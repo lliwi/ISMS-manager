@@ -1,0 +1,44 @@
+services:
+  # PostgreSQL Database for Development
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: isms_dev
+      POSTGRES_USER: isms
+      POSTGRES_PASSWORD: isms123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - isms_dev_network
+    restart: unless-stopped
+
+  # Flask Application in Development Mode
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - DATABASE_URL=postgresql://isms:isms123@db:5432/isms_dev
+      - SECRET_KEY=dev-secret-key
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    depends_on:
+      - db
+    networks:
+      - isms_dev_network
+    restart: unless-stopped
+    command: ["python", "app.py"]
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  isms_dev_network:
+    driver: bridge

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Versiones SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item active">Versiones</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Gestión de Versiones SOA</h1>
+                <p class="text-muted">Historial y control de versiones del Statement of Applicability</p>
+            </div>
+            <div>
+                <a href="{{ url_for('soa.create_version') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nueva Versión
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de versiones -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Versiones del SOA</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if versions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Versión</th>
+                                <th>Título</th>
+                                <th>ISO Version</th>
+                                <th>Estado</th>
+                                <th>Controles</th>
+                                <th>Creado por</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for version in versions %}
+                            <tr>
+                                <td>
+                                    <strong>{{ version.version_number }}</strong>
+                                    {% if version.is_current %}
+                                    <span class="badge bg-success ms-2">Actual</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ version.title }}</strong>
+                                    {% if version.description %}
+                                    <br><small class="text-muted">{{ version.description[:100] }}{{ '...' if version.description|length > 100 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">ISO {{ version.iso_version }}</span>
+                                </td>
+                                <td>
+                                    {% if version.status == 'active' %}
+                                        <span class="badge bg-success">Activa</span>
+                                    {% elif version.status == 'draft' %}
+                                        <span class="badge bg-warning">Borrador</span>
+                                    {% elif version.status == 'archived' %}
+                                        <span class="badge bg-secondary">Archivada</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">{{ version.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ version.controls.count() }}</span>
+                                </td>
+                                <td>
+                                    {{ version.created_by.full_name or version.created_by.username }}
+                                </td>
+                                <td>
+                                    {{ version.created_at.strftime('%d/%m/%Y') }}
+                                    {% if version.approval_date %}
+                                    <br><small class="text-muted">Aprobada: {{ version.approval_date.strftime('%d/%m/%Y') }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('soa.view_version', id=version.id) }}" class="btn btn-outline-primary" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if not version.is_current %}
+                                        <form method="POST" action="{{ url_for('soa.activate_version', id=version.id) }}" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-outline-success" title="Activar como actual" onclick="return confirm('¿Activar esta versión como actual?')">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Más opciones">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                {% if versions|length > 1 %}
+                                                <li><h6 class="dropdown-header">Comparar con:</h6></li>
+                                                {% for other_version in versions %}
+                                                {% if other_version.id != version.id %}
+                                                <li><a class="dropdown-item" href="{{ url_for('soa.compare_versions', id1=version.id, id2=other_version.id) }}">
+                                                    v{{ other_version.version_number }}
+                                                </a></li>
+                                                {% endif %}
+                                                {% endfor %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-code-branch fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay versiones SOA registradas</h5>
+                    <p class="text-muted">Crea la primera versión del Statement of Applicability.</p>
+                    <a href="{{ url_for('soa.create_version') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Primera Versión
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Timeline de versiones -->
+{% if versions|length > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Línea de Tiempo</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for version in versions %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if version.is_current %}bg-success{% elif version.status == 'draft' %}bg-warning{% else %}bg-secondary{% endif %}"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">
+                                {{ version.title }}
+                                <span class="badge bg-light text-dark ms-2">v{{ version.version_number }}</span>
+                            </h6>
+                            <small class="text-muted">
+                                {{ version.created_at.strftime('%d de %B, %Y') }} por {{ version.created_by.full_name or version.created_by.username }}
+                            </small>
+                            {% if version.description %}
+                            <p class="mt-2 mb-0 text-muted small">{{ version.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 3px #dee2e6;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border-left: 3px solid #0d6efd;
+}
+</style>
+{% endblock %}

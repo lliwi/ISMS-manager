@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Versión SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.versions') }}">Versiones</a></li>
+                <li class="breadcrumb-item active">Nueva Versión</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Crear Nueva Versión SOA</h1>
+                <p class="text-muted">Generar una nueva versión del Statement of Applicability</p>
+            </div>
+            <div>
+                <a href="{{ url_for('soa.versions') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información de la Nueva Versión</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <!-- Información básica -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="version_number" class="form-label"><strong>Número de Versión</strong></label>
+                            <input type="text" class="form-control" id="version_number" name="version_number"
+                                   placeholder="ej: 1.1, 2.0" required>
+                            <small class="form-text text-muted">Formato sugerido: Mayor.Menor (ej: 1.0, 1.1, 2.0)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="iso_version" class="form-label"><strong>Versión ISO 27001</strong></label>
+                            <select class="form-select" id="iso_version" name="iso_version">
+                                <option value="2022" selected>ISO/IEC 27001:2022</option>
+                                <option value="2013">ISO/IEC 27001:2013</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label"><strong>Título de la Versión</strong></label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               placeholder="ej: SOA v2.0 - Actualización por nueva ISO" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label"><strong>Descripción</strong></label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Describe los cambios y motivos de esta nueva versión..."></textarea>
+                    </div>
+
+                    <hr>
+
+                    <!-- Fechas -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="approval_date" class="form-label">Fecha de Aprobación</label>
+                            <input type="date" class="form-control" id="approval_date" name="approval_date">
+                            <small class="form-text text-muted">Opcional: fecha de aprobación por la dirección</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="next_review_date" class="form-label">Próxima Revisión</label>
+                            <input type="date" class="form-control" id="next_review_date" name="next_review_date">
+                            <small class="form-text text-muted">Fecha recomendada para la siguiente revisión</small>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Versión base -->
+                    <div class="mb-4">
+                        <label for="base_version_id" class="form-label"><strong>Versión Base (Opcional)</strong></label>
+                        <select class="form-select" id="base_version_id" name="base_version_id">
+                            <option value="">Crear versión vacía</option>
+                            {% for version in existing_versions %}
+                            <option value="{{ version.id }}" {% if version.is_current %}selected{% endif %}>
+                                v{{ version.version_number }} - {{ version.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            Si seleccionas una versión base, todos los controles se copiarán como punto de partida.
+                        </small>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('soa.versions') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Crear Versión
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de ayuda -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Guía de Versionado</h6>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary">¿Cuándo crear una nueva versión?</h6>
+                <ul class="small mb-3">
+                    <li>Actualización de la norma ISO 27001</li>
+                    <li>Cambios significativos en la organización</li>
+                    <li>Revisión anual del SOA</li>
+                    <li>Nuevos controles o exclusiones</li>
+                </ul>
+
+                <h6 class="text-primary">Esquema de Numeración:</h6>
+                <ul class="small mb-3">
+                    <li><strong>Mayor (X.0):</strong> Cambios significativos</li>
+                    <li><strong>Menor (X.Y):</strong> Actualizaciones menores</li>
+                    <li><strong>Parche (X.Y.Z):</strong> Correcciones</li>
+                </ul>
+
+                <h6 class="text-primary">Estado de Versiones:</h6>
+                <ul class="small">
+                    <li><strong>Borrador:</strong> En desarrollo</li>
+                    <li><strong>Activa:</strong> Versión actual en uso</li>
+                    <li><strong>Archivada:</strong> Versión histórica</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if existing_versions %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Versiones Existentes</h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    {% for version in existing_versions[:5] %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>v{{ version.version_number }}</span>
+                        <div>
+                            {% if version.is_current %}
+                            <span class="badge bg-success">Actual</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">{{ version.status|title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if existing_versions|length > 5 %}
+                    <small class="text-muted">... y {{ existing_versions|length - 5 }} más</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-suggest next review date (1 year from today)
+    const nextReviewDate = document.getElementById('next_review_date');
+    if (!nextReviewDate.value) {
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        nextReviewDate.value = nextYear.toISOString().split('T')[0];
+    }
+
+    // Auto-suggest approval date as today
+    const approvalDate = document.getElementById('approval_date');
+    if (!approvalDate.value) {
+        const today = new Date();
+        approvalDate.value = today.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}

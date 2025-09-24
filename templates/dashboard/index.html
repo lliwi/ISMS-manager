@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2 mb-0">Dashboard</h1>
+        <p class="text-muted">Bienvenido, {{ current_user.first_name or current_user.username }}</p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Cumplimiento SOA</h6>
+                        <h3 class="mb-0">{{ "%.1f"|format(kpis.soa_compliance) }}%</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-check fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Riesgos Altos/Críticos</h6>
+                        <h3 class="mb-0">{{ kpis.high_risk_count }}</h3>
+                        <small>de {{ kpis.total_risks }} total</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Incidentes Abiertos</h6>
+                        <h3 class="mb-0">{{ kpis.open_incidents }}</h3>
+                        <small>{{ kpis.incidents_this_month }} este mes</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-bug fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Tareas Pendientes</h6>
+                        <h3 class="mb-0">{{ kpis.my_pending_tasks }}</h3>
+                        <small>{{ kpis.overdue_tasks }} vencidas</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tasks fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Row -->
+<div class="row">
+    <!-- Recent Incidents -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Incidentes Recientes</h6>
+                <a href="{{ url_for('incidents.index') }}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_incidents %}
+                    <div class="list-group list-group-flush">
+                        {% for incident in recent_incidents %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ incident.title }}</h6>
+                                <small class="badge bg-{{ 'danger' if incident.severity == 'critical' else 'warning' if incident.severity == 'high' else 'info' }}">
+                                    {{ incident.severity }}
+                                </small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ incident.description }}</p>
+                            <small class="text-muted">{{ incident.detection_date.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted py-3">No hay incidentes recientes</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Non-Conformities -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">No Conformidades Recientes</h6>
+                <a href="{{ url_for('nonconformities.index') }}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_nonconformities %}
+                    <div class="list-group list-group-flush">
+                        {% for nc in recent_nonconformities %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ nc.title }}</h6>
+                                <small class="badge bg-{{ 'danger' if nc.severity == 'critical' else 'warning' if nc.severity == 'major' else 'secondary' }}">
+                                    {{ nc.severity }}
+                                </small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ nc.description }}</p>
+                            <small class="text-muted">{{ nc.created_at.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted py-3">No hay no conformidades recientes</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- My Tasks -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Mis Tareas Pendientes</h6>
+                <a href="{{ url_for('tasks.index') }}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+            </div>
+            <div class="card-body p-0">
+                {% if my_tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in my_tasks %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ task.title }}</h6>
+                                <small class="text-muted">{{ task.due_date.strftime('%d/%m') }}</small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ task.description or 'Sin descripción' }}</p>
+                            <small class="badge bg-{{ 'danger' if task.due_date and task.due_date < current_datetime else 'primary' }}">
+                                {{ task.task_type or 'General' }}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted py-3">No tienes tareas pendientes</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Statistics -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Estado del Sistema ISMS</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5 class="text-primary">{{ kpis.soa_compliance|round(1) }}%</h5>
+                        <p class="text-muted mb-0">Controles Implementados</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-{{ 'success' if kpis.open_nonconformities == 0 else 'warning' }}">{{ kpis.open_nonconformities }}</h5>
+                        <p class="text-muted mb-0">No Conformidades Abiertas</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-{{ 'success' if kpis.overdue_nonconformities == 0 else 'danger' }}">{{ kpis.overdue_nonconformities }}</h5>
+                        <p class="text-muted mb-0">No Conformidades Vencidas</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-{{ 'success' if kpis.overdue_tasks == 0 else 'warning' }}">{{ kpis.overdue_tasks }}</h5>
+                        <p class="text-muted mb-0">Tareas Vencidas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

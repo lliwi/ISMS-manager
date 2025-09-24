@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Documento - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.index') }}">Documentos</a></li>
+                <li class="breadcrumb-item active">Nuevo Documento</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Crear Nuevo Documento</h1>
+                <p class="text-muted">Agregar documentación del SGSI</p>
+            </div>
+            <div>
+                <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información del Documento</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="title" class="form-label"><strong>Título del Documento</strong></label>
+                            <input type="text" class="form-control" id="title" name="title" required
+                                   placeholder="ej: Política de Seguridad de la Información">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="document_type" class="form-label"><strong>Tipo de Documento</strong></label>
+                            <select class="form-select" id="document_type" name="document_type" required>
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="policy">Política</option>
+                                <option value="procedure">Procedimiento</option>
+                                <option value="instruction">Instrucción</option>
+                                <option value="record">Registro</option>
+                                <option value="minutes">Acta</option>
+                                <option value="plan">Plan</option>
+                                <option value="report">Informe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="content" class="form-label"><strong>Contenido</strong></label>
+                        <textarea class="form-control" id="content" name="content" rows="10"
+                                  placeholder="Contenido del documento..."></textarea>
+                        <small class="form-text text-muted">
+                            Ingrese el contenido principal del documento. Utilice Markdown para formato.
+                        </small>
+                    </div>
+
+                    <hr>
+
+                    <!-- Controles SOA Relacionados -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Controles SOA Relacionados</strong></label>
+                        <small class="form-text text-muted d-block mb-3">
+                            Seleccione los controles de seguridad que este documento resuelve o aplica.
+                        </small>
+
+                        {% if controls %}
+                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            <div class="row">
+                                {% for control in controls %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="related_controls" value="{{ control.id }}"
+                                               id="control_{{ control.id }}">
+                                        <label class="form-check-label" for="control_{{ control.id }}">
+                                            <code class="text-primary">{{ control.control_id }}</code>
+                                            <strong class="d-block">{{ control.title }}</strong>
+                                            <small class="text-muted">{{ control.category }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Filtro de controles -->
+                        <div class="mt-2">
+                            <input type="text" class="form-control form-control-sm"
+                                   id="control-filter" placeholder="Filtrar controles...">
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No hay controles SOA disponibles. Primero debe crear una versión SOA e importar controles.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Crear Documento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de ayuda -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Tipos de Documentos</h6>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary">Política</h6>
+                <p class="small text-muted">Documentos de alto nivel que establecen la dirección organizacional.</p>
+
+                <h6 class="text-primary">Procedimiento</h6>
+                <p class="small text-muted">Describen "cómo" se realizan las actividades específicas.</p>
+
+                <h6 class="text-primary">Instrucción</h6>
+                <p class="small text-muted">Guías detalladas paso a paso para tareas específicas.</p>
+
+                <h6 class="text-primary">Registro</h6>
+                <p class="small text-muted">Evidencias de actividades realizadas o resultados obtenidos.</p>
+
+                <h6 class="text-primary">Acta</h6>
+                <p class="small text-muted">Registro formal de reuniones y decisiones tomadas.</p>
+            </div>
+        </div>
+
+        {% if controls %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Estadísticas de Controles</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ controls|selectattr('is_applicable')|list|length }}</h4>
+                        <small class="text-muted">Aplicables</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ controls|selectattr('implementation_status', 'equalto', 'implemented')|list|length }}</h4>
+                        <small class="text-muted">Implementados</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtro de controles
+    const filterInput = document.getElementById('control-filter');
+    const controlCheckboxes = document.querySelectorAll('[name="related_controls"]');
+
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            controlCheckboxes.forEach(checkbox => {
+                const label = checkbox.nextElementSibling;
+                const text = label.textContent.toLowerCase();
+                const parentCol = checkbox.closest('.col-md-6');
+
+                if (text.includes(searchTerm)) {
+                    parentCol.style.display = '';
+                } else {
+                    parentCol.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
