@@ -51,9 +51,11 @@
     <div class="col-md-4">
         <select class="form-select" id="status-filter">
             <option value="">Todos los estados</option>
+            <option value="aplicable">Aplicable</option>
+            <option value="transferido">Transferido</option>
+            <option value="no_aplicable">No Aplicable</option>
             <option value="implemented">Implementado</option>
-            <option value="pending">Pendiente</option>
-            <option value="not_applicable">No Aplicable</option>
+            <option value="not_implemented">No Implementado</option>
         </select>
     </div>
 </div>
@@ -65,8 +67,8 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Implementados</h6>
-                        <h3 class="mb-0">{{ controls|selectattr('implementation_status', 'equalto', 'implemented')|list|length }}</h3>
+                        <h6 class="card-title">Aplicables</h6>
+                        <h3 class="mb-0">{{ controls|selectattr('applicability_status', 'equalto', 'aplicable')|list|length + (controls|rejectattr('applicability_status')|selectattr('is_applicable', 'equalto', true)|list|length) }}</h3>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-check-circle fa-2x opacity-75"></i>
@@ -76,15 +78,15 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-white">
+        <div class="card bg-info text-white">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Pendientes</h6>
-                        <h3 class="mb-0">{{ controls|selectattr('implementation_status', 'equalto', 'pending')|list|length }}</h3>
+                        <h6 class="card-title">Transferidos</h6>
+                        <h3 class="mb-0">{{ controls|selectattr('applicability_status', 'equalto', 'transferido')|list|length }}</h3>
                     </div>
                     <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                        <i class="fas fa-arrow-right fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -96,7 +98,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h6 class="card-title">No Aplicables</h6>
-                        <h3 class="mb-0">{{ controls|selectattr('implementation_status', 'equalto', 'not_applicable')|list|length }}</h3>
+                        <h3 class="mb-0">{{ controls|selectattr('applicability_status', 'equalto', 'no_aplicable')|list|length + (controls|rejectattr('applicability_status')|selectattr('is_applicable', 'equalto', false)|list|length) }}</h3>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-times-circle fa-2x opacity-75"></i>
@@ -106,15 +108,15 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info text-white">
+        <div class="card bg-warning text-white">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Total Controles</h6>
-                        <h3 class="mb-0">{{ controls|length }}</h3>
+                        <h6 class="card-title">Implementados</h6>
+                        <h3 class="mb-0">{{ controls|selectattr('implementation_status', 'equalto', 'implemented')|list|length }}</h3>
                     </div>
                     <div class="align-self-center">
-                        <i class="fas fa-list fa-2x opacity-75"></i>
+                        <i class="fas fa-check fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -138,10 +140,10 @@
                                 <th>Control ID</th>
                                 <th>Título</th>
                                 <th>Categoría</th>
-                                <th>Estado</th>
+                                <th>Aplicabilidad</th>
+                                <th>Implementación</th>
                                 <th>Madurez</th>
                                 <th>Responsable</th>
-                                <th>Aplicable</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -161,21 +163,34 @@
                                     <span class="badge bg-light text-dark">{{ control.category }}</span>
                                 </td>
                                 <td>
-                                    {% if control.implementation_status == 'implemented' %}
-                                        <span class="badge bg-success">Implementado</span>
-                                    {% elif control.implementation_status == 'pending' %}
-                                        <span class="badge bg-warning">Pendiente</span>
-                                    {% elif control.implementation_status == 'not_applicable' %}
-                                        <span class="badge bg-secondary">No Aplicable</span>
+                                    {% set status = control.applicability_status or ('aplicable' if control.is_applicable else 'no_aplicable') %}
+                                    {% if status == 'aplicable' %}
+                                        <span class="badge bg-success">Aplicable</span>
+                                    {% elif status == 'transferido' %}
+                                        <span class="badge bg-info">Transferido</span>
                                     {% else %}
-                                        <span class="badge bg-light text-dark">{{ control.implementation_status }}</span>
+                                        <span class="badge bg-danger">No Aplicable</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if status == 'aplicable' %}
+                                        {% if control.maturity_level == 'no_implementado' or control.maturity_level == 'no_gestionado' %}
+                                            <span class="badge bg-warning">No Implementado</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Implementado</span>
+                                        {% endif %}
+                                    {% elif status == 'transferido' %}
+                                        <span class="badge bg-info">Transferido</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="progress me-2" style="width: 60px; height: 8px;">
                                             <div class="progress-bar
-                                                {% if control.maturity_score <= 2 %}bg-danger
+                                                {% if control.maturity_score == 0 %}bg-secondary
+                                                {% elif control.maturity_score <= 2 %}bg-danger
                                                 {% elif control.maturity_score <= 4 %}bg-warning
                                                 {% else %}bg-success{% endif %}"
                                                  style="width: {{ (control.maturity_score / 6 * 100)|int }}%"></div>
@@ -188,13 +203,6 @@
                                         {{ control.responsible.full_name or control.responsible.username }}
                                     {% else %}
                                         <small class="text-muted">No asignado</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if control.is_applicable %}
-                                        <i class="fas fa-check-circle text-success" title="Aplicable"></i>
-                                    {% else %}
-                                        <i class="fas fa-times-circle text-danger" title="No Aplicable"></i>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -251,9 +259,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const matchesSearch = searchText.includes(searchTerm);
             const matchesStatus = !statusTerm ||
+                (statusTerm === 'aplicable' && rowStatus.includes('aplicable')) ||
+                (statusTerm === 'transferido' && rowStatus.includes('transferido')) ||
+                (statusTerm === 'no_aplicable' && rowStatus.includes('no aplicable')) ||
                 (statusTerm === 'implemented' && rowStatus.includes('implementado')) ||
-                (statusTerm === 'pending' && rowStatus.includes('pendiente')) ||
-                (statusTerm === 'not_applicable' && rowStatus.includes('no aplicable'));
+                (statusTerm === 'not_implemented' && rowStatus.includes('no implementado'));
 
             row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
         });

@@ -65,16 +65,30 @@
 
                     <!-- Aplicabilidad -->
                     <div class="mb-4">
-                        <label class="form-label"><strong>Aplicabilidad del Control</strong></label>
+                        <label class="form-label"><strong>Estado de Aplicabilidad del Control</strong></label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="applicability_status" id="aplicable" value="aplicable"
+                                   {{ 'checked' if control.applicability_status == 'aplicable' or (not control.applicability_status and control.is_applicable) }}>
+                            <label class="form-check-label" for="aplicable">
+                                <strong>Aplicable</strong> - Este control debe implementarse en la organización
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="applicability_status" id="no_aplicable" value="no_aplicable"
+                                   {{ 'checked' if control.applicability_status == 'no_aplicable' or (not control.applicability_status and not control.is_applicable) }}>
+                            <label class="form-check-label" for="no_aplicable">
+                                <strong>No Aplicable</strong> - Este control no es relevante para la organización
+                            </label>
+                        </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_applicable" id="is_applicable"
-                                   {{ 'checked' if control.is_applicable }}>
-                            <label class="form-check-label" for="is_applicable">
-                                <strong>Este control es aplicable a la organización</strong>
+                            <input class="form-check-input" type="radio" name="applicability_status" id="transferido" value="transferido"
+                                   {{ 'checked' if control.applicability_status == 'transferido' }}>
+                            <label class="form-check-label" for="transferido">
+                                <strong>Transferido</strong> - Este control se transfiere a un tercero
                             </label>
                         </div>
                         <small class="form-text text-muted">
-                            Marque esta casilla si el control debe implementarse en su organización según el análisis de aplicabilidad.
+                            Seleccione el estado de aplicabilidad según el análisis realizado para su organización.
                         </small>
                     </div>
 
@@ -98,23 +112,22 @@
                         </small>
                     </div>
 
-                    <!-- Estado de Implementación -->
-                    <div class="mb-4">
-                        <label for="implementation_status" class="form-label"><strong>Estado de Implementación</strong></label>
-                        <select class="form-select" id="implementation_status" name="implementation_status">
-                            <option value="pending" {{ 'selected' if control.implementation_status == 'pending' }}>Pendiente</option>
-                            <option value="implemented" {{ 'selected' if control.implementation_status == 'implemented' }}>Implementado</option>
-                            <option value="not_applicable" {{ 'selected' if control.implementation_status == 'not_applicable' }}>No Aplicable</option>
-                        </select>
+                    <!-- Detalles de Transferencia (solo para controles transferidos) -->
+                    <div class="mb-4" id="transfer_details_section" style="display: none;">
+                        <label for="transfer_details" class="form-label"><strong>Detalles de Transferencia</strong></label>
+                        <textarea class="form-control" id="transfer_details" name="transfer_details" rows="4"
+                                  placeholder="Especifique a quién se transfiere el control, bajo qué condiciones, acuerdos contractuales, etc.">{{ control.transfer_details or '' }}</textarea>
                         <small class="form-text text-muted">
-                            Indique el estado actual de implementación de este control.
+                            Describa los detalles de la transferencia: proveedor, condiciones contractuales, responsabilidades, etc.
                         </small>
                     </div>
+
 
                     <!-- Nivel de Madurez -->
                     <div class="mb-4">
                         <label for="maturity_level" class="form-label"><strong>Nivel de Madurez del Control</strong></label>
                         <select class="form-select" id="maturity_level" name="maturity_level">
+                            <option value="no_implementado" {{ 'selected' if control.maturity_level == 'no_implementado' or control.maturity_level == 'no_gestionado' }}>No Implementado (0) - Control sin implementar</option>
                             <option value="inicial" {{ 'selected' if control.maturity_level == 'inicial' }}>Inicial (1) - Proceso ad-hoc e impredecible</option>
                             <option value="repetible" {{ 'selected' if control.maturity_level == 'repetible' }}>Repetible (2) - Proceso disciplinado</option>
                             <option value="definido" {{ 'selected' if control.maturity_level == 'definido' }}>Definido (3) - Proceso estándar y consistente</option>
@@ -123,7 +136,7 @@
                             <option value="optimizado" {{ 'selected' if control.maturity_level == 'optimizado' }}>Optimizado (6) - Proceso en mejora continua</option>
                         </select>
                         <small class="form-text text-muted">
-                            Evalúe el nivel de madurez actual del control según el modelo CMMI.
+                            Evalúe el nivel de madurez actual del control. El nivel 0 indica que el control no está implementado, cualquier otro nivel indica que está implementado.
                         </small>
                     </div>
 
@@ -181,11 +194,11 @@
                     El Statement of Applicability (SOA) documenta los controles de seguridad que son aplicables a su organización y justifica la inclusión o exclusión de cada control.
                 </p>
 
-                <h6 class="text-primary">Estados de Implementación:</h6>
+                <h6 class="text-primary">Estados de Aplicabilidad:</h6>
                 <ul class="small text-muted mb-3">
-                    <li><strong>Pendiente:</strong> Control seleccionado pero no implementado</li>
-                    <li><strong>Implementado:</strong> Control completamente implementado</li>
+                    <li><strong>Aplicable:</strong> Control debe implementarse en la organización</li>
                     <li><strong>No Aplicable:</strong> Control no relevante para la organización</li>
+                    <li><strong>Transferido:</strong> Control transferido a un tercero (outsourcing, proveedores)</li>
                 </ul>
 
                 <h6 class="text-primary">Mejores Prácticas:</h6>
@@ -207,9 +220,13 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="border-end">
-                            {% if control.is_applicable %}
+                            {% set status = control.applicability_status or ('aplicable' if control.is_applicable else 'no_aplicable') %}
+                            {% if status == 'aplicable' %}
                                 <i class="fas fa-check-circle text-success fa-2x"></i>
                                 <br><small class="text-success">Aplicable</small>
+                            {% elif status == 'transferido' %}
+                                <i class="fas fa-arrow-right text-info fa-2x"></i>
+                                <br><small class="text-info">Transferido</small>
                             {% else %}
                                 <i class="fas fa-times-circle text-danger fa-2x"></i>
                                 <br><small class="text-danger">No Aplicable</small>
@@ -220,12 +237,9 @@
                         {% if control.implementation_status == 'implemented' %}
                             <i class="fas fa-check-circle text-success fa-2x"></i>
                             <br><small class="text-success">Implementado</small>
-                        {% elif control.implementation_status == 'pending' %}
-                            <i class="fas fa-clock text-warning fa-2x"></i>
-                            <br><small class="text-warning">Pendiente</small>
                         {% else %}
-                            <i class="fas fa-minus-circle text-secondary fa-2x"></i>
-                            <br><small class="text-secondary">No Aplicable</small>
+                            <i class="fas fa-clock text-warning fa-2x"></i>
+                            <br><small class="text-warning">No Implementado</small>
                         {% endif %}
                     </div>
                 </div>
@@ -238,24 +252,25 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const applicableCheck = document.getElementById('is_applicable');
-    const statusSelect = document.getElementById('implementation_status');
+    const applicabilityRadios = document.querySelectorAll('input[name="applicability_status"]');
+    const transferSection = document.getElementById('transfer_details_section');
 
-    // Sincronizar aplicabilidad con estado
-    applicableCheck.addEventListener('change', function() {
-        if (!this.checked) {
-            statusSelect.value = 'not_applicable';
-        } else if (statusSelect.value === 'not_applicable') {
-            statusSelect.value = 'pending';
-        }
-    });
+    function toggleSections() {
+        const selectedStatus = document.querySelector('input[name="applicability_status"]:checked')?.value;
 
-    statusSelect.addEventListener('change', function() {
-        if (this.value === 'not_applicable') {
-            applicableCheck.checked = false;
+        if (selectedStatus === 'transferido') {
+            transferSection.style.display = 'block';
         } else {
-            applicableCheck.checked = true;
+            transferSection.style.display = 'none';
         }
+    }
+
+    // Ejecutar al cargar la página
+    toggleSections();
+
+    // Escuchar cambios en los radio buttons
+    applicabilityRadios.forEach(radio => {
+        radio.addEventListener('change', toggleSections);
     });
 });
 </script>

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Versión {{ version.version_number }} - SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.versions') }}">Versiones</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.view_version', id=version.id) }}">v{{ version.version_number }}</a></li>
+                <li class="breadcrumb-item active">Editar</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Editar Versión {{ version.version_number }}</h1>
+                <p class="text-muted">Modificar información de la versión del SOA</p>
+            </div>
+            <div>
+                <a href="{{ url_for('soa.view_version', id=version.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información de la Versión</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <!-- Información básica -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="version_number" class="form-label"><strong>Número de Versión</strong></label>
+                            <input type="text" class="form-control" id="version_number" name="version_number"
+                                   value="{{ version.version_number }}" required>
+                            <small class="form-text text-muted">Formato sugerido: Mayor.Menor (ej: 1.0, 1.1, 2.0)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="iso_version" class="form-label"><strong>Versión ISO 27001</strong></label>
+                            <select class="form-select" id="iso_version" name="iso_version">
+                                <option value="2022" {{ 'selected' if version.iso_version == '2022' }}>ISO/IEC 27001:2022</option>
+                                <option value="2013" {{ 'selected' if version.iso_version == '2013' }}>ISO/IEC 27001:2013</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label"><strong>Título de la Versión</strong></label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               value="{{ version.title }}" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label"><strong>Descripción</strong></label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ version.description or '' }}</textarea>
+                    </div>
+
+                    <hr>
+
+                    <!-- Fechas -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="approval_date" class="form-label">Fecha de Aprobación</label>
+                            <input type="date" class="form-control" id="approval_date" name="approval_date"
+                                   value="{{ version.approval_date.strftime('%Y-%m-%d') if version.approval_date }}">
+                            <small class="form-text text-muted">Opcional: fecha de aprobación por la dirección</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="next_review_date" class="form-label">Próxima Revisión</label>
+                            <input type="date" class="form-control" id="next_review_date" name="next_review_date"
+                                   value="{{ version.next_review_date.strftime('%Y-%m-%d') if version.next_review_date }}">
+                            <small class="form-text text-muted">Fecha recomendada para la siguiente revisión</small>
+                        </div>
+                    </div>
+
+                    <!-- Información de solo lectura -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Estado</strong></label>
+                            <div class="form-control-plaintext">
+                                {% if version.status == 'active' %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% elif version.status == 'draft' %}
+                                    <span class="badge bg-warning">Borrador</span>
+                                {% elif version.status == 'archived' %}
+                                    <span class="badge bg-secondary">Archivada</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">{{ version.status|title }}</span>
+                                {% endif %}
+                                {% if version.is_current %}
+                                    <span class="badge bg-success ms-2">Versión Actual</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Creado por</strong></label>
+                            <div class="form-control-plaintext">
+                                {{ version.created_by.full_name or version.created_by.username }}
+                                <br><small class="text-muted">{{ version.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('soa.view_version', id=version.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de información -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información de la Versión</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Controles:</strong></div>
+                    <div class="col-7">
+                        <span class="badge bg-info">{{ version.controls.count() }}</span>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Creada:</strong></div>
+                    <div class="col-7">{{ version.created_at.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% if version.approval_date %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Aprobada:</strong></div>
+                    <div class="col-7">{{ version.approval_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% endif %}
+                {% if version.next_review_date %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Próxima Revisión:</strong></div>
+                    <div class="col-7">{{ version.next_review_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Restricciones de Edición</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Nota:</strong> Solo se puede editar la información básica de la versión. Los controles deben editarse individualmente.
+                </div>
+                {% if version.is_current %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Versión Actual:</strong> Esta es la versión activa del SOA. Los cambios afectarán la vista principal.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

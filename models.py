@@ -118,10 +118,11 @@ class SOAControl(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(100), nullable=False)  # e.g., "Information Security Policies"
-    is_applicable = db.Column(db.Boolean, default=True)
+    applicability_status = db.Column(db.String(20), default='aplicable')  # aplicable, no_aplicable, transferido
     justification = db.Column(db.Text)
-    implementation_status = db.Column(db.String(50), default='pending')  # pending, implemented, not_applicable
-    maturity_level = db.Column(db.String(20), default='inicial')  # inicial, repetible, definido, controlado, cuantificado, optimizado
+    transfer_details = db.Column(db.Text)  # Detalles de a quién se transfiere y bajo qué condiciones
+    implementation_status = db.Column(db.String(50), default='not_implemented')  # not_implemented, implemented
+    maturity_level = db.Column(db.String(20), default='no_implementado')  # no_implementado, inicial, repetible, definido, controlado, cuantificado, optimizado
     evidence = db.Column(db.Text)  # Campo para explicar cómo se cumple el control
     responsible_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     target_date = db.Column(db.Date)
@@ -149,6 +150,7 @@ class SOAControl(db.Model):
     def maturity_level_display(self):
         """Retorna el nivel de madurez con formato legible"""
         maturity_map = {
+            'no_implementado': 'No Implementado (0)',
             'inicial': 'Inicial (1)',
             'repetible': 'Repetible (2)',
             'definido': 'Definido (3)',
@@ -162,6 +164,7 @@ class SOAControl(db.Model):
     def maturity_score(self):
         """Retorna el score numérico del nivel de madurez"""
         maturity_scores = {
+            'no_implementado': 0,
             'inicial': 1,
             'repetible': 2,
             'definido': 3,
@@ -170,6 +173,11 @@ class SOAControl(db.Model):
             'optimizado': 6
         }
         return maturity_scores.get(self.maturity_level, 0)
+
+    @property
+    def is_implemented(self):
+        """Determina si el control está implementado basado en el nivel de madurez"""
+        return self.maturity_score > 0
 
 class Risk(db.Model):
     __tablename__ = 'risks'

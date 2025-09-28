@@ -91,35 +91,57 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('soa.view_version', id=version.id) }}" class="btn btn-outline-primary" title="Ver">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <!-- Acciones principales -->
+                                        <a href="{{ url_for('soa.view_version', id=version.id) }}" class="btn btn-outline-primary btn-sm" title="Ver">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        {% if current_user.can_access('soa') %}
+                                        <a href="{{ url_for('soa.edit_version', id=version.id) }}" class="btn btn-outline-secondary btn-sm" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
                                         {% if not version.is_current %}
-                                        <form method="POST" action="{{ url_for('soa.activate_version', id=version.id) }}" style="display: inline;">
+                                        <form method="POST" action="{{ url_for('soa.activate_version', id=version.id) }}" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <button type="submit" class="btn btn-outline-success" title="Activar como actual" onclick="return confirm('¿Activar esta versión como actual?')">
+                                            <button type="submit" class="btn btn-outline-success btn-sm" title="Activar como actual" onclick="return confirm('¿Activar esta versión como actual?')">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         </form>
                                         {% endif %}
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Más opciones">
-                                                <i class="fas fa-ellipsis-h"></i>
+                                        {% endif %}
+
+                                        <!-- Botón de comparación -->
+                                        {% if versions|length > 1 %}
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Comparar">
+                                                <i class="fas fa-code-branch"></i>
                                             </button>
-                                            <ul class="dropdown-menu">
-                                                {% if versions|length > 1 %}
+                                            <ul class="dropdown-menu dropdown-menu-end">
                                                 <li><h6 class="dropdown-header">Comparar con:</h6></li>
                                                 {% for other_version in versions %}
                                                 {% if other_version.id != version.id %}
                                                 <li><a class="dropdown-item" href="{{ url_for('soa.compare_versions', id1=version.id, id2=other_version.id) }}">
-                                                    v{{ other_version.version_number }}
+                                                    <i class="fas fa-code-branch me-2"></i>v{{ other_version.version_number }}
                                                 </a></li>
                                                 {% endif %}
                                                 {% endfor %}
-                                                {% endif %}
                                             </ul>
                                         </div>
+                                        {% endif %}
+
+                                        <!-- Botón clonar -->
+                                        {% if current_user.can_access('soa') %}
+                                        <a href="{{ url_for('soa.clone_version', id=version.id) }}" class="btn btn-outline-warning btn-sm" title="Clonar versión">
+                                            <i class="fas fa-copy"></i>
+                                        </a>
+                                        {% endif %}
+
+                                        <!-- Botón eliminar -->
+                                        {% if current_user.can_access('soa') and not version.is_current %}
+                                        <button type="button" class="btn btn-outline-danger btn-sm" title="Eliminar" onclick="deleteVersion({{ version.id }}, '{{ version.version_number }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -215,5 +237,56 @@
     padding: 1rem;
     border-left: 3px solid #0d6efd;
 }
+
+/* Mejoras para la tabla de versiones */
+.table-responsive {
+    overflow-x: auto;
+    overflow-y: visible; /* Permite que los dropdowns sean visibles */
+}
+
+/* Asegurar que los dropdowns estén sobre otros elementos */
+.btn-group .dropdown-menu {
+    z-index: 1050;
+    position: absolute;
+}
+
+/* Ancho mínimo para la columna de acciones */
+.table td:last-child {
+    min-width: 180px;
+    white-space: nowrap;
+}
+
+/* Espaciado mejorado para botones */
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+
+/* Evitar que los botones se rompan en líneas múltiples */
+.d-flex.flex-wrap {
+    flex-wrap: nowrap !important;
+}
 </style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function deleteVersion(versionId, versionNumber) {
+    if (confirm(`¿Está seguro de que desea eliminar la versión ${versionNumber}? Esta acción no se puede deshacer.`)) {
+        // Crear y enviar formulario para eliminar
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/soa/versions/${versionId}/delete`;
+
+        // CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrf_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        form.appendChild(csrfToken);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 {% endblock %}

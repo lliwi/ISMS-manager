@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Comparar Versiones SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.versions') }}">Versiones</a></li>
+                <li class="breadcrumb-item active">Comparar Versiones</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Comparar Versiones SOA</h1>
+                <p class="text-muted">
+                    Comparando
+                    <span class="badge bg-primary">v{{ version1.version_number }}</span>
+                    vs
+                    <span class="badge bg-info">v{{ version2.version_number }}</span>
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('soa.versions') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Versiones
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información de las versiones -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">Versión {{ version1.version_number }}</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>{{ version1.title }}</strong></p>
+                <div class="row text-sm">
+                    <div class="col-6">
+                        <small class="text-muted">Creada: {{ version1.created_at.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Controles: {{ version1.controls.count() }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">Versión {{ version2.version_number }}</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>{{ version2.title }}</strong></p>
+                <div class="row text-sm">
+                    <div class="col-6">
+                        <small class="text-muted">Creada: {{ version2.created_at.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Controles: {{ version2.controls.count() }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen de cambios -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Resumen de Cambios</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="text-success">
+                            <i class="fas fa-plus-circle fa-2x"></i>
+                            <h4 class="mt-2">{{ comparison|selectattr('status', 'equalto', 'added')|list|length }}</h4>
+                            <small>Controles Añadidos</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-danger">
+                            <i class="fas fa-minus-circle fa-2x"></i>
+                            <h4 class="mt-2">{{ comparison|selectattr('status', 'equalto', 'removed')|list|length }}</h4>
+                            <small>Controles Eliminados</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-warning">
+                            <i class="fas fa-edit fa-2x"></i>
+                            <h4 class="mt-2">{{ comparison|selectattr('status', 'equalto', 'modified')|list|length }}</h4>
+                            <small>Controles Modificados</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted">
+                            <i class="fas fa-equals fa-2x"></i>
+                            <h4 class="mt-2">{{ comparison|selectattr('status', 'equalto', 'unchanged')|list|length }}</h4>
+                            <small>Sin Cambios</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm filter-btn active" data-filter="all">
+                        Todos los Controles
+                    </button>
+                    <button class="btn btn-outline-success btn-sm filter-btn" data-filter="added">
+                        <i class="fas fa-plus me-1"></i>Añadidos
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm filter-btn" data-filter="removed">
+                        <i class="fas fa-minus me-1"></i>Eliminados
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm filter-btn" data-filter="modified">
+                        <i class="fas fa-edit me-1"></i>Modificados
+                    </button>
+                    <button class="btn btn-outline-muted btn-sm filter-btn" data-filter="unchanged">
+                        <i class="fas fa-equals me-1"></i>Sin Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de comparación -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Comparación Detallada de Controles</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Control ID</th>
+                                <th>Título</th>
+                                <th>Estado</th>
+                                <th>Versión {{ version1.version_number }}</th>
+                                <th>Versión {{ version2.version_number }}</th>
+                                <th>Cambios</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in comparison %}
+                            <tr class="comparison-row" data-status="{{ item.status }}">
+                                <td><code>{{ item.control_id }}</code></td>
+                                <td>{{ item.title }}</td>
+                                <td>
+                                    {% if item.status == 'added' %}
+                                        <span class="badge bg-success">Añadido</span>
+                                    {% elif item.status == 'removed' %}
+                                        <span class="badge bg-danger">Eliminado</span>
+                                    {% elif item.status == 'modified' %}
+                                        <span class="badge bg-warning">Modificado</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Sin Cambios</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.control1 %}
+                                        {% set status1 = item.control1.applicability_status or ('aplicable' if item.control1.is_applicable else 'no_aplicable') %}
+                                        <div class="small">
+                                            <strong>Aplicabilidad:</strong>
+                                            {% if status1 == 'aplicable' %}
+                                                <span class="badge bg-success">Aplicable</span>
+                                            {% elif status1 == 'transferido' %}
+                                                <span class="badge bg-info">Transferido</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">No Aplicable</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small">
+                                            <strong>Madurez:</strong> {{ item.control1.maturity_level_display }}
+                                        </div>
+                                        {% if item.control1.responsible %}
+                                        <div class="small">
+                                            <strong>Responsable:</strong> {{ item.control1.responsible.full_name or item.control1.responsible.username }}
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">No existe</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.control2 %}
+                                        {% set status2 = item.control2.applicability_status or ('aplicable' if item.control2.is_applicable else 'no_aplicable') %}
+                                        <div class="small">
+                                            <strong>Aplicabilidad:</strong>
+                                            {% if status2 == 'aplicable' %}
+                                                <span class="badge bg-success">Aplicable</span>
+                                            {% elif status2 == 'transferido' %}
+                                                <span class="badge bg-info">Transferido</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">No Aplicable</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small">
+                                            <strong>Madurez:</strong> {{ item.control2.maturity_level_display }}
+                                        </div>
+                                        {% if item.control2.responsible %}
+                                        <div class="small">
+                                            <strong>Responsable:</strong> {{ item.control2.responsible.full_name or item.control2.responsible.username }}
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">No existe</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.status == 'modified' and item.changes %}
+                                        <div class="small">
+                                            {% for change_type, change in item.changes.items() %}
+                                            <div class="mb-1">
+                                                <strong>{{ change_type|title }}:</strong>
+                                                <span class="text-danger">{{ change.old }}</span>
+                                                <i class="fas fa-arrow-right mx-1"></i>
+                                                <span class="text-success">{{ change.new }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif item.status == 'added' %}
+                                        <span class="text-success">Control añadido en v{{ version2.version_number }}</span>
+                                    {% elif item.status == 'removed' %}
+                                        <span class="text-danger">Control eliminado en v{{ version2.version_number }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Sin cambios</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const rows = document.querySelectorAll('.comparison-row');
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Filter rows
+            rows.forEach(row => {
+                const status = row.getAttribute('data-status');
+                if (filter === 'all' || status === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

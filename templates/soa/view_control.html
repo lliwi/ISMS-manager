@@ -57,25 +57,16 @@
                 </div>
                 {% endif %}
                 <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Estado de Implementación:</strong></div>
+                    <div class="col-sm-3"><strong>Estado de Aplicabilidad:</strong></div>
                     <div class="col-sm-9">
-                        {% if control.implementation_status == 'implemented' %}
-                            <span class="badge bg-success fs-6">Implementado</span>
-                        {% elif control.implementation_status == 'pending' %}
-                            <span class="badge bg-warning fs-6">Pendiente</span>
-                        {% elif control.implementation_status == 'not_applicable' %}
-                            <span class="badge bg-secondary fs-6">No Aplicable</span>
-                        {% else %}
-                            <span class="badge bg-light text-dark fs-6">{{ control.implementation_status }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Aplicabilidad:</strong></div>
-                    <div class="col-sm-9">
-                        {% if control.is_applicable %}
+                        {% set status = control.applicability_status or ('aplicable' if control.is_applicable else 'no_aplicable') %}
+                        {% if status == 'aplicable' %}
                             <span class="badge bg-success fs-6">
                                 <i class="fas fa-check me-1"></i>Aplicable
+                            </span>
+                        {% elif status == 'transferido' %}
+                            <span class="badge bg-info fs-6">
+                                <i class="fas fa-arrow-right me-1"></i>Transferido
                             </span>
                         {% else %}
                             <span class="badge bg-danger fs-6">
@@ -84,6 +75,29 @@
                         {% endif %}
                     </div>
                 </div>
+                {% if control.applicability_status == 'transferido' and control.transfer_details %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Detalles de Transferencia:</strong></div>
+                    <div class="col-sm-9">
+                        <div class="p-3 bg-light rounded">
+                            {{ control.transfer_details }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if control.applicability_status == 'aplicable' or (not control.applicability_status and control.is_applicable) %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Estado de Implementación:</strong></div>
+                    <div class="col-sm-9">
+                        {% if control.maturity_level == 'no_implementado' or control.maturity_level == 'no_gestionado' %}
+                            <span class="badge bg-warning fs-6">No Implementado</span>
+                        {% else %}
+                            <span class="badge bg-success fs-6">Implementado</span>
+                        {% endif %}
+                        <small class="text-muted ms-2">Basado en nivel de madurez</small>
+                    </div>
+                </div>
+                {% endif %}
                 {% if control.justification %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Justificación:</strong></div>
@@ -112,7 +126,8 @@
                         <div class="d-flex align-items-center">
                             <div class="progress me-3" style="width: 150px; height: 12px;">
                                 <div class="progress-bar
-                                    {% if control.maturity_score <= 2 %}bg-danger
+                                    {% if control.maturity_score == 0 %}bg-secondary
+                                    {% elif control.maturity_score <= 2 %}bg-danger
                                     {% elif control.maturity_score <= 4 %}bg-warning
                                     {% else %}bg-success{% endif %}"
                                      style="width: {{ (control.maturity_score / 6 * 100)|int }}%"></div>
@@ -244,26 +259,27 @@
                 <h6 class="mb-0">Estado del Control</h6>
             </div>
             <div class="card-body">
-                {% if control.implementation_status == 'implemented' %}
-                    <div class="progress mb-2">
-                        <div class="progress-bar bg-success" style="width: 100%"></div>
-                    </div>
-                    <small class="text-success">Control completamente implementado</small>
-                {% elif control.implementation_status == 'pending' %}
-                    <div class="progress mb-2">
-                        <div class="progress-bar bg-warning" style="width: 30%"></div>
-                    </div>
-                    <small class="text-warning">Implementación en curso</small>
-                {% elif control.implementation_status == 'not_applicable' %}
+                {% set status = control.applicability_status or ('aplicable' if control.is_applicable else 'no_aplicable') %}
+                {% if status == 'no_aplicable' %}
                     <div class="progress mb-2">
                         <div class="progress-bar bg-secondary" style="width: 0%"></div>
                     </div>
                     <small class="text-secondary">Control no aplicable</small>
+                {% elif status == 'transferido' %}
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-info" style="width: 100%"></div>
+                    </div>
+                    <small class="text-info">Control transferido a tercero</small>
+                {% elif control.maturity_level == 'no_implementado' or control.maturity_level == 'no_gestionado' %}
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-warning" style="width: 5%"></div>
+                    </div>
+                    <small class="text-warning">Control no implementado</small>
                 {% else %}
                     <div class="progress mb-2">
-                        <div class="progress-bar bg-light" style="width: 0%"></div>
+                        <div class="progress-bar bg-success" style="width: {{ (control.maturity_score / 6 * 100)|int }}%"></div>
                     </div>
-                    <small class="text-muted">Estado no definido</small>
+                    <small class="text-success">Control implementado - Madurez nivel {{ control.maturity_score }}</small>
                 {% endif %}
             </div>
         </div>

@@ -57,8 +57,8 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
 
-    # Override database for development
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL', Config.SQLALCHEMY_DATABASE_URI)
+    # Override database for development - use localhost for local development
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL', 'postgresql://isms:isms_secure_password@localhost:5432/isms_db')
 
 class TestingConfig(Config):
     """Testing configuration"""

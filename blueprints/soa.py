@@ -6,6 +6,25 @@ from dateutil.relativedelta import relativedelta
 
 soa_bp = Blueprint('soa', __name__)
 
+def sort_controls_by_id(controls):
+    """Ordena los controles por control_id de forma natural (números primero, luego letras)"""
+    def sort_control_id(control):
+        control_id = control.control_id
+        # Separar por puntos: A.5.1 -> ['A', '5', '1']
+        parts = control_id.split('.')
+
+        # Crear una tupla para ordenamiento natural
+        sort_key = []
+        for part in parts:
+            if part.isdigit():
+                sort_key.append((0, int(part)))  # (0, número) para que los números vayan primero
+            else:
+                sort_key.append((1, part))  # (1, letra) para que las letras vayan después
+
+        return sort_key
+
+    return sorted(controls, key=sort_control_id)
+
 @soa_bp.route('/')
 @login_required
 def index():
@@ -27,8 +46,9 @@ def index():
         db.session.add(current_version)
         db.session.commit()
 
-    # Obtener controles de la versión actual
+    # Obtener controles de la versión actual y ordenarlos
     controls = current_version.controls.all() if current_version else []
+    controls = sort_controls_by_id(controls)
     all_versions = SOAVersion.query.order_by(SOAVersion.created_at.desc()).all()
 
     return render_template('soa/index.html',
@@ -52,15 +72,31 @@ def edit_control(id):
     control = SOAControl.query.get_or_404(id)
 
     if request.method == 'POST':
-        control.is_applicable = request.form.get('is_applicable') == 'on'
+        control.applicability_status = request.form.get('applicability_status', 'aplicable')
         control.justification = request.form['justification']
         control.evidence = request.form['evidence']
-        control.implementation_status = request.form['implementation_status']
+
+        # Actualizar nivel de madurez primero
         control.maturity_level = request.form['maturity_level']
+
+        # Derivar estado de implementación del nivel de madurez y aplicabilidad
+        if control.applicability_status == 'transferido':
+            control.implementation_status = 'implemented'  # Los transferidos se consideran implementados
+            control.transfer_details = request.form.get('transfer_details', '')
+        elif control.applicability_status == 'no_aplicable':
+            control.implementation_status = 'not_implemented'
+            control.transfer_details = None
+        else:  # aplicable
+            # Para controles aplicables, derivar del nivel de madurez
+            if control.maturity_level == 'no_implementado':
+                control.implementation_status = 'not_implemented'
+            else:
+                control.implementation_status = 'implemented'
+            control.transfer_details = None
         control.responsible_user_id = int(request.form['responsible_user_id']) if request.form['responsible_user_id'] else None
 
         # Fecha objetivo
-        if request.form['target_date']:
+        if request.form.get('target_date'):
             control.target_date = datetime.strptime(request.form['target_date'], '%Y-%m-%d').date()
         else:
             control.target_date = None
@@ -123,8 +159,9 @@ def create_version():
                         title=base_control.title,
                         description=base_control.description,
                         category=base_control.category,
-                        is_applicable=base_control.is_applicable,
+                        applicability_status=base_control.applicability_status or ('aplicable' if base_control.is_applicable else 'no_aplicable'),
                         justification=base_control.justification,
+                        transfer_details=base_control.transfer_details,
                         implementation_status=base_control.implementation_status,
                         maturity_level=base_control.maturity_level,
                         responsible_user_id=base_control.responsible_user_id,
@@ -145,15 +182,16 @@ def create_version():
 @login_required
 def view_version(id):
     version = SOAVersion.query.get_or_404(id)
-    controls = version.controls.all()
+    controls = sort_controls_by_id(version.controls.all())
 
     # Estadísticas de la versión
     stats = {
         'total_controls': len(controls),
-        'applicable': len([c for c in controls if c.is_applicable]),
+        'aplicable': len([c for c in controls if (c.applicability_status or ('aplicable' if c.is_applicable else 'no_aplicable')) == 'aplicable']),
+        'transferido': len([c for c in controls if (c.applicability_status or ('aplicable' if c.is_applicable else 'no_aplicable')) == 'transferido']),
+        'no_aplicable': len([c for c in controls if (c.applicability_status or ('aplicable' if c.is_applicable else 'no_aplicable')) == 'no_aplicable']),
         'implemented': len([c for c in controls if c.implementation_status == 'implemented']),
-        'pending': len([c for c in controls if c.implementation_status == 'pending']),
-        'not_applicable': len([c for c in controls if c.implementation_status == 'not_applicable'])
+        'not_implemented': len([c for c in controls if c.implementation_status == 'not_implemented' or c.implementation_status == 'pending'])
     }
 
     return render_template('soa/view_version.html', version=version, controls=controls, stats=stats)
@@ -170,6 +208,73 @@ def activate_version(id):
 
     flash(f'Versión {version.version_number} activada como versión actual', 'success')
     return redirect(url_for('soa.view_version', id=version.id))
+
+@soa_bp.route('/versions/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_version(id):
+    if not current_user.can_access('soa'):
+        flash('No tienes permisos para editar versiones SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    version = SOAVersion.query.get_or_404(id)
+
+    if request.method == 'POST':
+        version.version_number = request.form['version_number']
+        version.title = request.form['title']
+        version.description = request.form['description']
+        version.iso_version = request.form['iso_version']
+
+        # Establecer fechas
+        if request.form['approval_date']:
+            version.approval_date = datetime.strptime(request.form['approval_date'], '%Y-%m-%d').date()
+        else:
+            version.approval_date = None
+
+        if request.form['next_review_date']:
+            version.next_review_date = datetime.strptime(request.form['next_review_date'], '%Y-%m-%d').date()
+        else:
+            version.next_review_date = None
+
+        db.session.commit()
+        flash('Versión SOA actualizada correctamente', 'success')
+        return redirect(url_for('soa.view_version', id=version.id))
+
+    return render_template('soa/edit_version.html', version=version)
+
+@soa_bp.route('/versions/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_version(id):
+    if not current_user.can_access('soa'):
+        flash('No tienes permisos para eliminar versiones SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    version = SOAVersion.query.get_or_404(id)
+
+    # No permitir eliminar la versión actual
+    if version.is_current:
+        flash('No se puede eliminar la versión actual del SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    # Verificar si hay al menos otra versión
+    total_versions = SOAVersion.query.count()
+    if total_versions <= 1:
+        flash('No se puede eliminar la única versión del SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    try:
+        # Eliminar todos los controles asociados primero
+        for control in version.controls:
+            db.session.delete(control)
+
+        # Eliminar la versión
+        db.session.delete(version)
+        db.session.commit()
+        flash(f'Versión {version.version_number} eliminada correctamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error al eliminar la versión. Inténtelo de nuevo.', 'error')
+
+    return redirect(url_for('soa.versions'))
 
 @soa_bp.route('/versions/<int:id1>/compare/<int:id2>')
 @login_required
@@ -191,8 +296,10 @@ def compare_versions(id1, id2):
         if c1 and c2:
             # Control existe en ambas versiones
             changes = {}
-            if c1.is_applicable != c2.is_applicable:
-                changes['applicability'] = {'old': c1.is_applicable, 'new': c2.is_applicable}
+            status1 = c1.applicability_status or ('aplicable' if c1.is_applicable else 'no_aplicable')
+            status2 = c2.applicability_status or ('aplicable' if c2.is_applicable else 'no_aplicable')
+            if status1 != status2:
+                changes['applicability'] = {'old': status1, 'new': status2}
             if c1.implementation_status != c2.implementation_status:
                 changes['status'] = {'old': c1.implementation_status, 'new': c2.implementation_status}
             if c1.maturity_level != c2.maturity_level:
@@ -234,3 +341,75 @@ def compare_versions(id1, id2):
                          version1=version1,
                          version2=version2,
                          comparison=comparison)
+
+@soa_bp.route('/versions/<int:id>/clone', methods=['GET', 'POST'])
+@login_required
+def clone_version(id):
+    if not current_user.can_access('soa'):
+        flash('No tienes permisos para clonar versiones SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    source_version = SOAVersion.query.get_or_404(id)
+
+    if request.method == 'POST':
+        # Crear nueva versión basada en la fuente
+        new_version = SOAVersion(
+            version_number=request.form['version_number'],
+            title=request.form['title'],
+            description=request.form['description'],
+            iso_version=source_version.iso_version,  # Mantener la misma versión ISO
+            status='draft',  # Siempre crear como borrador
+            created_by_id=current_user.id
+        )
+
+        # Establecer fechas si se proporcionan
+        if request.form.get('approval_date'):
+            new_version.approval_date = datetime.strptime(request.form['approval_date'], '%Y-%m-%d').date()
+
+        if request.form.get('next_review_date'):
+            new_version.next_review_date = datetime.strptime(request.form['next_review_date'], '%Y-%m-%d').date()
+
+        db.session.add(new_version)
+        db.session.flush()  # Para obtener el ID
+
+        # Clonar todos los controles de la versión fuente
+        for source_control in source_version.controls:
+            new_control = SOAControl(
+                control_id=source_control.control_id,
+                title=source_control.title,
+                description=source_control.description,
+                category=source_control.category,
+                applicability_status=source_control.applicability_status or ('aplicable' if source_control.is_applicable else 'no_aplicable'),
+                justification=source_control.justification,
+                transfer_details=source_control.transfer_details,
+                implementation_status=source_control.implementation_status,
+                maturity_level=source_control.maturity_level,
+                responsible_user_id=source_control.responsible_user_id,
+                target_date=source_control.target_date,
+                evidence=source_control.evidence,
+                soa_version_id=new_version.id
+            )
+            db.session.add(new_control)
+
+        db.session.commit()
+        flash(f'Versión SOA {new_version.version_number} clonada correctamente desde v{source_version.version_number}', 'success')
+        return redirect(url_for('soa.view_version', id=new_version.id))
+
+    # Para GET: mostrar formulario de clonación
+    # Generar sugerencia de número de versión
+    latest_version = SOAVersion.query.order_by(SOAVersion.created_at.desc()).first()
+    if latest_version:
+        try:
+            # Intentar incrementar el número de versión
+            parts = latest_version.version_number.split('.')
+            major = int(parts[0])
+            minor = int(parts[1]) if len(parts) > 1 else 0
+            suggested_version = f"{major}.{minor + 1}"
+        except (ValueError, IndexError):
+            suggested_version = "1.1"
+    else:
+        suggested_version = "1.0"
+
+    return render_template('soa/clone_version.html',
+                         source_version=source_version,
+                         suggested_version=suggested_version)

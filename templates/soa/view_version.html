@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Versión {{ version.version_number }} - SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.versions') }}">Versiones</a></li>
+                <li class="breadcrumb-item active">v{{ version.version_number }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Versión {{ version.version_number }}
+                    {% if version.is_current %}
+                    <span class="badge bg-success ms-2">Actual</span>
+                    {% endif %}
+                </h1>
+                <p class="text-muted">{{ version.title }}</p>
+            </div>
+            <div class="btn-group">
+                {% if current_user.can_access('soa') %}
+                <a href="{{ url_for('soa.edit_version', id=version.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Editar Versión
+                </a>
+                {% if not version.is_current %}
+                <form method="POST" action="{{ url_for('soa.activate_version', id=version.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-success" onclick="return confirm('¿Activar esta versión como actual?')">
+                        <i class="fas fa-check me-2"></i>Activar
+                    </button>
+                </form>
+                {% endif %}
+                {% endif %}
+                <a href="{{ url_for('soa.versions') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información de la versión -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Información de la Versión</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Número de Versión:</strong></div>
+                    <div class="col-sm-9"><code>{{ version.version_number }}</code></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Título:</strong></div>
+                    <div class="col-sm-9">{{ version.title }}</div>
+                </div>
+                {% if version.description %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Descripción:</strong></div>
+                    <div class="col-sm-9">{{ version.description }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>ISO Version:</strong></div>
+                    <div class="col-sm-9">
+                        <span class="badge bg-light text-dark">ISO/IEC 27001:{{ version.iso_version }}</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Estado:</strong></div>
+                    <div class="col-sm-9">
+                        {% if version.status == 'active' %}
+                            <span class="badge bg-success">Activa</span>
+                        {% elif version.status == 'draft' %}
+                            <span class="badge bg-warning">Borrador</span>
+                        {% elif version.status == 'archived' %}
+                            <span class="badge bg-secondary">Archivada</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">{{ version.status|title }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Creado por:</strong></div>
+                    <div class="col-sm-9">{{ version.created_by.full_name or version.created_by.username }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Fecha de Creación:</strong></div>
+                    <div class="col-sm-9">{{ version.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                </div>
+                {% if version.approval_date %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Fecha de Aprobación:</strong></div>
+                    <div class="col-sm-9">{{ version.approval_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% endif %}
+                {% if version.next_review_date %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Próxima Revisión:</strong></div>
+                    <div class="col-sm-9">{{ version.next_review_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Estadísticas de Controles</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-1">{{ stats.total_controls }}</h4>
+                            <small class="text-muted">Total Controles</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-1">{{ stats.implemented }}</h4>
+                        <small class="text-muted">Implementados</small>
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h6 class="text-success mb-1">{{ stats.aplicable }}</h6>
+                        <small class="text-muted">Aplicables</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-info mb-1">{{ stats.transferido }}</h6>
+                        <small class="text-muted">Transferidos</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-secondary mb-1">{{ stats.no_aplicable }}</h6>
+                        <small class="text-muted">No Aplicables</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones rápidas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Acciones</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('soa.index') }}?version={{ version.id }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-list me-2"></i>Ver Controles
+                    </a>
+                    {% if current_user.can_access('soa') %}
+                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
+                        <i class="fas fa-download me-2"></i>Exportar SOA
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de controles -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Controles de la Versión {{ version.version_number }}</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if controls %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Control ID</th>
+                                <th>Título</th>
+                                <th>Aplicabilidad</th>
+                                <th>Implementación</th>
+                                <th>Madurez</th>
+                                <th>Responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for control in controls %}
+                            <tr>
+                                <td><code>{{ control.control_id }}</code></td>
+                                <td>
+                                    <strong>{{ control.title }}</strong>
+                                    {% if control.description %}
+                                    <br><small class="text-muted text-truncate-2">{{ control.description[:80] }}{{ '...' if control.description|length > 80 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set status = control.applicability_status or ('aplicable' if control.is_applicable else 'no_aplicable') %}
+                                    {% if status == 'aplicable' %}
+                                        <span class="badge bg-success">Aplicable</span>
+                                    {% elif status == 'transferido' %}
+                                        <span class="badge bg-info">Transferido</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No Aplicable</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if status == 'aplicable' %}
+                                        {% if control.maturity_level == 'no_implementado' or control.maturity_level == 'no_gestionado' %}
+                                            <span class="badge bg-warning">No Implementado</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Implementado</span>
+                                        {% endif %}
+                                    {% elif status == 'transferido' %}
+                                        <span class="badge bg-info">Transferido</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 50px; height: 6px;">
+                                            <div class="progress-bar
+                                                {% if control.maturity_score == 0 %}bg-secondary
+                                                {% elif control.maturity_score <= 2 %}bg-danger
+                                                {% elif control.maturity_score <= 4 %}bg-warning
+                                                {% else %}bg-success{% endif %}"
+                                                 style="width: {{ (control.maturity_score / 6 * 100)|int }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ control.maturity_level_display }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if control.responsible %}
+                                        {{ control.responsible.full_name or control.responsible.username }}
+                                    {% else %}
+                                        <small class="text-muted">No asignado</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('soa.view_control', id=control.id) }}" class="btn btn-outline-primary" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.can_access('soa') %}
+                                        <a href="{{ url_for('soa.edit_control', id=control.id) }}" class="btn btn-outline-secondary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay controles en esta versión</h5>
+                    <p class="text-muted">Esta versión del SOA no contiene controles definidos.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de exportación -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exportar SOA v{{ version.version_number }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Seleccione el formato de exportación para esta versión del SOA:</p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="exportSOA('pdf')">
+                        <i class="fas fa-file-pdf me-2"></i>Exportar como PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="exportSOA('excel')">
+                        <i class="fas fa-file-excel me-2"></i>Exportar como Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-info" onclick="exportSOA('csv')">
+                        <i class="fas fa-file-csv me-2"></i>Exportar como CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function exportSOA(format) {
+    // Implementar exportación según el formato
+    alert(`Exportando SOA v{{ version.version_number }} en formato ${format.toUpperCase()}...`);
+    // Aquí iría la lógica real de exportación
+    $('#exportModal').modal('hide');
+}
+</script>
+{% endblock %}

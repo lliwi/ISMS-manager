@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Clonar Versión {{ source_version.version_number }} - SOA - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.index') }}">SOA</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.versions') }}">Versiones</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('soa.view_version', id=source_version.id) }}">v{{ source_version.version_number }}</a></li>
+                <li class="breadcrumb-item active">Clonar</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Clonar Versión {{ source_version.version_number }}</h1>
+                <p class="text-muted">Crear una nueva versión basada en la versión existente</p>
+            </div>
+            <div>
+                <a href="{{ url_for('soa.view_version', id=source_version.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Nueva Versión SOA</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <!-- Información básica -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="version_number" class="form-label"><strong>Número de Versión</strong></label>
+                            <input type="text" class="form-control" id="version_number" name="version_number"
+                                   value="{{ suggested_version }}" required>
+                            <small class="form-text text-muted">Formato sugerido: Mayor.Menor (ej: 1.0, 1.1, 2.0)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="iso_version" class="form-label"><strong>Versión ISO 27001</strong></label>
+                            <select class="form-select" id="iso_version" name="iso_version" disabled>
+                                <option value="{{ source_version.iso_version }}" selected>ISO/IEC 27001:{{ source_version.iso_version }}</option>
+                            </select>
+                            <small class="form-text text-muted">Se mantiene la misma versión ISO de la versión fuente</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label"><strong>Título de la Versión</strong></label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               value="Copia de {{ source_version.title }}" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="form-label"><strong>Descripción</strong></label>
+                        <textarea class="form-control" id="description" name="description" rows="3">Versión clonada desde v{{ source_version.version_number }} - {{ source_version.description or '' }}</textarea>
+                    </div>
+
+                    <hr>
+
+                    <!-- Fechas opcionales -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="approval_date" class="form-label">Fecha de Aprobación</label>
+                            <input type="date" class="form-control" id="approval_date" name="approval_date">
+                            <small class="form-text text-muted">Opcional: fecha de aprobación por la dirección</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="next_review_date" class="form-label">Próxima Revisión</label>
+                            <input type="date" class="form-control" id="next_review_date" name="next_review_date">
+                            <small class="form-text text-muted">Fecha recomendada para la siguiente revisión</small>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('soa.view_version', id=source_version.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-copy me-2"></i>Clonar Versión
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de información de la versión fuente -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Versión Fuente: {{ source_version.version_number }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Título:</strong></div>
+                    <div class="col-7">{{ source_version.title }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>ISO Version:</strong></div>
+                    <div class="col-7">{{ source_version.iso_version }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Estado:</strong></div>
+                    <div class="col-7">
+                        {% if source_version.status == 'active' %}
+                            <span class="badge bg-success">Activa</span>
+                        {% elif source_version.status == 'draft' %}
+                            <span class="badge bg-warning">Borrador</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ source_version.status|title }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Controles:</strong></div>
+                    <div class="col-7">
+                        <span class="badge bg-info">{{ source_version.controls.count() }}</span>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Creada:</strong></div>
+                    <div class="col-7">{{ source_version.created_at.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% if source_version.approval_date %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Aprobada:</strong></div>
+                    <div class="col-7">{{ source_version.approval_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">¿Qué se va a clonar?</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Se copiarán:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Todos los controles ({{ source_version.controls.count() }})</li>
+                        <li>Estados de aplicabilidad</li>
+                        <li>Niveles de madurez</li>
+                        <li>Justificaciones y evidencias</li>
+                        <li>Responsables asignados</li>
+                        <li>Fechas objetivo</li>
+                    </ul>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Nota:</strong> La nueva versión se creará como "Borrador" y deberás activarla manualmente cuando esté lista.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
