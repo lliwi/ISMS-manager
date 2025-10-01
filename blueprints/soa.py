@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, Response
 from flask_login import login_required, current_user
-from models import SOAControl, SOAVersion, User, db
+from models import SOAControl, SOAVersion, User, ISOVersion, db
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from werkzeug.utils import secure_filename
@@ -180,7 +180,9 @@ def create_version():
 
     # Para GET: obtener versiones existentes para usar como base
     existing_versions = SOAVersion.query.order_by(SOAVersion.created_at.desc()).all()
-    return render_template('soa/create_version.html', existing_versions=existing_versions)
+    # Obtener versiones ISO activas
+    iso_versions = ISOVersion.query.filter_by(is_active=True).order_by(ISOVersion.year.desc()).all()
+    return render_template('soa/create_version.html', existing_versions=existing_versions, iso_versions=iso_versions)
 
 @soa_bp.route('/versions/<int:id>')
 @login_required
@@ -243,7 +245,9 @@ def edit_version(id):
         flash('Versión SOA actualizada correctamente', 'success')
         return redirect(url_for('soa.view_version', id=version.id))
 
-    return render_template('soa/edit_version.html', version=version)
+    # Obtener versiones ISO activas
+    iso_versions = ISOVersion.query.filter_by(is_active=True).order_by(ISOVersion.year.desc()).all()
+    return render_template('soa/edit_version.html', version=version, iso_versions=iso_versions)
 
 @soa_bp.route('/versions/<int:id>/delete', methods=['POST'])
 @login_required

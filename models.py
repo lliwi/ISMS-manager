@@ -72,6 +72,22 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
+class ISOVersion(db.Model):
+    __tablename__ = 'iso_versions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(20), unique=True, nullable=False)  # e.g., "2013", "2022"
+    year = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    number_of_controls = db.Column(db.Integer)  # e.g., 114 controls in 2013, 93 controls in 2022
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<ISOVersion {self.version}>'
+
 class SOAVersion(db.Model):
     __tablename__ = 'soa_versions'
 

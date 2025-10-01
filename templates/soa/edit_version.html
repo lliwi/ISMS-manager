@@ -49,9 +49,24 @@
                         <div class="col-md-6">
                             <label for="iso_version" class="form-label"><strong>Versión ISO 27001</strong></label>
                             <select class="form-select" id="iso_version" name="iso_version">
-                                <option value="2022" {{ 'selected' if version.iso_version == '2022' }}>ISO/IEC 27001:2022</option>
-                                <option value="2013" {{ 'selected' if version.iso_version == '2013' }}>ISO/IEC 27001:2013</option>
+                                {% if iso_versions %}
+                                    {% for iso in iso_versions %}
+                                        <option value="{{ iso.version }}" {{ 'selected' if version.iso_version == iso.version }}>
+                                            {{ iso.title }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="2022" {{ 'selected' if version.iso_version == '2022' }}>ISO/IEC 27001:2022</option>
+                                    <option value="2013" {{ 'selected' if version.iso_version == '2013' }}>ISO/IEC 27001:2013</option>
+                                {% endif %}
                             </select>
+                            {% if iso_versions %}
+                            <small class="form-text text-muted">
+                                <a href="{{ url_for('auxiliary.iso_versions') }}" target="_blank">
+                                    <i class="fas fa-external-link-alt me-1"></i>Gestionar versiones ISO
+                                </a>
+                            </small>
+                            {% endif %}
                         </div>
                     </div>
 
