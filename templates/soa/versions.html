@@ -136,6 +136,29 @@
                                         </a>
                                         {% endif %}
 
+                                        <!-- Botón importar/exportar -->
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Importar/Exportar">
+                                                <i class="fas fa-file-import"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><h6 class="dropdown-header">Importar/Exportar CSV</h6></li>
+                                                {% if current_user.can_access('soa') %}
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="openImportModal({{ version.id }}, '{{ version.version_number }}'); return false;">
+                                                        <i class="fas fa-file-import me-2"></i>Importar desde CSV
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                {% endif %}
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ url_for('soa.export_controls_version', id=version.id) }}">
+                                                        <i class="fas fa-file-csv me-2"></i>Exportar a CSV
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+
                                         <!-- Botón eliminar -->
                                         {% if current_user.can_access('soa') and not version.is_current %}
                                         <button type="button" class="btn btn-outline-danger btn-sm" title="Eliminar" onclick="deleteVersion({{ version.id }}, '{{ version.version_number }}')">
@@ -197,6 +220,55 @@
     </div>
 </div>
 {% endif %}
+<!-- Modal de Importación de Controles -->
+<div class="modal fade" id="importControlsModal" tabindex="-1" aria-labelledby="importControlsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importControlsModalLabel">Importar Controles SOA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('soa.import_controls') }}" enctype="multipart/form-data" id="importForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="version_id" id="modal_version_id" value=""/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Versión Destino</label>
+                        <input type="text" class="form-control" id="modal_version_display" readonly>
+                        <div class="form-text">Versión donde se importarán los controles.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Archivo CSV</label>
+                        <input type="file" class="form-control" id="import_file" name="import_file" accept=".csv" required>
+                        <div class="form-text">Formato soportado: CSV (.csv)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="overwrite_existing" name="overwrite_existing" value="true">
+                            <label class="form-check-label" for="overwrite_existing">
+                                Sobrescribir controles existentes
+                            </label>
+                            <div class="form-text">Si está marcado, actualizará los controles que ya existan en la versión.</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> La importación añadirá o actualizará controles en la versión seleccionada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_head %}
@@ -242,6 +314,9 @@
 .table-responsive {
     overflow-x: auto;
     overflow-y: visible; /* Permite que los dropdowns sean visibles */
+    /* Añadir padding inferior para dar espacio a los dropdowns */
+    padding-bottom: 150px;
+    margin-bottom: -150px;
 }
 
 /* Asegurar que los dropdowns estén sobre otros elementos */
@@ -252,7 +327,7 @@
 
 /* Ancho mínimo para la columna de acciones */
 .table td:last-child {
-    min-width: 180px;
+    min-width: 220px; /* Aumentado para dar más espacio */
     white-space: nowrap;
 }
 
@@ -264,6 +339,45 @@
 /* Evitar que los botones se rompan en líneas múltiples */
 .d-flex.flex-wrap {
     flex-wrap: nowrap !important;
+}
+
+/* Ajustar el ancho de la tabla para evitar scroll innecesario */
+.table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+/* Ajustar columnas específicas */
+.table th:nth-child(1), .table td:nth-child(1) { /* Versión */
+    width: 90px;
+}
+.table th:nth-child(2), .table td:nth-child(2) { /* Título */
+    width: 30%;
+    min-width: 200px;
+}
+.table th:nth-child(3), .table td:nth-child(3) { /* ISO Version */
+    width: 100px;
+}
+.table th:nth-child(4), .table td:nth-child(4) { /* Estado */
+    width: 90px;
+}
+.table th:nth-child(5), .table td:nth-child(5) { /* Controles */
+    width: 85px;
+}
+.table th:nth-child(6), .table td:nth-child(6) { /* Creado por */
+    width: 120px;
+}
+.table th:nth-child(7), .table td:nth-child(7) { /* Fecha */
+    width: 115px;
+}
+.table th:nth-child(8), .table td:nth-child(8) { /* Acciones */
+    width: 220px;
+}
+
+/* Permitir que el texto se ajuste en columnas largas */
+.table td:nth-child(2) {
+    white-space: normal;
+    word-wrap: break-word;
 }
 </style>
 {% endblock %}
@@ -287,6 +401,23 @@ function deleteVersion(versionId, versionNumber) {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+function openImportModal(versionId, versionNumber) {
+    // Establecer el ID de la versión en el campo oculto
+    document.getElementById('modal_version_id').value = versionId;
+
+    // Establecer el texto de la versión en el campo de solo lectura
+    document.getElementById('modal_version_display').value = `v${versionNumber}`;
+
+    // Resetear el formulario
+    document.getElementById('importForm').reset();
+    document.getElementById('modal_version_id').value = versionId;
+    document.getElementById('modal_version_display').value = `v${versionNumber}`;
+
+    // Abrir el modal
+    const modal = new bootstrap.Modal(document.getElementById('importControlsModal'));
+    modal.show();
 }
 </script>
 {% endblock %}

@@ -1,8 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, Response
 from flask_login import login_required, current_user
 from models import SOAControl, SOAVersion, User, db
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
+from werkzeug.utils import secure_filename
+import csv
+import io
+import os
 
 soa_bp = Blueprint('soa', __name__)
 
@@ -413,3 +417,182 @@ def clone_version(id):
     return render_template('soa/clone_version.html',
                          source_version=source_version,
                          suggested_version=suggested_version)
+
+# === IMPORTACIÓN Y EXPORTACIÓN DE CONTROLES ===
+
+@soa_bp.route('/versions/<int:id>/export')
+@login_required
+def export_controls_version(id):
+    """Exportar controles de una versión específica del SOA a CSV"""
+    if not current_user.can_access('soa'):
+        flash('No tienes permisos para exportar controles SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    # Obtener la versión especificada
+    version = SOAVersion.query.get_or_404(id)
+    controls = sort_controls_by_id(version.controls.all())
+
+    return export_controls_csv(controls, version)
+
+def export_controls_csv(controls, version):
+    """Exportar controles a formato CSV"""
+    # Crear buffer de texto
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+    # Encabezados
+    headers = [
+        'ID Control', 'Título', 'Descripción', 'Categoría',
+        'Estado Aplicabilidad', 'Estado Implementación', 'Nivel Madurez',
+        'Justificación', 'Detalles Transferencia', 'Evidencia',
+        'Responsable', 'Fecha Objetivo'
+    ]
+    writer.writerow(headers)
+
+    # Datos
+    for control in controls:
+        writer.writerow([
+            control.control_id,
+            control.title or '',
+            control.description or '',
+            control.category or '',
+            control.applicability_status or 'aplicable',
+            control.implementation_status or '',
+            control.maturity_level or '',
+            control.justification or '',
+            control.transfer_details or '',
+            control.evidence or '',
+            control.responsible.full_name if control.responsible else '',
+            control.target_date.strftime('%Y-%m-%d') if control.target_date else ''
+        ])
+
+    # Preparar respuesta
+    output.seek(0)
+    filename = f"SOA_Controles_v{version.version_number}_{datetime.now().strftime('%Y%m%d')}.csv"
+
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+@soa_bp.route('/import-controls', methods=['POST'])
+@login_required
+def import_controls():
+    """Importar controles desde archivo CSV"""
+    if not current_user.can_access('soa'):
+        flash('No tienes permisos para importar controles SOA', 'error')
+        return redirect(url_for('soa.versions'))
+
+    version_id = request.form.get('version_id')
+    overwrite_existing = request.form.get('overwrite_existing') == 'true'
+
+    if not version_id:
+        flash('Debe seleccionar una versión destino', 'error')
+        return redirect(url_for('soa.versions'))
+
+    version = SOAVersion.query.get_or_404(version_id)
+
+    # Verificar que se haya subido un archivo
+    if 'import_file' not in request.files:
+        flash('Debe seleccionar un archivo para importar', 'error')
+        return redirect(url_for('soa.versions'))
+
+    file = request.files['import_file']
+
+    if file.filename == '':
+        flash('Debe seleccionar un archivo para importar', 'error')
+        return redirect(url_for('soa.versions'))
+
+    try:
+        # Determinar el tipo de archivo
+        filename = secure_filename(file.filename)
+        file_ext = os.path.splitext(filename)[1].lower()
+
+        if file_ext == '.csv':
+            result = import_controls_from_csv(file, version, overwrite_existing)
+        else:
+            flash('Formato de archivo no soportado. Use CSV (.csv)', 'error')
+            return redirect(url_for('soa.versions'))
+
+        flash(result['message'], result['category'])
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al importar controles: {str(e)}', 'error')
+
+    return redirect(url_for('soa.view_version', id=version.id))
+
+def import_controls_from_csv(file, version, overwrite_existing):
+    """Importar controles desde archivo CSV"""
+    # Decodificar el archivo
+    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+    csv_reader = csv.DictReader(stream)
+
+    added_count = 0
+    updated_count = 0
+    skipped_count = 0
+
+    for row in csv_reader:
+        # Obtener el ID del control (buscar variaciones del nombre de columna)
+        control_id = row.get('ID Control') or row.get('control_id') or row.get('id_control')
+
+        if not control_id or not control_id.strip():
+            continue
+
+        control_id = control_id.strip()
+
+        # Buscar control existente en esta versión
+        existing_control = SOAControl.query.filter_by(
+            control_id=control_id,
+            soa_version_id=version.id
+        ).first()
+
+        if existing_control and not overwrite_existing:
+            skipped_count += 1
+            continue
+
+        # Preparar datos del control
+        control_data = {
+            'control_id': control_id,
+            'soa_version_id': version.id,
+            'title': row.get('Título') or row.get('title') or '',
+            'description': row.get('Descripción') or row.get('description') or '',
+            'category': row.get('Categoría') or row.get('category') or '',
+            'applicability_status': row.get('Estado Aplicabilidad') or row.get('applicability_status') or 'aplicable',
+            'implementation_status': row.get('Estado Implementación') or row.get('implementation_status') or '',
+            'maturity_level': row.get('Nivel Madurez') or row.get('maturity_level') or '',
+            'justification': row.get('Justificación') or row.get('justification') or '',
+            'transfer_details': row.get('Detalles Transferencia') or row.get('transfer_details') or '',
+            'evidence': row.get('Evidencia') or row.get('evidence') or ''
+        }
+
+        # Manejar fecha objetivo
+        target_date_str = row.get('Fecha Objetivo') or row.get('target_date') or ''
+        if target_date_str and target_date_str.strip():
+            try:
+                control_data['target_date'] = datetime.strptime(target_date_str.strip(), '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        if existing_control:
+            # Actualizar control existente
+            for key, value in control_data.items():
+                if key != 'soa_version_id' and value:  # No actualizar la versión ni valores vacíos
+                    setattr(existing_control, key, value)
+            updated_count += 1
+        else:
+            # Crear nuevo control
+            new_control = SOAControl(**control_data)
+            db.session.add(new_control)
+            added_count += 1
+
+    db.session.commit()
+
+    message = f'Importación completada: {added_count} controles añadidos'
+    if updated_count > 0:
+        message += f', {updated_count} actualizados'
+    if skipped_count > 0:
+        message += f', {skipped_count} omitidos'
+
+    return {'message': message, 'category': 'success'}
