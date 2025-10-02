@@ -33,17 +33,17 @@
                 <h6 class="mb-0">Información del Documento</h6>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <div class="row mb-3">
                         <div class="col-md-8">
-                            <label for="title" class="form-label"><strong>Título del Documento</strong></label>
+                            <label for="title" class="form-label"><strong>Título del Documento</strong> <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="title" name="title" required
                                    placeholder="ej: Política de Seguridad de la Información">
                         </div>
                         <div class="col-md-4">
-                            <label for="document_type" class="form-label"><strong>Tipo de Documento</strong></label>
+                            <label for="document_type" class="form-label"><strong>Tipo de Documento</strong> <span class="text-danger">*</span></label>
                             <select class="form-select" id="document_type" name="document_type" required>
                                 <option value="">Seleccionar tipo...</option>
                                 <option value="policy">Política</option>
@@ -58,11 +58,20 @@
                     </div>
 
                     <div class="mb-4">
+                        <label for="file" class="form-label"><strong>Archivo Adjunto</strong></label>
+                        <input type="file" class="form-control" id="file" name="file"
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.md">
+                        <small class="form-text text-muted">
+                            Formatos permitidos: PDF, DOCX, XLSX, PPTX, ODT, TXT, MD (Máx. 50 MB)
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
                         <label for="content" class="form-label"><strong>Contenido</strong></label>
                         <textarea class="form-control" id="content" name="content" rows="10"
                                   placeholder="Contenido del documento..."></textarea>
                         <small class="form-text text-muted">
-                            Ingrese el contenido principal del documento. Utilice Markdown para formato.
+                            Ingrese el contenido principal del documento. Si sube un archivo, este contenido es opcional.
                         </small>
                     </div>
 
@@ -71,23 +80,39 @@
                     <!-- Controles SOA Relacionados -->
                     <div class="mb-4">
                         <label class="form-label"><strong>Controles SOA Relacionados</strong></label>
-                        <small class="form-text text-muted d-block mb-3">
-                            Seleccione los controles de seguridad que este documento resuelve o aplica.
-                        </small>
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Los controles seleccionados se actualizarán automáticamente a <strong>Madurez Nivel 2 (Repetible)</strong>
+                            cuando se documenten, si su nivel actual es inferior.
+                        </div>
 
                         {% if controls %}
-                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                            <div class="row">
+                        <!-- Filtro de controles -->
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="control-filter"
+                                   placeholder="🔍 Buscar controles por ID, título o categoría...">
+                        </div>
+
+                        <!-- Contador de controles -->
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <span id="selected-count">0</span> controles seleccionados de
+                                <span id="total-count">{{ controls|length }}</span>
+                            </small>
+                        </div>
+
+                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;" id="controls-container">
+                            <div class="row" id="controls-list">
                                 {% for control in controls %}
-                                <div class="col-md-6 mb-2">
+                                <div class="col-md-12 mb-2 control-item" data-control-text="{{ control.control_id|lower }} {{ control.title|lower }} {{ control.category|lower }}">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox"
+                                        <input class="form-check-input control-checkbox" type="checkbox"
                                                name="related_controls" value="{{ control.id }}"
                                                id="control_{{ control.id }}">
-                                        <label class="form-check-label" for="control_{{ control.id }}">
+                                        <label class="form-check-label" for="control_{{ control.id }}" style="cursor: pointer;">
                                             <code class="text-primary">{{ control.control_id }}</code>
-                                            <strong class="d-block">{{ control.title }}</strong>
-                                            <small class="text-muted">{{ control.category }}</small>
+                                            <strong>{{ control.title }}</strong>
+                                            <br><small class="text-muted">{{ control.category }}</small>
                                         </label>
                                     </div>
                                 </div>
@@ -95,14 +120,12 @@
                             </div>
                         </div>
 
-                        <!-- Filtro de controles -->
-                        <div class="mt-2">
-                            <input type="text" class="form-control form-control-sm"
-                                   id="control-filter" placeholder="Filtrar controles...">
+                        <div id="no-results" class="alert alert-warning mt-2" style="display: none;">
+                            <i class="fas fa-search me-2"></i>No se encontraron controles que coincidan con la búsqueda.
                         </div>
                         {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
                             No hay controles SOA disponibles. Primero debe crear una versión SOA e importar controles.
                         </div>
                         {% endif %}
@@ -173,25 +196,79 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filtro de controles
+    // Elementos
     const filterInput = document.getElementById('control-filter');
-    const controlCheckboxes = document.querySelectorAll('[name="related_controls"]');
+    const controlItems = document.querySelectorAll('.control-item');
+    const controlCheckboxes = document.querySelectorAll('.control-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const noResults = document.getElementById('no-results');
 
+    // Función para actualizar el contador de seleccionados
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.control-checkbox:checked').length;
+        if (selectedCount) {
+            selectedCount.textContent = checked;
+        }
+    }
+
+    // Filtro de controles
     if (filterInput) {
         filterInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
 
-            controlCheckboxes.forEach(checkbox => {
-                const label = checkbox.nextElementSibling;
-                const text = label.textContent.toLowerCase();
-                const parentCol = checkbox.closest('.col-md-6');
+            controlItems.forEach(item => {
+                const controlText = item.getAttribute('data-control-text');
 
-                if (text.includes(searchTerm)) {
-                    parentCol.style.display = '';
+                if (controlText.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
                 } else {
-                    parentCol.style.display = 'none';
+                    item.style.display = 'none';
                 }
             });
+
+            // Mostrar/ocultar mensaje de sin resultados
+            if (noResults) {
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Actualizar contador cuando se marcan/desmarcan checkboxes
+    controlCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Inicializar contador
+    updateSelectedCount();
+
+    // Advertencia al salir sin guardar
+    let formModified = false;
+    const form = document.querySelector('form');
+
+    if (form) {
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                formModified = true;
+            });
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formModified) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        form.addEventListener('submit', () => {
+            formModified = false;
         });
     }
 });

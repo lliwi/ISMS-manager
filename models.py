@@ -229,6 +229,27 @@ class Risk(db.Model):
     def __repr__(self):
         return f'<Risk {self.title}>'
 
+class DocumentVersion(db.Model):
+    __tablename__ = 'document_versions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=False)
+    version_number = db.Column(db.String(20), nullable=False)
+    file_path = db.Column(db.String(500))
+    file_size = db.Column(db.Integer)  # Tamaño en bytes
+    file_type = db.Column(db.String(100))  # MIME type
+    content = db.Column(db.Text)
+    status = db.Column(db.String(20), default='draft')
+    change_notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Relationships
+    created_by = db.relationship('User', backref='created_document_versions')
+
+    def __repr__(self):
+        return f'<DocumentVersion {self.version_number}>'
+
 class Document(db.Model):
     __tablename__ = 'documents'
 
@@ -239,6 +260,8 @@ class Document(db.Model):
     status = db.Column(db.String(20), default='draft')  # draft, review, approved, obsolete
     content = db.Column(db.Text)
     file_path = db.Column(db.String(500))
+    file_size = db.Column(db.Integer)  # Tamaño en bytes
+    file_type = db.Column(db.String(100))  # MIME type
     approval_date = db.Column(db.Date)
     next_review_date = db.Column(db.Date)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -246,13 +269,106 @@ class Document(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Versionado
+    current_version_id = db.Column(db.Integer, db.ForeignKey('document_versions.id'))
+    parent_document_id = db.Column(db.Integer, db.ForeignKey('documents.id'))
+
+    # Validación IA (opcional)
+    ai_verified = db.Column(db.Boolean, default=False)
+    ai_verification_date = db.Column(db.DateTime)
+    ai_verification_version = db.Column(db.String(20))
+    ai_model_used = db.Column(db.String(100))
+    ai_overall_score = db.Column(db.Integer)  # 0-100
+    ai_verified_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    ai_needs_reverification = db.Column(db.Boolean, default=False)
+
     # Relationships
     author = db.relationship('User', foreign_keys=[author_id], backref='authored_documents')
     approver = db.relationship('User', foreign_keys=[approver_id], backref='approved_documents')
+    ai_verified_by = db.relationship('User', foreign_keys=[ai_verified_by_id], backref='ai_verified_documents')
     related_controls = db.relationship('SOAControl', secondary=document_control_association, back_populates='related_documents')
+    versions = db.relationship('DocumentVersion', backref='document', lazy='dynamic', foreign_keys='DocumentVersion.document_id')
+    current_version = db.relationship('DocumentVersion', foreign_keys=[current_version_id], post_update=True)
+    parent_document = db.relationship('Document', remote_side=[id], backref='cloned_documents')
 
     def __repr__(self):
         return f'<Document {self.title} v{self.version}>'
+
+    @property
+    def has_file(self):
+        """Verifica si el documento tiene un archivo adjunto"""
+        return self.file_path is not None and self.file_path != ''
+
+    @property
+    def file_extension(self):
+        """Retorna la extensión del archivo"""
+        if self.file_path:
+            return self.file_path.rsplit('.', 1)[-1].lower()
+        return None
+
+    @property
+    def is_pdf(self):
+        """Verifica si el archivo es PDF"""
+        return self.file_extension == 'pdf'
+
+    @property
+    def is_office(self):
+        """Verifica si es un documento ofimático"""
+        office_exts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp']
+        return self.file_extension in office_exts
+
+    @property
+    def ai_verification_status(self):
+        """Retorna el estado de verificación IA"""
+        if not self.ai_verified:
+            return 'not_verified'
+        if self.ai_needs_reverification:
+            return 'needs_reverification'
+        if self.ai_overall_score:
+            if self.ai_overall_score >= 80:
+                return 'verified_compliant'
+            elif self.ai_overall_score >= 50:
+                return 'verified_partial'
+            else:
+                return 'verified_non_compliant'
+        return 'verified'
+
+class DocumentControlValidation(db.Model):
+    __tablename__ = 'document_control_validations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey('documents.id'), nullable=False)
+    control_id = db.Column(db.Integer, db.ForeignKey('soa_controls.id'), nullable=False)
+    document_version = db.Column(db.String(20))
+
+    # Resultados
+    compliance_status = db.Column(db.String(20))  # compliant, partial, non_compliant
+    confidence_level = db.Column(db.Integer)  # 1-5
+    overall_score = db.Column(db.Integer)  # 0-100
+    summary = db.Column(db.Text)
+
+    # Detalles (almacenados como JSON)
+    ai_analysis = db.Column(db.Text)  # JSON completo de respuesta IA
+    covered_aspects = db.Column(db.JSON)
+    missing_aspects = db.Column(db.JSON)
+    evidence_quotes = db.Column(db.JSON)
+    recommendations = db.Column(db.JSON)
+    maturity_suggestion = db.Column(db.Integer)  # 2-6
+
+    # Metadatos
+    ai_model = db.Column(db.String(100))
+    tokens_used = db.Column(db.Integer)
+    validation_time = db.Column(db.Float)  # Segundos
+    validated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    validated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # Relationships
+    document = db.relationship('Document', backref='ai_validations')
+    control = db.relationship('SOAControl', backref='document_validations')
+    validated_by = db.relationship('User', backref='ai_validations_performed')
+
+    def __repr__(self):
+        return f'<DocumentControlValidation doc:{self.document_id} ctrl:{self.control_id}>'
 
 class Incident(db.Model):
     __tablename__ = 'incidents'

@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Editar {{ document.title }} - Documentos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.index') }}">Documentos</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.view', id=document.id) }}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active">Editar</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Editar Documento</h1>
+                <p class="text-muted">Modificar información y crear nueva versión si es necesario</p>
+            </div>
+            <div>
+                <a href="{{ url_for('documents.view', id=document.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Cancelar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row">
+        <!-- Formulario principal -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Información del Documento</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="title" class="form-label"><strong>Título del Documento</strong> <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   value="{{ document.title }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="document_type" class="form-label"><strong>Tipo</strong> <span class="text-danger">*</span></label>
+                            <select class="form-select" id="document_type" name="document_type" required>
+                                <option value="policy" {{ 'selected' if document.document_type == 'policy' }}>Política</option>
+                                <option value="procedure" {{ 'selected' if document.document_type == 'procedure' }}>Procedimiento</option>
+                                <option value="instruction" {{ 'selected' if document.document_type == 'instruction' }}>Instrucción</option>
+                                <option value="record" {{ 'selected' if document.document_type == 'record' }}>Registro</option>
+                                <option value="minutes" {{ 'selected' if document.document_type == 'minutes' }}>Acta</option>
+                                <option value="plan" {{ 'selected' if document.document_type == 'plan' }}>Plan</option>
+                                <option value="report" {{ 'selected' if document.document_type == 'report' }}>Informe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="content" class="form-label"><strong>Contenido</strong></label>
+                        <textarea class="form-control" id="content" name="content" rows="10"
+                                  placeholder="Contenido del documento...">{{ document.content or '' }}</textarea>
+                        <small class="form-text text-muted">
+                            Ingrese el contenido principal del documento. Si sube un archivo, este contenido es opcional.
+                        </small>
+                    </div>
+
+                    <hr>
+
+                    <!-- Archivo adjunto -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Archivo Adjunto</strong></label>
+
+                        {% if document.has_file %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-paperclip me-2"></i>
+                            <strong>Archivo actual:</strong> {{ document.file_path.split('/')[-1] }}
+                            ({{ (document.file_size / 1024)|round(1) }} KB)
+                            <br>
+                            <small>Si sube un nuevo archivo, se creará una nueva versión del documento.</small>
+                        </div>
+                        {% endif %}
+
+                        <input type="file" class="form-control" id="file" name="file"
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.md">
+                        <small class="form-text text-muted">
+                            Formatos permitidos: PDF, DOCX, XLSX, PPTX, ODT, TXT, MD (Máx. 50 MB)
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="change_notes" class="form-label"><strong>Notas del Cambio</strong></label>
+                        <textarea class="form-control" id="change_notes" name="change_notes" rows="3"
+                                  placeholder="Describe los cambios realizados en esta versión..."></textarea>
+                        <small class="form-text text-muted">
+                            Estas notas se guardarán en el historial de versiones.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles SOA Relacionados -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Controles SOA Relacionados</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Los controles seleccionados se actualizarán automáticamente a <strong>Madurez Nivel 2 (Repetible)</strong>
+                        cuando se documenten, si su nivel actual es inferior.
+                    </div>
+
+                    {% if controls %}
+                    <!-- Filtro de controles -->
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="control-filter"
+                               placeholder="🔍 Buscar controles por ID, título o categoría...">
+                    </div>
+
+                    <!-- Contador de controles -->
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <span id="selected-count">{{ document.related_controls|length }}</span> controles seleccionados de
+                            <span id="total-count">{{ controls|length }}</span>
+                        </small>
+                    </div>
+
+                    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                        <div class="row">
+                            {% for control in controls %}
+                            <div class="col-md-12 mb-2 control-item" data-control-text="{{ control.control_id|lower }} {{ control.title|lower }} {{ control.category|lower }}">
+                                <div class="form-check">
+                                    <input class="form-check-input control-checkbox" type="checkbox"
+                                           name="related_controls" value="{{ control.id }}"
+                                           id="control_{{ control.id }}"
+                                           {{ 'checked' if control in document.related_controls }}>
+                                    <label class="form-check-label" for="control_{{ control.id }}" style="cursor: pointer;">
+                                        <code class="text-primary">{{ control.control_id }}</code>
+                                        <strong>{{ control.title }}</strong>
+                                        <br><small class="text-muted">{{ control.category }}</small>
+                                        {% if control.maturity_level != 'no_implementado' %}
+                                        <span class="badge bg-info">{{ control.maturity_level_display }}</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="no-results" class="alert alert-warning mt-2" style="display: none;">
+                        <i class="fas fa-search me-2"></i>No se encontraron controles que coincidan con la búsqueda.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No hay controles SOA disponibles. Primero debe crear una versión SOA e importar controles.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="d-flex justify-content-between mb-4">
+                <a href="{{ url_for('documents.view', id=document.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+
+        <!-- Información lateral -->
+        <div class="col-md-4">
+            <!-- Información de versión actual -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Versión Actual</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Versión:</strong></div>
+                        <div class="col-7"><code>{{ document.version }}</code></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Estado:</strong></div>
+                        <div class="col-7">
+                            {% if document.status == 'draft' %}
+                                <span class="badge bg-warning">Borrador</span>
+                            {% elif document.status == 'review' %}
+                                <span class="badge bg-info">En Revisión</span>
+                            {% elif document.status == 'approved' %}
+                                <span class="badge bg-success">Aprobado</span>
+                            {% elif document.status == 'obsolete' %}
+                                <span class="badge bg-secondary">Obsoleto</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Última Edición:</strong></div>
+                        <div class="col-7"><small>{{ document.updated_at.strftime('%d/%m/%Y') }}</small></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advertencias -->
+            {% if document.ai_verified %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Atención:</strong> Este documento ha sido verificado por IA. Al editarlo, se marcará para re-verificación.
+            </div>
+            {% endif %}
+
+            <!-- Ayuda sobre versionado -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Sobre el Versionado</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Nueva versión automática:</strong>
+                    </p>
+                    <ul class="small">
+                        <li>Se crea si cambias el contenido</li>
+                        <li>Se crea si subes un nuevo archivo</li>
+                    </ul>
+                    <p class="small mb-2">
+                        <strong>El historial guarda:</strong>
+                    </p>
+                    <ul class="small mb-0">
+                        <li>Todas las versiones anteriores</li>
+                        <li>Archivos de cada versión</li>
+                        <li>Notas de cambios</li>
+                        <li>Quién hizo cada cambio</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Controles seleccionados actualmente -->
+            {% if document.related_controls %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Controles Actualmente Asociados</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        {% for control in document.related_controls %}
+                        <div class="mb-1">
+                            <code class="text-primary">{{ control.control_id }}</code>
+                            {{ control.title }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos
+    const filterInput = document.getElementById('control-filter');
+    const controlItems = document.querySelectorAll('.control-item');
+    const controlCheckboxes = document.querySelectorAll('.control-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const noResults = document.getElementById('no-results');
+
+    // Función para actualizar el contador de seleccionados
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.control-checkbox:checked').length;
+        if (selectedCount) {
+            selectedCount.textContent = checked;
+        }
+    }
+
+    // Filtro de controles
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            controlItems.forEach(item => {
+                const controlText = item.getAttribute('data-control-text');
+
+                if (controlText.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Mostrar/ocultar mensaje de sin resultados
+            if (noResults) {
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Actualizar contador cuando se marcan/desmarcan checkboxes
+    controlCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Inicializar contador
+    updateSelectedCount();
+
+    // Advertencia al salir sin guardar
+    let formModified = false;
+    const form = document.querySelector('form');
+
+    if (form) {
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                formModified = true;
+            });
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formModified) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        form.addEventListener('submit', () => {
+            formModified = false;
+        });
+    }
+});
+</script>
+{% endblock %}

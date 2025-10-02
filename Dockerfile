@@ -16,6 +16,11 @@ RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
     libpq-dev \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

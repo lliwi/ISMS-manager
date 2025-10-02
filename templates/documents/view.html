@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.title }} - Documentos - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<!-- PDF.js para visualizar PDFs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+.document-viewer {
+    width: 100%;
+    height: 600px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+
+.document-viewer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+#pdf-canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.pdf-controls {
+    background: #f8f9fa;
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.375rem 0.375rem 0 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.index') }}">Documentos</a></li>
+                <li class="breadcrumb-item active">{{ document.title }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">{{ document.title }}</h1>
+                <p class="text-muted">
+                    Versión {{ document.version }} -
+                    {% if document.document_type == 'policy' %}Política
+                    {% elif document.document_type == 'procedure' %}Procedimiento
+                    {% elif document.document_type == 'instruction' %}Instrucción
+                    {% elif document.document_type == 'record' %}Registro
+                    {% elif document.document_type == 'minutes' %}Acta
+                    {% elif document.document_type == 'plan' %}Plan
+                    {% elif document.document_type == 'report' %}Informe
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+                {% if current_user.can_access('documents') %}
+                <a href="{{ url_for('documents.edit', id=document.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Editar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Contenido principal -->
+    <div class="col-md-8">
+        <!-- Badges de estado -->
+        <div class="mb-3">
+            {% if document.status == 'draft' %}
+                <span class="badge bg-warning">Borrador</span>
+            {% elif document.status == 'review' %}
+                <span class="badge bg-info">En Revisión</span>
+            {% elif document.status == 'approved' %}
+                <span class="badge bg-success">Aprobado</span>
+            {% elif document.status == 'obsolete' %}
+                <span class="badge bg-secondary">Obsoleto</span>
+            {% endif %}
+
+            {% if document.ai_verification_status == 'verified_compliant' %}
+                <span class="badge bg-success">
+                    <i class="fas fa-robot"></i> Verificado IA - Cumple ({{ document.ai_overall_score }}%)
+                </span>
+            {% elif document.ai_verification_status == 'verified_partial' %}
+                <span class="badge bg-warning">
+                    <i class="fas fa-robot"></i> Verificado IA - Parcial ({{ document.ai_overall_score }}%)
+                </span>
+            {% elif document.ai_verification_status == 'verified_non_compliant' %}
+                <span class="badge bg-danger">
+                    <i class="fas fa-robot"></i> Verificado IA - No Cumple ({{ document.ai_overall_score }}%)
+                </span>
+            {% elif document.ai_verification_status == 'needs_reverification' %}
+                <span class="badge bg-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Modificado - Requiere re-verificación
+                </span>
+            {% endif %}
+
+            {% if document.has_file %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-paperclip"></i> {{ document.file_extension|upper }}
+                </span>
+            {% endif %}
+        </div>
+
+        <!-- Visualizador de documentos -->
+        {% if document.has_file %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Archivo del Documento
+                    </h6>
+                    <a href="{{ url_for('documents.download', id=document.id) }}" class="btn btn-sm btn-success">
+                        <i class="fas fa-download me-1"></i>Descargar
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if document.is_pdf %}
+                    <!-- Visualizador PDF -->
+                    <div class="pdf-controls text-center">
+                        <button id="prev-page" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="mx-3">
+                            Página <span id="page-num"></span> de <span id="page-count"></span>
+                        </span>
+                        <button id="next-page" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="zoom-in" class="btn btn-sm btn-outline-secondary ms-3">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button id="zoom-out" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                    </div>
+                    <div class="document-viewer" style="overflow: auto; text-align: center; background: #525659;">
+                        <canvas id="pdf-canvas"></canvas>
+                    </div>
+                {% elif document.is_office %}
+                    <!-- Visualizador de documentos Office convertidos a PDF -->
+                    <div class="alert alert-info m-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        El documento se convierte automáticamente a PDF para su visualización.
+                        <a href="{{ url_for('documents.download', id=document.id) }}" class="alert-link">Descargar documento original</a>
+                    </div>
+
+                    <!-- Controles del visor PDF -->
+                    <div class="pdf-controls text-center py-2 bg-light border-bottom">
+                        <button class="btn btn-sm btn-secondary" id="pdf-prev-office">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="mx-3">
+                            Página <span id="pdf-page-num-office"></span> / <span id="pdf-page-count-office"></span>
+                        </span>
+                        <button class="btn btn-sm btn-secondary" id="pdf-next-office">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary ms-3" id="pdf-zoom-in-office">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="pdf-zoom-out-office">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                    </div>
+                    <div class="document-viewer" style="overflow: auto; text-align: center; background: #525659;">
+                        <canvas id="pdf-canvas-office"></canvas>
+                    </div>
+                {% else %}
+                    <!-- Otros archivos -->
+                    <div class="alert alert-info m-3">
+                        <i class="fas fa-file me-2"></i>
+                        Este tipo de archivo no se puede visualizar en el navegador.
+                        <a href="{{ url_for('documents.download', id=document.id) }}" class="alert-link">
+                            <i class="fas fa-download me-1"></i>Descargar archivo
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Contenido del documento -->
+        {% if document.content %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-align-left me-2"></i>Contenido</h6>
+            </div>
+            <div class="card-body">
+                <div style="white-space: pre-wrap;">{{ document.content }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Controles SOA Relacionados -->
+        {% if document.related_controls %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Controles SOA Relacionados</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for control in document.related_controls %}
+                    <a href="{{ url_for('soa.view_control', id=control.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <code class="text-primary">{{ control.control_id }}</code>
+                                {{ control.title }}
+                            </h6>
+                            <small>
+                                {% if control.maturity_level == 'repetible' %}
+                                    <span class="badge bg-info">Madurez 2</span>
+                                {% elif control.maturity_level == 'definido' %}
+                                    <span class="badge bg-primary">Madurez 3</span>
+                                {% elif control.maturity_level == 'controlado' %}
+                                    <span class="badge bg-success">Madurez 4</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1 small text-muted">{{ control.category }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Validaciones IA -->
+        {% if ai_validations %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-robot me-2"></i>Resultados de Validación IA</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Última verificación:</strong> {{ document.ai_verification_date.strftime('%d/%m/%Y %H:%M') if document.ai_verification_date }}
+                    por {{ document.ai_verified_by.full_name if document.ai_verified_by }}
+                    <br>
+                    <strong>Modelo:</strong> {{ document.ai_model_used }}
+                </div>
+
+                {% for validation in ai_validations %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                <code>{{ validation.control.control_id }}</code>
+                                {{ validation.control.title }}
+                            </span>
+                            <span>
+                                {% if validation.compliance_status == 'compliant' %}
+                                    <span class="badge bg-success">✅ Cumple ({{ validation.overall_score }}%)</span>
+                                {% elif validation.compliance_status == 'partial' %}
+                                    <span class="badge bg-warning">⚠️ Parcial ({{ validation.overall_score }}%)</span>
+                                {% else %}
+                                    <span class="badge bg-danger">❌ No Cumple ({{ validation.overall_score }}%)</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Resumen:</strong> {{ validation.summary }}</p>
+
+                        {% if validation.covered_aspects %}
+                        <h6 class="text-success">✅ Aspectos Cubiertos:</h6>
+                        <ul>
+                            {% for aspect in validation.covered_aspects %}
+                            <li class="text-success">{{ aspect }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        {% if validation.missing_aspects %}
+                        <h6 class="text-warning">⚠️ Aspectos Faltantes:</h6>
+                        <ul>
+                            {% for aspect in validation.missing_aspects %}
+                            <li class="text-warning">{{ aspect }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        {% if validation.recommendations %}
+                        <h6 class="text-info">💡 Recomendaciones:</h6>
+                        <ul>
+                            {% for rec in validation.recommendations %}
+                            <li class="text-info">{{ rec }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Información lateral -->
+    <div class="col-md-4">
+        <!-- Información del documento -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Información del Documento</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Versión:</strong></div>
+                    <div class="col-7">
+                        <code>{{ document.version }}</code>
+                        {% if versions|length > 1 %}
+                        <br><a href="{{ url_for('documents.versions', id=document.id) }}" class="small">
+                            Ver {{ versions|length }} versiones
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Estado:</strong></div>
+                    <div class="col-7">
+                        {% if document.status == 'draft' %}
+                            <span class="badge bg-warning">Borrador</span>
+                        {% elif document.status == 'review' %}
+                            <span class="badge bg-info">En Revisión</span>
+                        {% elif document.status == 'approved' %}
+                            <span class="badge bg-success">Aprobado</span>
+                        {% elif document.status == 'obsolete' %}
+                            <span class="badge bg-secondary">Obsoleto</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Autor:</strong></div>
+                    <div class="col-7">{{ document.author.full_name or document.author.username }}</div>
+                </div>
+                {% if document.approver %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Aprobado por:</strong></div>
+                    <div class="col-7">{{ document.approver.full_name or document.approver.username }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Creado:</strong></div>
+                    <div class="col-7"><small>{{ document.created_at.strftime('%d/%m/%Y %H:%M') }}</small></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Actualizado:</strong></div>
+                    <div class="col-7"><small>{{ document.updated_at.strftime('%d/%m/%Y %H:%M') }}</small></div>
+                </div>
+                {% if document.approval_date %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Aprobación:</strong></div>
+                    <div class="col-7"><small>{{ document.approval_date.strftime('%d/%m/%Y') }}</small></div>
+                </div>
+                {% endif %}
+                {% if document.next_review_date %}
+                <div class="row mb-2">
+                    <div class="col-5"><strong>Próxima Revisión:</strong></div>
+                    <div class="col-7"><small>{{ document.next_review_date.strftime('%d/%m/%Y') }}</small></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Cambiar estado -->
+        {% if current_user.can_access('documents') %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Cambiar Estado</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('documents.change_status', id=document.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="status" class="form-select mb-2">
+                        <option value="draft" {{ 'selected' if document.status == 'draft' }}>Borrador</option>
+                        <option value="review" {{ 'selected' if document.status == 'review' }}>En Revisión</option>
+                        <option value="approved" {{ 'selected' if document.status == 'approved' }}>Aprobado</option>
+                        <option value="obsolete" {{ 'selected' if document.status == 'obsolete' }}>Obsoleto</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-exchange-alt me-1"></i>Cambiar Estado
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Acciones -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Acciones</h6>
+            </div>
+            <div class="card-body">
+                {% if document.has_file %}
+                <a href="{{ url_for('documents.download', id=document.id) }}" class="btn btn-success btn-sm w-100 mb-2">
+                    <i class="fas fa-download me-1"></i>Descargar Archivo
+                </a>
+                {% endif %}
+                <a href="{{ url_for('documents.versions', id=document.id) }}" class="btn btn-info btn-sm w-100 mb-2">
+                    <i class="fas fa-history me-1"></i>Ver Historial de Versiones
+                </a>
+                {% if current_user.can_access('documents') %}
+                <a href="{{ url_for('documents.edit', id=document.id) }}" class="btn btn-primary btn-sm w-100 mb-2">
+                    <i class="fas fa-edit me-1"></i>Editar Documento
+                </a>
+                <form method="POST" action="{{ url_for('documents.clone', id=document.id) }}" class="mb-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-secondary btn-sm w-100">
+                        <i class="fas fa-copy me-1"></i>Clonar Documento
+                    </button>
+                </form>
+                <button type="button" class="btn btn-danger btn-sm w-100" onclick="confirmDelete()">
+                    <i class="fas fa-trash me-1"></i>Eliminar Documento
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar el documento <strong>{{ document.title }}</strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer y se eliminarán todas las versiones.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('documents.delete', id=document.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if document.is_pdf and document.has_file %}
+<script>
+// Configuración de PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const url = '{{ url_for("documents.download", id=document.id) }}';
+let pdfDoc = null;
+let pageNum = 1;
+let pageRendering = false;
+let pageNumPending = null;
+let scale = 1.5;
+const canvas = document.getElementById('pdf-canvas');
+const ctx = canvas.getContext('2d');
+
+function renderPage(num) {
+    pageRendering = true;
+    pdfDoc.getPage(num).then(function(page) {
+        const viewport = page.getViewport({scale: scale});
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+
+        const renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function() {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+                renderPage(pageNumPending);
+                pageNumPending = null;
+            }
+        });
+    });
+
+    document.getElementById('page-num').textContent = num;
+}
+
+function queueRenderPage(num) {
+    if (pageRendering) {
+        pageNumPending = num;
+    } else {
+        renderPage(num);
+    }
+}
+
+function onPrevPage() {
+    if (pageNum <= 1) {
+        return;
+    }
+    pageNum--;
+    queueRenderPage(pageNum);
+}
+
+function onNextPage() {
+    if (pageNum >= pdfDoc.numPages) {
+        return;
+    }
+    pageNum++;
+    queueRenderPage(pageNum);
+}
+
+function onZoomIn() {
+    scale += 0.25;
+    queueRenderPage(pageNum);
+}
+
+function onZoomOut() {
+    if (scale <= 0.5) return;
+    scale -= 0.25;
+    queueRenderPage(pageNum);
+}
+
+document.getElementById('prev-page').addEventListener('click', onPrevPage);
+document.getElementById('next-page').addEventListener('click', onNextPage);
+document.getElementById('zoom-in').addEventListener('click', onZoomIn);
+document.getElementById('zoom-out').addEventListener('click', onZoomOut);
+
+// Cargar el PDF
+pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+    pdfDoc = pdfDoc_;
+    document.getElementById('page-count').textContent = pdfDoc.numPages;
+    renderPage(pageNum);
+});
+</script>
+{% endif %}
+
+{% if document.is_office %}
+<script>
+// Configurar PDF.js para documentos Office convertidos
+const urlOffice = '{{ url_for("documents.view_as_pdf", id=document.id) }}';
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDocOffice = null,
+    pageNumOffice = 1,
+    pageRenderingOffice = false,
+    pageNumPendingOffice = null,
+    scaleOffice = 1.5;
+
+const canvasOffice = document.getElementById('pdf-canvas-office');
+const ctxOffice = canvasOffice.getContext('2d');
+
+function renderPageOffice(num) {
+    pageRenderingOffice = true;
+    pdfDocOffice.getPage(num).then(function(page) {
+        const viewport = page.getViewport({scale: scaleOffice});
+        canvasOffice.height = viewport.height;
+        canvasOffice.width = viewport.width;
+
+        const renderContext = {
+            canvasContext: ctxOffice,
+            viewport: viewport
+        };
+
+        const renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function() {
+            pageRenderingOffice = false;
+            if (pageNumPendingOffice !== null) {
+                renderPageOffice(pageNumPendingOffice);
+                pageNumPendingOffice = null;
+            }
+        });
+    });
+
+    document.getElementById('pdf-page-num-office').textContent = num;
+}
+
+function queueRenderPageOffice(num) {
+    if (pageRenderingOffice) {
+        pageNumPendingOffice = num;
+    } else {
+        renderPageOffice(num);
+    }
+}
+
+function onPrevPageOffice() {
+    if (pageNumOffice <= 1) {
+        return;
+    }
+    pageNumOffice--;
+    queueRenderPageOffice(pageNumOffice);
+}
+
+function onNextPageOffice() {
+    if (pageNumOffice >= pdfDocOffice.numPages) {
+        return;
+    }
+    pageNumOffice++;
+    queueRenderPageOffice(pageNumOffice);
+}
+
+function onZoomInOffice() {
+    scaleOffice += 0.25;
+    queueRenderPageOffice(pageNumOffice);
+}
+
+function onZoomOutOffice() {
+    if (scaleOffice <= 0.5) return;
+    scaleOffice -= 0.25;
+    queueRenderPageOffice(pageNumOffice);
+}
+
+document.getElementById('pdf-prev-office').addEventListener('click', onPrevPageOffice);
+document.getElementById('pdf-next-office').addEventListener('click', onNextPageOffice);
+document.getElementById('pdf-zoom-in-office').addEventListener('click', onZoomInOffice);
+document.getElementById('pdf-zoom-out-office').addEventListener('click', onZoomOutOffice);
+
+// Cargar el PDF convertido
+pdfjsLib.getDocument(urlOffice).promise.then(function(pdfDoc_) {
+    pdfDocOffice = pdfDoc_;
+    document.getElementById('pdf-page-count-office').textContent = pdfDocOffice.numPages;
+    renderPageOffice(pageNumOffice);
+}).catch(function(error) {
+    console.error('Error al cargar el PDF:', error);
+    alert('Error al convertir el documento. Por favor, descargue el archivo original.');
+});
+</script>
+{% endif %}
+
+<script>
+function confirmDelete() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %}

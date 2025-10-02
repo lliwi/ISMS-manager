@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Documentos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Gestión de Documentos</h1>
+                <p class="text-muted">Control de documentación del SGSI</p>
+            </div>
+            {% if current_user.can_access('documents') %}
+            <div>
+                <a href="{{ url_for('documents.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nuevo Documento
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Documentos</h6>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">En Borrador</h6>
+                        <h3 class="mb-0">{{ stats.draft }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Aprobados</h6>
+                        <h3 class="mb-0">{{ stats.approved }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Verificados IA</h6>
+                        <h3 class="mb-0">{{ stats.ai_verified }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-robot fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y búsqueda -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo de Documento</label>
+                        <select name="type" class="form-select" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            <option value="policy" {{ 'selected' if current_type == 'policy' }}>Política</option>
+                            <option value="procedure" {{ 'selected' if current_type == 'procedure' }}>Procedimiento</option>
+                            <option value="instruction" {{ 'selected' if current_type == 'instruction' }}>Instrucción</option>
+                            <option value="record" {{ 'selected' if current_type == 'record' }}>Registro</option>
+                            <option value="minutes" {{ 'selected' if current_type == 'minutes' }}>Acta</option>
+                            <option value="plan" {{ 'selected' if current_type == 'plan' }}>Plan</option>
+                            <option value="report" {{ 'selected' if current_type == 'report' }}>Informe</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estado</label>
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            <option value="draft" {{ 'selected' if current_status == 'draft' }}>Borrador</option>
+                            <option value="review" {{ 'selected' if current_status == 'review' }}>En Revisión</option>
+                            <option value="approved" {{ 'selected' if current_status == 'approved' }}>Aprobado</option>
+                            <option value="obsolete" {{ 'selected' if current_status == 'obsolete' }}>Obsoleto</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" name="search" class="form-control" placeholder="Buscar por título o contenido..." value="{{ search_term or '' }}">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de documentos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Documentos Registrados ({{ documents|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Título</th>
+                                <th>Versión</th>
+                                <th>Estado</th>
+                                <th>Verificación IA</th>
+                                <th>Controles</th>
+                                <th>Autor</th>
+                                <th>Última Actualización</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documents %}
+                            <tr>
+                                <td>
+                                    {% if doc.document_type == 'policy' %}
+                                        <span class="badge bg-primary">Política</span>
+                                    {% elif doc.document_type == 'procedure' %}
+                                        <span class="badge bg-info">Procedimiento</span>
+                                    {% elif doc.document_type == 'instruction' %}
+                                        <span class="badge bg-secondary">Instrucción</span>
+                                    {% elif doc.document_type == 'record' %}
+                                        <span class="badge bg-success">Registro</span>
+                                    {% elif doc.document_type == 'minutes' %}
+                                        <span class="badge bg-warning">Acta</span>
+                                    {% elif doc.document_type == 'plan' %}
+                                        <span class="badge bg-dark">Plan</span>
+                                    {% elif doc.document_type == 'report' %}
+                                        <span class="badge bg-light text-dark">Informe</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('documents.view', id=doc.id) }}" class="text-decoration-none">
+                                        <strong>{{ doc.title }}</strong>
+                                    </a>
+                                    {% if doc.has_file %}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-paperclip"></i> {{ doc.file_extension|upper }}
+                                        {% if doc.file_size %}
+                                            ({{ (doc.file_size / 1024)|round(1) }} KB)
+                                        {% endif %}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <code>v{{ doc.version }}</code>
+                                    {% if doc.versions.count() > 1 %}
+                                    <br><small class="text-muted">{{ doc.versions.count() }} versiones</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc.status == 'draft' %}
+                                        <span class="badge bg-warning">Borrador</span>
+                                    {% elif doc.status == 'review' %}
+                                        <span class="badge bg-info">En Revisión</span>
+                                    {% elif doc.status == 'approved' %}
+                                        <span class="badge bg-success">Aprobado</span>
+                                    {% elif doc.status == 'obsolete' %}
+                                        <span class="badge bg-secondary">Obsoleto</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc.ai_verification_status == 'not_verified' %}
+                                        <span class="badge bg-light text-dark" title="Sin verificar">
+                                            <i class="fas fa-search"></i> Sin verificar
+                                        </span>
+                                    {% elif doc.ai_verification_status == 'needs_reverification' %}
+                                        <span class="badge bg-warning" title="Requiere re-verificación">
+                                            <i class="fas fa-exclamation-triangle"></i> Re-verificar
+                                        </span>
+                                    {% elif doc.ai_verification_status == 'verified_compliant' %}
+                                        <span class="badge bg-success" title="Verificado - Cumple">
+                                            <i class="fas fa-robot"></i> Cumple ({{ doc.ai_overall_score }}%)
+                                        </span>
+                                    {% elif doc.ai_verification_status == 'verified_partial' %}
+                                        <span class="badge bg-warning" title="Verificado - Cumple Parcialmente">
+                                            <i class="fas fa-robot"></i> Parcial ({{ doc.ai_overall_score }}%)
+                                        </span>
+                                    {% elif doc.ai_verification_status == 'verified_non_compliant' %}
+                                        <span class="badge bg-danger" title="Verificado - No Cumple">
+                                            <i class="fas fa-robot"></i> No Cumple ({{ doc.ai_overall_score }}%)
+                                        </span>
+                                    {% elif doc.ai_verified %}
+                                        <span class="badge bg-info" title="Verificado">
+                                            <i class="fas fa-robot"></i> Verificado
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc.related_controls %}
+                                        <span class="badge bg-primary">{{ doc.related_controls|length }} controles</span>
+                                    {% else %}
+                                        <small class="text-muted">Sin controles</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ doc.author.full_name or doc.author.username }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ doc.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('documents.view', id=doc.id) }}"
+                                           class="btn btn-outline-primary"
+                                           title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.can_access('documents') %}
+                                        <a href="{{ url_for('documents.edit', id=doc.id) }}"
+                                           class="btn btn-outline-secondary"
+                                           title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if doc.has_file %}
+                                        <a href="{{ url_for('documents.download', id=doc.id) }}"
+                                           class="btn btn-outline-success"
+                                           title="Descargar">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay documentos registrados</h5>
+                    <p class="text-muted">Los documentos del SGSI aparecerán aquí.</p>
+                    {% if current_user.can_access('documents') %}
+                    <a href="{{ url_for('documents.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Primer Documento
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

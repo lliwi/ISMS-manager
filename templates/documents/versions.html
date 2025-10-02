@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Versiones - {{ document.title }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.index') }}">Documentos</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('documents.view', id=document.id) }}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active">Historial de Versiones</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Historial de Versiones</h1>
+                <p class="text-muted">{{ document.title }}</p>
+            </div>
+            <div>
+                <a href="{{ url_for('documents.view', id=document.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Versiones del Documento ({{ versions|length }})
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if versions %}
+                <!-- Timeline de versiones -->
+                <div class="timeline">
+                    {% for version in versions %}
+                    <div class="timeline-item mb-4">
+                        <div class="row">
+                            <div class="col-md-2 text-end">
+                                <div class="timeline-marker">
+                                    <h5 class="mb-0">
+                                        <code class="text-primary">v{{ version.version_number }}</code>
+                                    </h5>
+                                    <small class="text-muted">
+                                        {{ version.created_at.strftime('%d/%m/%Y') }}
+                                        <br>{{ version.created_at.strftime('%H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-10">
+                                <div class="card {{ 'border-success' if version.id == document.current_version_id else '' }}">
+                                    <div class="card-header {{ 'bg-success text-white' if version.id == document.current_version_id else '' }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>Versión {{ version.version_number }}</strong>
+                                                {% if version.id == document.current_version_id %}
+                                                    <span class="badge bg-warning text-dark ms-2">Actual</span>
+                                                {% endif %}
+                                                {% if version.status == 'draft' %}
+                                                    <span class="badge bg-light text-dark ms-1">Borrador</span>
+                                                {% elif version.status == 'approved' %}
+                                                    <span class="badge bg-success ms-1">Aprobado</span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {% if version.file_path %}
+                                                <a href="{{ url_for('documents.download_version', id=version.id) }}"
+                                                   class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    <strong>Creado por:</strong>
+                                                    {{ version.created_by.full_name or version.created_by.username }}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    <strong>Fecha:</strong>
+                                                    {{ version.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        {% if version.file_path %}
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <div class="alert alert-light mb-0">
+                                                    <i class="fas fa-paperclip me-2"></i>
+                                                    <strong>Archivo:</strong> {{ version.file_path.split('/')[-1] }}
+                                                    {% if version.file_size %}
+                                                        <span class="text-muted">({{ (version.file_size / 1024)|round(1) }} KB)</span>
+                                                    {% endif %}
+                                                    {% if version.file_type %}
+                                                        <span class="badge bg-secondary ms-2">{{ version.file_type }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if version.change_notes %}
+                                        <div class="row mb-2">
+                                            <div class="col-12">
+                                                <strong>Notas del cambio:</strong>
+                                                <p class="mb-0 mt-2 ps-3 border-start border-3 border-primary">
+                                                    {{ version.change_notes }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if version.content %}
+                                        <details class="mt-3">
+                                            <summary class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-eye me-1"></i>Ver contenido
+                                            </summary>
+                                            <div class="mt-2 p-3 bg-light border rounded">
+                                                <pre class="mb-0" style="white-space: pre-wrap;">{{ version.content[:500] }}{% if version.content|length > 500 %}...{% endif %}</pre>
+                                            </div>
+                                        </details>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay historial de versiones</h5>
+                    <p class="text-muted">El historial de versiones aparecerá aquí.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: calc(16.666% + 1.5rem);
+    top: 4rem;
+    bottom: -2rem;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-marker {
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .timeline-item::before {
+        left: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
