@@ -373,6 +373,65 @@
             </div>
         </div>
 
+        <!-- Estado de Verificación IA -->
+        {% if document.ai_verified %}
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Estado de Verificación IA
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Checkbox de verificado (visual, no editable) -->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" checked disabled>
+                    <label class="form-check-label">
+                        <strong>Documento verificado por IA</strong>
+                    </label>
+                </div>
+
+                <!-- Información de verificación -->
+                <div class="small">
+                    <p><strong>Fecha:</strong> {{ document.ai_verification_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    <p><strong>Modelo:</strong> {{ document.ai_model_used }}</p>
+                    <p><strong>Puntuación:</strong>
+                        <span class="badge bg-{{ 'success' if document.ai_overall_score >= 80 else 'warning' if document.ai_overall_score >= 50 else 'danger' }}">
+                            {{ document.ai_overall_score }}%
+                        </span>
+                    </p>
+                    <p><strong>Verificado por:</strong> {{ document.ai_verified_by.full_name if document.ai_verified_by else document.ai_verified_by.username }}</p>
+                </div>
+
+                <!-- Cuadro de comentarios del verificador -->
+                <div class="mt-3">
+                    <label class="form-label"><strong>Comentarios del Verificador:</strong></label>
+                    <textarea
+                        id="verification-comments"
+                        class="form-control"
+                        rows="4"
+                        placeholder="Añade comentarios sobre la verificación..."
+                        {% if not current_user.can_access('documents') %}disabled{% endif %}
+                    >{{ document.ai_verification_comments or '' }}</textarea>
+
+                    {% if current_user.can_access('documents') %}
+                    <button
+                        id="save-comments-btn"
+                        class="btn btn-sm btn-primary mt-2 w-100">
+                        <i class="fas fa-save me-1"></i>Guardar Comentarios
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if document.ai_needs_reverification %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    El documento ha sido modificado y requiere re-verificación
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Cambiar estado -->
         {% if current_user.can_access('documents') %}
         <div class="card mb-3">
@@ -414,6 +473,11 @@
                 <a href="{{ url_for('documents.edit', id=document.id) }}" class="btn btn-primary btn-sm w-100 mb-2">
                     <i class="fas fa-edit me-1"></i>Editar Documento
                 </a>
+                {% if document.related_controls and document.has_file %}
+                <button id="btn-verify-ai" class="btn btn-info btn-sm w-100 mb-2">
+                    <i class="fas fa-robot me-1"></i>Verificación IA
+                </button>
+                {% endif %}
                 <form method="POST" action="{{ url_for('documents.clone', id=document.id) }}" class="mb-2">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-secondary btn-sm w-100">
@@ -641,6 +705,99 @@ pdfjsLib.getDocument(urlOffice).promise.then(function(pdfDoc_) {
 function confirmDelete() {
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
+}
+
+// Verificación IA
+const btnVerifyAI = document.getElementById('btn-verify-ai');
+if (btnVerifyAI) {
+    btnVerifyAI.addEventListener('click', async function() {
+        // Confirmar con el usuario
+        if (!confirm('¿Desea iniciar la verificación IA del documento? Este proceso puede tardar varios minutos.')) {
+            return;
+        }
+
+        // Deshabilitar botón y mostrar loading
+        btnVerifyAI.disabled = true;
+        const originalHTML = btnVerifyAI.innerHTML;
+        btnVerifyAI.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verificando...';
+
+        try {
+            const response = await fetch('{{ url_for("documents.verify_ai", id=document.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                alert(`Verificación completada exitosamente!\n\nPuntuación: ${data.overall_score}%\nControles verificados: ${data.verified_controls}/${data.total_controls}`);
+                // Recargar la página para mostrar los resultados
+                window.location.reload();
+            } else {
+                // Mostrar error
+                alert('Error en la verificación: ' + data.error);
+                btnVerifyAI.disabled = false;
+                btnVerifyAI.innerHTML = originalHTML;
+            }
+        } catch (error) {
+            alert('Error al comunicarse con el servidor: ' + error.message);
+            btnVerifyAI.disabled = false;
+            btnVerifyAI.innerHTML = originalHTML;
+        }
+    });
+}
+
+// Guardar comentarios de verificación
+const saveCommentsBtn = document.getElementById('save-comments-btn');
+if (saveCommentsBtn) {
+    saveCommentsBtn.addEventListener('click', async function() {
+        const comments = document.getElementById('verification-comments').value;
+
+        // Deshabilitar botón
+        saveCommentsBtn.disabled = true;
+        const originalHTML = saveCommentsBtn.innerHTML;
+        saveCommentsBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+        try {
+            const response = await fetch('{{ url_for("documents.update_verification_comments", id=document.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ comments: comments })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Mostrar feedback visual
+                saveCommentsBtn.innerHTML = '<i class="fas fa-check me-1"></i>Guardado';
+                saveCommentsBtn.classList.remove('btn-primary');
+                saveCommentsBtn.classList.add('btn-success');
+
+                // Volver al estado original después de 2 segundos
+                setTimeout(() => {
+                    saveCommentsBtn.innerHTML = originalHTML;
+                    saveCommentsBtn.classList.remove('btn-success');
+                    saveCommentsBtn.classList.add('btn-primary');
+                    saveCommentsBtn.disabled = false;
+                }, 2000);
+            } else {
+                alert('Error al guardar comentarios: ' + data.error);
+                saveCommentsBtn.disabled = false;
+                saveCommentsBtn.innerHTML = originalHTML;
+            }
+        } catch (error) {
+            alert('Error al comunicarse con el servidor: ' + error.message);
+            saveCommentsBtn.disabled = false;
+            saveCommentsBtn.innerHTML = originalHTML;
+        }
+    });
 }
 </script>
 {% endblock %}

@@ -27,16 +27,30 @@ services:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://isms:isms_secure_password@db:5432/isms_db
       - SECRET_KEY=your-production-secret-key-change-this
+      - AI_VERIFICATION_ENABLED=${AI_VERIFICATION_ENABLED:-False}
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - AI_MODEL=${AI_MODEL:-llama3:8b}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_BASE_URL=${AI_BASE_URL:-http://localhost:11434}
+      - AI_TIMEOUT=${AI_TIMEOUT:-120}
+      - KNOWLEDGE_BASE_PATH=${KNOWLEDGE_BASE_PATH:-knowledge}
     ports:
       - "5000:5000"
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ./services:/app/services
+      - ./knowledge:/app/knowledge
+      - ./config.py:/app/config.py
+      - ./blueprints:/app/blueprints
+      - ./models.py:/app/models.py
     depends_on:
       db:
         condition: service_healthy
     networks:
       - isms_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
@@ -72,9 +86,27 @@ services:
     restart: always
     command: redis-server --appendonly yes
 
+  # Ollama AI Service (Optional - for document verification)
+  # Uncomment to enable local AI document verification
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - isms_network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
 volumes:
   postgres_data:
   redis_data:
+  # ollama_data:  # Uncomment if using Ollama service
 
 networks:
   isms_network:

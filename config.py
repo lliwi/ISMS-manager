@@ -52,6 +52,15 @@ class Config:
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_FILE = os.environ.get('LOG_FILE', 'logs/isms.log')
 
+    # AI Document Verification Settings
+    AI_VERIFICATION_ENABLED = os.environ.get('AI_VERIFICATION_ENABLED', 'False').lower() == 'true'
+    AI_PROVIDER = os.environ.get('AI_PROVIDER', 'ollama')  # ollama, openai, deepseek
+    AI_MODEL = os.environ.get('AI_MODEL', 'llama3:8b')
+    AI_API_KEY = os.environ.get('AI_API_KEY', '')
+    AI_BASE_URL = os.environ.get('AI_BASE_URL', 'http://localhost:11434')
+    AI_TIMEOUT = int(os.environ.get('AI_TIMEOUT', '120'))
+    KNOWLEDGE_BASE_PATH = os.environ.get('KNOWLEDGE_BASE_PATH', 'knowledge')
+
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True

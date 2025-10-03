@@ -47,13 +47,9 @@
                         <div class="col-md-4">
                             <label for="document_type" class="form-label"><strong>Tipo</strong> <span class="text-danger">*</span></label>
                             <select class="form-select" id="document_type" name="document_type" required>
-                                <option value="policy" {{ 'selected' if document.document_type == 'policy' }}>Política</option>
-                                <option value="procedure" {{ 'selected' if document.document_type == 'procedure' }}>Procedimiento</option>
-                                <option value="instruction" {{ 'selected' if document.document_type == 'instruction' }}>Instrucción</option>
-                                <option value="record" {{ 'selected' if document.document_type == 'record' }}>Registro</option>
-                                <option value="minutes" {{ 'selected' if document.document_type == 'minutes' }}>Acta</option>
-                                <option value="plan" {{ 'selected' if document.document_type == 'plan' }}>Plan</option>
-                                <option value="report" {{ 'selected' if document.document_type == 'report' }}>Informe</option>
+                                {% for doc_type in document_types %}
+                                <option value="{{ doc_type.code }}" {{ 'selected' if document.document_type.code == doc_type.code }}>{{ doc_type.name }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>

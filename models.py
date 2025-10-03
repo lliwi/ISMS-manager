@@ -281,6 +281,7 @@ class Document(db.Model):
     ai_overall_score = db.Column(db.Integer)  # 0-100
     ai_verified_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     ai_needs_reverification = db.Column(db.Boolean, default=False)
+    ai_verification_comments = db.Column(db.Text)  # Comentarios del verificador humano
 
     # Relationships
     document_type = db.relationship('DocumentType', backref='documents')

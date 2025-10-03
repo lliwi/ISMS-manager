@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
-from models import Document, DocumentVersion, DocumentControlValidation, User, SOAControl, SOAVersion, db
+from models import Document, DocumentVersion, DocumentControlValidation, DocumentType, User, SOAControl, SOAVersion, db
 from datetime import datetime, date
 from werkzeug.utils import secure_filename
 from dateutil.relativedelta import relativedelta
@@ -8,6 +8,7 @@ import os
 import mimetypes
 import subprocess
 import tempfile
+from services.ai_verification import AIVerificationService
 
 documents_bp = Blueprint('documents', __name__)
 
@@ -118,7 +119,10 @@ def index():
 
     # Aplicar filtros
     if doc_type:
-        query = query.filter_by(document_type=doc_type)
+        # Buscar el tipo de documento por código
+        dt = DocumentType.query.filter_by(code=doc_type).first()
+        if dt:
+            query = query.filter_by(document_type_id=dt.id)
     if status:
         query = query.filter_by(status=status)
     if search:
@@ -157,10 +161,17 @@ def create():
 
     if request.method == 'POST':
         try:
+            # Obtener el tipo de documento por código
+            doc_type_code = request.form['document_type']
+            doc_type = DocumentType.query.filter_by(code=doc_type_code).first()
+            if not doc_type:
+                flash(f'Tipo de documento "{doc_type_code}" no válido', 'error')
+                return redirect(url_for('documents.create'))
+
             # Crear documento base
             document = Document(
                 title=request.form['title'],
-                document_type=request.form['document_type'],
+                document_type_id=doc_type.id,
                 content=request.form.get('content', ''),
                 author_id=current_user.id,
                 version='1.0'
@@ -231,7 +242,10 @@ def create():
             soa_version_id=current_version.id
         ).order_by(SOAControl.control_id).all()
 
-    return render_template('documents/create.html', controls=controls)
+    # Obtener tipos de documento activos
+    document_types = DocumentType.query.filter_by(is_active=True).order_by(DocumentType.order).all()
+
+    return render_template('documents/create.html', controls=controls, document_types=document_types)
 
 @documents_bp.route('/<int:id>')
 @login_required
@@ -260,9 +274,16 @@ def edit(id):
 
     if request.method == 'POST':
         try:
+            # Obtener el tipo de documento por código
+            doc_type_code = request.form['document_type']
+            doc_type = DocumentType.query.filter_by(code=doc_type_code).first()
+            if not doc_type:
+                flash(f'Tipo de documento "{doc_type_code}" no válido', 'error')
+                return redirect(url_for('documents.edit', id=id))
+
             # Actualizar información básica
             document.title = request.form['title']
-            document.document_type = request.form['document_type']
+            document.document_type_id = doc_type.id
             content = request.form.get('content', '')
 
             # Obtener controles actuales antes de modificar
@@ -354,7 +375,10 @@ def edit(id):
             soa_version_id=current_version.id
         ).order_by(SOAControl.control_id).all()
 
-    return render_template('documents/edit.html', document=document, controls=controls)
+    # Obtener tipos de documento activos
+    document_types = DocumentType.query.filter_by(is_active=True).order_by(DocumentType.order).all()
+
+    return render_template('documents/edit.html', document=document, controls=controls, document_types=document_types)
 
 @documents_bp.route('/<int:id>/delete', methods=['POST'])
 @login_required
@@ -370,6 +394,10 @@ def delete(id):
         # Eliminar archivo físico si existe
         if document.file_path and os.path.exists(document.file_path):
             os.remove(document.file_path)
+
+        # Romper la referencia circular antes de eliminar versiones
+        document.current_version_id = None
+        db.session.flush()
 
         # Eliminar archivos de versiones
         for version in document.versions:
@@ -519,7 +547,7 @@ def clone(id):
         # Crear clon
         cloned = Document(
             title=f"{original.title} (Copia)",
-            document_type=original.document_type,
+            document_type_id=original.document_type_id,
             content=original.content,
             author_id=current_user.id,
             version='1.0',
@@ -571,3 +599,128 @@ def clone(id):
         db.session.rollback()
         flash(f'Error al clonar el documento: {str(e)}', 'error')
         return redirect(url_for('documents.view', id=id))
+
+@documents_bp.route('/<int:id>/verify-ai', methods=['POST'])
+@login_required
+def verify_ai(id):
+    """Verifica el documento usando IA contra los controles SOA relacionados"""
+    if not current_user.can_access('documents'):
+        return jsonify({'success': False, 'error': 'No tienes permisos para verificar documentos'}), 403
+
+    document = Document.query.get_or_404(id)
+
+    # Validaciones
+    if not document.related_controls:
+        return jsonify({'success': False, 'error': 'El documento no tiene controles SOA relacionados'}), 400
+
+    if not document.has_file:
+        return jsonify({'success': False, 'error': 'El documento no tiene archivo adjunto'}), 400
+
+    try:
+        # Inicializar servicio de verificación
+        ai_service = AIVerificationService()
+
+        # Verificar disponibilidad
+        available, message = ai_service.is_available()
+        if not available:
+            return jsonify({'success': False, 'error': message}), 503
+
+        # Realizar verificación
+        results = ai_service.verify_document(document, document.related_controls)
+
+        # Guardar resultados en la base de datos
+        # Actualizar el documento
+        document.ai_verified = True
+        document.ai_verification_date = datetime.utcnow()
+        document.ai_verification_version = document.version
+        document.ai_model_used = results['model_used']
+        document.ai_overall_score = results['overall_score']
+        document.ai_verified_by_id = current_user.id
+        document.ai_needs_reverification = False
+
+        # Guardar validaciones individuales por control
+        for validation_data in results['validations']:
+            control_id = validation_data['control_id']
+
+            # Buscar si ya existe una validación previa
+            existing_validation = DocumentControlValidation.query.filter_by(
+                document_id=document.id,
+                control_id=control_id
+            ).first()
+
+            if existing_validation:
+                # Actualizar existente
+                existing_validation.document_version = document.version
+                existing_validation.compliance_status = validation_data['compliance_status']
+                existing_validation.confidence_level = validation_data['confidence_level']
+                existing_validation.overall_score = validation_data['overall_score']
+                existing_validation.summary = validation_data['summary']
+                existing_validation.covered_aspects = validation_data['covered_aspects']
+                existing_validation.missing_aspects = validation_data['missing_aspects']
+                existing_validation.evidence_quotes = validation_data['evidence_quotes']
+                existing_validation.recommendations = validation_data['recommendations']
+                existing_validation.maturity_suggestion = validation_data['maturity_suggestion']
+                existing_validation.ai_model = results['model_used']
+                existing_validation.tokens_used = validation_data['tokens_used']
+                existing_validation.validation_time = validation_data['validation_time']
+                existing_validation.validated_at = datetime.utcnow()
+                existing_validation.validated_by_id = current_user.id
+            else:
+                # Crear nueva
+                new_validation = DocumentControlValidation(
+                    document_id=document.id,
+                    control_id=control_id,
+                    document_version=document.version,
+                    compliance_status=validation_data['compliance_status'],
+                    confidence_level=validation_data['confidence_level'],
+                    overall_score=validation_data['overall_score'],
+                    summary=validation_data['summary'],
+                    covered_aspects=validation_data['covered_aspects'],
+                    missing_aspects=validation_data['missing_aspects'],
+                    evidence_quotes=validation_data['evidence_quotes'],
+                    recommendations=validation_data['recommendations'],
+                    maturity_suggestion=validation_data['maturity_suggestion'],
+                    ai_model=results['model_used'],
+                    tokens_used=validation_data['tokens_used'],
+                    validation_time=validation_data['validation_time'],
+                    validated_at=datetime.utcnow(),
+                    validated_by_id=current_user.id
+                )
+                db.session.add(new_validation)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Verificación completada exitosamente',
+            'overall_score': results['overall_score'],
+            'verified_controls': results['verified_controls'],
+            'total_controls': results['total_controls']
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@documents_bp.route('/<int:id>/update-verification-comments', methods=['POST'])
+@login_required
+def update_verification_comments(id):
+    """Actualiza los comentarios de verificación del documento"""
+    if not current_user.can_access('documents'):
+        return jsonify({'success': False, 'error': 'No tienes permisos para modificar documentos'}), 403
+
+    document = Document.query.get_or_404(id)
+
+    try:
+        comments = request.json.get('comments', '')
+        document.ai_verification_comments = comments
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Comentarios guardados correctamente'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -46,13 +46,9 @@
                             <label for="document_type" class="form-label"><strong>Tipo de Documento</strong> <span class="text-danger">*</span></label>
                             <select class="form-select" id="document_type" name="document_type" required>
                                 <option value="">Seleccionar tipo...</option>
-                                <option value="policy">Política</option>
-                                <option value="procedure">Procedimiento</option>
-                                <option value="instruction">Instrucción</option>
-                                <option value="record">Registro</option>
-                                <option value="minutes">Acta</option>
-                                <option value="plan">Plan</option>
-                                <option value="report">Informe</option>
+                                {% for doc_type in document_types %}
+                                <option value="{{ doc_type.code }}">{{ doc_type.name }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
