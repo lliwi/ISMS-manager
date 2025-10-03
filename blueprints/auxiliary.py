@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from models import db, ISOVersion
+from models import db, ISOVersion, DocumentType
 from datetime import datetime
 
 auxiliary_bp = Blueprint('auxiliary', __name__)
@@ -162,3 +162,181 @@ def toggle_iso_version_active(id):
         flash(f'Error al cambiar el estado de la versión ISO: {str(e)}', 'error')
 
     return redirect(url_for('auxiliary.iso_versions'))
+
+# ============== TIPOS DE DOCUMENTOS ==============
+
+@auxiliary_bp.route('/document-types')
+@login_required
+def document_types():
+    """Lista todos los tipos de documentos disponibles"""
+    if not current_user.can_access('documents'):
+        flash('No tienes permisos para acceder a esta sección', 'error')
+        return redirect(url_for('dashboard.index'))
+
+    types = DocumentType.query.order_by(DocumentType.order).all()
+    return render_template('auxiliary/document_types.html', types=types)
+
+@auxiliary_bp.route('/document-types/new', methods=['GET', 'POST'])
+@login_required
+def create_document_type():
+    """Crea un nuevo tipo de documento"""
+    if not current_user.can_access('documents'):
+        flash('No tienes permisos para crear tipos de documentos', 'error')
+        return redirect(url_for('auxiliary.document_types'))
+
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            review_period_months = request.form.get('review_period_months')
+            requires_approval = request.form.get('requires_approval') == 'on'
+            approval_workflow = request.form.get('approval_workflow')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name:
+                flash('Los campos Código y Nombre son obligatorios', 'error')
+                return render_template('auxiliary/document_type_form.html', form_data=request.form)
+
+            # Verificar que el código no exista
+            existing_type = DocumentType.query.filter_by(code=code).first()
+            if existing_type:
+                flash(f'Ya existe un tipo de documento con el código {code}', 'error')
+                return render_template('auxiliary/document_type_form.html', form_data=request.form)
+
+            new_type = DocumentType(
+                code=code,
+                name=name,
+                description=description,
+                review_period_months=int(review_period_months) if review_period_months else 12,
+                requires_approval=requires_approval,
+                approval_workflow=approval_workflow,
+                icon=icon or 'fa-file',
+                color=color or 'primary',
+                is_active=is_active,
+                order=int(order) if order else 0
+            )
+
+            db.session.add(new_type)
+            db.session.commit()
+
+            flash(f'Tipo de documento {name} creado exitosamente', 'success')
+            return redirect(url_for('auxiliary.document_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el tipo de documento: {str(e)}', 'error')
+            return render_template('auxiliary/document_type_form.html', form_data=request.form)
+
+    return render_template('auxiliary/document_type_form.html', form_data=None)
+
+@auxiliary_bp.route('/document-types/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_document_type(id):
+    """Edita un tipo de documento existente"""
+    if not current_user.can_access('documents'):
+        flash('No tienes permisos para editar tipos de documentos', 'error')
+        return redirect(url_for('auxiliary.document_types'))
+
+    doc_type = DocumentType.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            review_period_months = request.form.get('review_period_months')
+            requires_approval = request.form.get('requires_approval') == 'on'
+            approval_workflow = request.form.get('approval_workflow')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name:
+                flash('Los campos Código y Nombre son obligatorios', 'error')
+                return render_template('auxiliary/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+            # Verificar que el código no exista (excepto el actual)
+            existing_type = DocumentType.query.filter_by(code=code).first()
+            if existing_type and existing_type.id != id:
+                flash(f'Ya existe un tipo de documento con el código {code}', 'error')
+                return render_template('auxiliary/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+            doc_type.code = code
+            doc_type.name = name
+            doc_type.description = description
+            doc_type.review_period_months = int(review_period_months) if review_period_months else 12
+            doc_type.requires_approval = requires_approval
+            doc_type.approval_workflow = approval_workflow
+            doc_type.icon = icon or 'fa-file'
+            doc_type.color = color or 'primary'
+            doc_type.is_active = is_active
+            doc_type.order = int(order) if order else 0
+            doc_type.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            flash(f'Tipo de documento {name} actualizado exitosamente', 'success')
+            return redirect(url_for('auxiliary.document_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el tipo de documento: {str(e)}', 'error')
+            return render_template('auxiliary/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+    return render_template('auxiliary/document_type_form.html', doc_type=doc_type, form_data=None)
+
+@auxiliary_bp.route('/document-types/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_document_type(id):
+    """Elimina un tipo de documento"""
+    if not current_user.can_access('documents'):
+        flash('No tienes permisos para eliminar tipos de documentos', 'error')
+        return redirect(url_for('auxiliary.document_types'))
+
+    doc_type = DocumentType.query.get_or_404(id)
+
+    try:
+        # Verificar si el tipo está siendo usado en documentos
+        if doc_type.documents:
+            flash(f'No se puede eliminar el tipo de documento {doc_type.name} porque está siendo usado en {len(doc_type.documents)} documento(s)', 'error')
+            return redirect(url_for('auxiliary.document_types'))
+
+        db.session.delete(doc_type)
+        db.session.commit()
+
+        flash(f'Tipo de documento {doc_type.name} eliminado exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el tipo de documento: {str(e)}', 'error')
+
+    return redirect(url_for('auxiliary.document_types'))
+
+@auxiliary_bp.route('/document-types/<int:id>/toggle-active', methods=['POST'])
+@login_required
+def toggle_document_type_active(id):
+    """Activa o desactiva un tipo de documento"""
+    if not current_user.can_access('documents'):
+        flash('No tienes permisos para modificar tipos de documentos', 'error')
+        return redirect(url_for('auxiliary.document_types'))
+
+    doc_type = DocumentType.query.get_or_404(id)
+
+    try:
+        doc_type.is_active = not doc_type.is_active
+        doc_type.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        status = 'activado' if doc_type.is_active else 'desactivado'
+        flash(f'Tipo de documento {doc_type.name} {status} exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar el estado del tipo de documento: {str(e)}', 'error')
+
+    return redirect(url_for('auxiliary.document_types'))

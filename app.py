@@ -28,7 +28,7 @@ def create_app(config_name=None):
     login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
 
     # Import models after db initialization
-    from models import User, Role
+    from models import User, Role, DocumentType
 
     # User loader for Flask-Login
     @login_manager.user_loader
@@ -103,6 +103,111 @@ def create_app(config_name=None):
                 created_at=datetime.utcnow()
             )
             db.session.add(admin_user)
+            db.session.commit()
+
+        # Create default document types if they don't exist
+        if not DocumentType.query.first():
+            document_types = [
+                DocumentType(
+                    code='policy',
+                    name='Política',
+                    description='Documentos de nivel estratégico que establecen las directrices generales de la organización',
+                    review_period_months=24,
+                    requires_approval=True,
+                    approval_workflow='management',
+                    icon='fa-gavel',
+                    color='danger',
+                    is_active=True,
+                    order=1
+                ),
+                DocumentType(
+                    code='procedure',
+                    name='Procedimiento',
+                    description='Descripciones detalladas de los procesos operativos de la organización',
+                    review_period_months=12,
+                    requires_approval=True,
+                    approval_workflow='responsible',
+                    icon='fa-list-ol',
+                    color='primary',
+                    is_active=True,
+                    order=2
+                ),
+                DocumentType(
+                    code='instruction',
+                    name='Instrucción',
+                    description='Guías específicas para la realización de tareas concretas',
+                    review_period_months=12,
+                    requires_approval=False,
+                    approval_workflow='technical',
+                    icon='fa-book',
+                    color='info',
+                    is_active=True,
+                    order=3
+                ),
+                DocumentType(
+                    code='record',
+                    name='Registro',
+                    description='Documentos que evidencian la ejecución de actividades',
+                    review_period_months=6,
+                    requires_approval=False,
+                    approval_workflow='automatic',
+                    icon='fa-folder-open',
+                    color='success',
+                    is_active=True,
+                    order=4
+                ),
+                DocumentType(
+                    code='minutes',
+                    name='Acta',
+                    description='Registros de reuniones y decisiones tomadas',
+                    review_period_months=3,
+                    requires_approval=False,
+                    approval_workflow='automatic',
+                    icon='fa-clipboard',
+                    color='warning',
+                    is_active=True,
+                    order=5
+                ),
+                DocumentType(
+                    code='form',
+                    name='Formulario',
+                    description='Plantillas para la recopilación de información',
+                    review_period_months=12,
+                    requires_approval=False,
+                    approval_workflow='technical',
+                    icon='fa-file-alt',
+                    color='secondary',
+                    is_active=True,
+                    order=6
+                ),
+                DocumentType(
+                    code='manual',
+                    name='Manual',
+                    description='Documentos de referencia y consulta',
+                    review_period_months=24,
+                    requires_approval=True,
+                    approval_workflow='management',
+                    icon='fa-book-open',
+                    color='dark',
+                    is_active=True,
+                    order=7
+                ),
+                DocumentType(
+                    code='report',
+                    name='Informe',
+                    description='Documentos de análisis y resultados',
+                    review_period_months=6,
+                    requires_approval=False,
+                    approval_workflow='automatic',
+                    icon='fa-chart-bar',
+                    color='info',
+                    is_active=True,
+                    order=8
+                )
+            ]
+            for doc_type in document_types:
+                db.session.add(doc_type)
+
             db.session.commit()
 
     return app

@@ -238,6 +238,7 @@ test_data/
 sample_data/
 dev_scripts/
 fixtures/
+knowledge/
 
 # Temporary test files
 tests/*

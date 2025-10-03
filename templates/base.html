@@ -74,15 +74,22 @@
                 </ul>
 
                 <ul class="navbar-nav">
-                    {% if current_user.can_access('soa') %}
+                    {% if current_user.can_access('soa') or current_user.can_access('documents') %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-database me-1"></i>Auxiliares
                         </a>
                         <ul class="dropdown-menu">
+                            {% if current_user.can_access('soa') %}
                             <li><a class="dropdown-item" href="{{ url_for('auxiliary.iso_versions') }}">
                                 <i class="fas fa-book me-1"></i>Versiones ISO
                             </a></li>
+                            {% endif %}
+                            {% if current_user.can_access('documents') %}
+                            <li><a class="dropdown-item" href="{{ url_for('auxiliary.document_types') }}">
+                                <i class="fas fa-file-alt me-1"></i>Tipos de Documentos
+                            </a></li>
+                            {% endif %}
                         </ul>
                     </li>
                     {% endif %}

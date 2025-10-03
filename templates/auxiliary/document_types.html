@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Tipos de Documentos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">Tipos de Documentos</h1>
+                <p class="text-muted">Gestión de tipos de documentos disponibles en el sistema</p>
+            </div>
+            {% if current_user.can_access('documents') %}
+            <div>
+                <a href="{{ url_for('auxiliary.create_document_type') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nuevo Tipo de Documento
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Tipos</h6>
+                        <h3 class="mb-0">{{ types|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-list fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Tipos Activos</h6>
+                        <h3 class="mb-0">{{ types|selectattr('is_active', 'equalto', true)|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Tipos Inactivos</h6>
+                        <h3 class="mb-0">{{ types|selectattr('is_active', 'equalto', false)|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de tipos de documentos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Tipos de Documentos Registrados</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if types %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Revisión</th>
+                                <th>Aprobación</th>
+                                <th>Estado</th>
+                                <th>Orden</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc_type in types %}
+                            <tr>
+                                <td>
+                                    <i class="fas {{ doc_type.icon }} text-{{ doc_type.color }} me-2"></i>
+                                    <strong><code>{{ doc_type.code }}</code></strong>
+                                </td>
+                                <td>
+                                    <strong>{{ doc_type.name }}</strong>
+                                    {% if doc_type.description %}
+                                    <br><small class="text-muted">{{ doc_type.description[:80] }}{{ '...' if doc_type.description|length > 80 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ doc_type.review_period_months }} meses</span>
+                                </td>
+                                <td>
+                                    {% if doc_type.requires_approval %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-check-circle me-1"></i>Requerida
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-times-circle me-1"></i>No requerida
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc_type.is_active %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark">{{ doc_type.order }}</span>
+                                </td>
+                                <td>
+                                    {% if current_user.can_access('documents') %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('auxiliary.edit_document_type', id=doc_type.id) }}" class="btn btn-outline-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ url_for('auxiliary.toggle_document_type_active', id=doc_type.id) }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-outline-secondary" title="{{ 'Desactivar' if doc_type.is_active else 'Activar' }}">
+                                                <i class="fas fa-{{ 'toggle-on' if doc_type.is_active else 'toggle-off' }}"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-outline-danger" title="Eliminar"
+                                                onclick="confirmDelete('{{ doc_type.name }}', '{{ url_for('auxiliary.delete_document_type', id=doc_type.id) }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay tipos de documentos registrados</h5>
+                    <p class="text-muted">Los tipos de documentos aparecerán aquí.</p>
+                    {% if current_user.can_access('documents') %}
+                    <a href="{{ url_for('auxiliary.create_document_type') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Primer Tipo de Documento
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar el tipo de documento <strong id="typeToDelete"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmDelete(typeName, deleteUrl) {
+    document.getElementById('typeToDelete').textContent = typeName;
+    document.getElementById('deleteForm').action = deleteUrl;
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %}

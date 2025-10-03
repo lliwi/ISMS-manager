@@ -255,7 +255,7 @@ class Document(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
-    document_type = db.Column(db.String(50), nullable=False)  # policy, procedure, instruction, record, minutes
+    document_type_id = db.Column(db.Integer, db.ForeignKey('document_types.id'), nullable=False)
     version = db.Column(db.String(20), default='1.0')
     status = db.Column(db.String(20), default='draft')  # draft, review, approved, obsolete
     content = db.Column(db.Text)
@@ -283,6 +283,7 @@ class Document(db.Model):
     ai_needs_reverification = db.Column(db.Boolean, default=False)
 
     # Relationships
+    document_type = db.relationship('DocumentType', backref='documents')
     author = db.relationship('User', foreign_keys=[author_id], backref='authored_documents')
     approver = db.relationship('User', foreign_keys=[approver_id], backref='approved_documents')
     ai_verified_by = db.relationship('User', foreign_keys=[ai_verified_by_id], backref='ai_verified_documents')
@@ -483,3 +484,24 @@ class TrainingSession(db.Model):
 
     def __repr__(self):
         return f'<TrainingSession {self.title}>'
+
+class DocumentType(db.Model):
+    """Tipos de documentos configurables"""
+    __tablename__ = 'document_types'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False)  # policy, procedure, instruction, etc.
+    name = db.Column(db.String(100), nullable=False)  # Política, Procedimiento, etc.
+    description = db.Column(db.Text)
+    review_period_months = db.Column(db.Integer, default=12)  # Período de revisión en meses
+    requires_approval = db.Column(db.Boolean, default=True)  # Requiere aprobación
+    approval_workflow = db.Column(db.String(100))  # Tipo de flujo de aprobación
+    icon = db.Column(db.String(50), default='fa-file')  # Icono FontAwesome
+    color = db.Column(db.String(20), default='primary')  # Color Bootstrap (primary, success, etc.)
+    is_active = db.Column(db.Boolean, default=True)  # Tipo activo
+    order = db.Column(db.Integer, default=0)  # Orden de visualización
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<DocumentType {self.code}: {self.name}>'
