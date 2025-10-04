@@ -37,28 +37,85 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(100))
     department = db.Column(db.String(100))
     position = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
     is_active = db.Column(db.Boolean, default=True)
+
+    # Security fields
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    account_locked_until = db.Column(db.DateTime)
+    password_changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    must_change_password = db.Column(db.Boolean, default=False)
+    last_password_change_notification = db.Column(db.DateTime)
+
+    # Audit fields
     last_login = db.Column(db.DateTime)
+    last_login_ip = db.Column(db.String(45))  # IPv6 compatible
+    last_activity = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     # Foreign Keys
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        """Establece la contraseña del usuario con hash seguro"""
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
+        self.password_changed_at = datetime.utcnow()
+        self.must_change_password = False
 
     def check_password(self, password):
+        """Verifica la contraseña del usuario"""
         return check_password_hash(self.password_hash, password)
+
+    def is_account_locked(self):
+        """Verifica si la cuenta está bloqueada"""
+        if self.account_locked_until:
+            if datetime.utcnow() < self.account_locked_until:
+                return True
+            else:
+                # El bloqueo ha expirado, resetear contador
+                self.failed_login_attempts = 0
+                self.account_locked_until = None
+        return False
+
+    def increment_failed_login(self):
+        """Incrementa el contador de intentos fallidos"""
+        self.failed_login_attempts += 1
+        # Bloquear cuenta después de 5 intentos fallidos por 30 minutos
+        if self.failed_login_attempts >= 5:
+            from datetime import timedelta
+            self.account_locked_until = datetime.utcnow() + timedelta(minutes=30)
+
+    def reset_failed_login(self):
+        """Resetea el contador de intentos fallidos"""
+        self.failed_login_attempts = 0
+        self.account_locked_until = None
+
+    def needs_password_change(self):
+        """Verifica si la contraseña necesita ser cambiada (90 días)"""
+        from datetime import timedelta
+        if self.must_change_password:
+            return True
+        if self.password_changed_at:
+            password_age = datetime.utcnow() - self.password_changed_at
+            return password_age > timedelta(days=90)
+        return True
 
     @property
     def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
+        """Retorna el nombre completo del usuario"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.username
 
     def has_role(self, role_name):
+        """Verifica si el usuario tiene un rol específico"""
         return self.role.name == role_name
 
     def can_access(self, module):
+        """Verifica si el usuario puede acceder a un módulo"""
         permissions = {
             'admin': ['all'],
             'ciso': ['all'],
@@ -506,3 +563,67 @@ class DocumentType(db.Model):
 
     def __repr__(self):
         return f'<DocumentType {self.code}: {self.name}>'
+
+class AuditLog(db.Model):
+    """Registro de auditoría para trazabilidad completa"""
+    __tablename__ = 'audit_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Información del evento
+    action = db.Column(db.String(50), nullable=False)  # login, logout, create, update, delete, view, etc.
+    entity_type = db.Column(db.String(50))  # User, Document, Risk, etc.
+    entity_id = db.Column(db.Integer)  # ID de la entidad afectada
+    description = db.Column(db.Text)
+
+    # Datos del cambio
+    old_values = db.Column(db.JSON)  # Valores anteriores
+    new_values = db.Column(db.JSON)  # Valores nuevos
+
+    # Información del usuario
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    username = db.Column(db.String(80))  # Guardado por si se elimina el usuario
+
+    # Información de contexto
+    ip_address = db.Column(db.String(45))  # IPv6 compatible
+    user_agent = db.Column(db.String(255))
+    session_id = db.Column(db.String(255))
+
+    # Metadata
+    status = db.Column(db.String(20), default='success')  # success, failed, error
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    # Relationships
+    user = db.relationship('User', backref='audit_logs', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f'<AuditLog {self.action} by {self.username} at {self.created_at}>'
+
+    @staticmethod
+    def log_action(action, entity_type=None, entity_id=None, description=None,
+                   old_values=None, new_values=None, user=None, ip_address=None,
+                   user_agent=None, status='success', error_message=None):
+        """Helper para crear registros de auditoría"""
+        from flask_login import current_user
+
+        if user is None and current_user and current_user.is_authenticated:
+            user = current_user
+
+        log = AuditLog(
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            description=description,
+            old_values=old_values,
+            new_values=new_values,
+            user_id=user.id if user else None,
+            username=user.username if user else 'anonymous',
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status=status,
+            error_message=error_message
+        )
+
+        db.session.add(log)
+        return log

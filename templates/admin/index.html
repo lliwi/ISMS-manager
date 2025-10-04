@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Administración - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2 mb-0">Panel de Administración</h1>
+        <p class="text-muted">Gestión de usuarios y configuración del sistema</p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Usuarios</h6>
+                        <h3 class="mb-0">{{ users_count }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Usuarios Activos</h6>
+                        <h3 class="mb-0">{{ active_users }}</h3>
+                        <small>{{ "%.1f"|format((active_users / users_count * 100) if users_count > 0 else 0) }}% del total</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-user-check fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Cuentas Bloqueadas</h6>
+                        <h3 class="mb-0">{{ locked_users }}</h3>
+                        {% if locked_users > 0 %}
+                        <small><i class="fas fa-exclamation-triangle"></i> Requiere atención</small>
+                        {% else %}
+                        <small><i class="fas fa-check"></i> Sin problemas</small>
+                        {% endif %}
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-lock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Contraseñas Expiradas</h6>
+                        <h3 class="mb-0">{{ users_need_password_change }}</h3>
+                        {% if users_need_password_change > 0 %}
+                        <small><i class="fas fa-exclamation-circle"></i> Acción requerida</small>
+                        {% else %}
+                        <small><i class="fas fa-shield-alt"></i> Todo OK</small>
+                        {% endif %}
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-key fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt"></i> Acciones Rápidas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary btn-block w-100">
+                            <i class="fas fa-users"></i><br>
+                            Gestionar Usuarios
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.create_user') }}" class="btn btn-outline-success btn-block w-100">
+                            <i class="fas fa-user-plus"></i><br>
+                            Crear Usuario
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline-info btn-block w-100">
+                            <i class="fas fa-history"></i><br>
+                            Ver Auditoría
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('auxiliary.document_types') }}" class="btn btn-outline-secondary btn-block w-100">
+                            <i class="fas fa-cog"></i><br>
+                            Configuración
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics by Role -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie"></i> Distribución por Rol
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Rol</th>
+                            <th class="text-end">Usuarios</th>
+                            <th class="text-end">Porcentaje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for role_name, count in role_stats %}
+                        <tr>
+                            <td>
+                                {% if role_name == 'admin' %}
+                                    <span class="badge bg-danger"><i class="fas fa-crown"></i> Administrador</span>
+                                {% elif role_name == 'ciso' %}
+                                    <span class="badge bg-primary"><i class="fas fa-shield-alt"></i> CISO</span>
+                                {% elif role_name == 'auditor' %}
+                                    <span class="badge bg-info"><i class="fas fa-search"></i> Auditor</span>
+                                {% elif role_name == 'owner' %}
+                                    <span class="badge bg-success"><i class="fas fa-user-tie"></i> Propietario</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="fas fa-user"></i> Usuario</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end"><strong>{{ count }}</strong></td>
+                            <td class="text-end">{{ "%.1f"|format((count / users_count * 100) if users_count > 0 else 0) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock"></i> Actividad Reciente
+                </h5>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% if recent_activity %}
+                <div class="list-group list-group-flush">
+                    {% for log in recent_activity %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="mb-1">
+                                <strong>{{ log.username }}</strong>
+                                {% if log.action == 'login_success' %}
+                                    <span class="text-success"><i class="fas fa-sign-in-alt"></i> Inició sesión</span>
+                                {% elif log.action == 'login_failed' %}
+                                    <span class="text-danger"><i class="fas fa-times"></i> Login fallido</span>
+                                {% elif log.action == 'user_create' %}
+                                    <span class="text-info"><i class="fas fa-user-plus"></i> Creó usuario</span>
+                                {% elif log.action == 'user_update' %}
+                                    <span class="text-warning"><i class="fas fa-user-edit"></i> Modificó usuario</span>
+                                {% elif log.action == 'password_changed' %}
+                                    <span class="text-primary"><i class="fas fa-key"></i> Cambió contraseña</span>
+                                {% else %}
+                                    {{ log.action }}
+                                {% endif %}
+                            </small>
+                            <small class="text-muted">{{ log.created_at.strftime('%d/%m %H:%M') }}</small>
+                        </div>
+                        {% if log.description %}
+                        <small class="text-muted d-block">{{ log.description }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center my-4">
+                    <i class="fas fa-info-circle"></i> No hay actividad reciente
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle"></i> Estado del Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Seguridad</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Protección CSRF activa</li>
+                            <li><i class="fas fa-check text-success"></i> Sesiones seguras (HttpOnly)</li>
+                            <li><i class="fas fa-check text-success"></i> Auditoría completa habilitada</li>
+                            <li><i class="fas fa-check text-success"></i> Validación de contraseñas activa</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Información</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total usuarios inactivos:</strong> {{ inactive_users }}</li>
+                            <li><strong>Cuentas bloqueadas:</strong> {{ locked_users }}</li>
+                            <li><strong>Contraseñas expiradas:</strong> {{ users_need_password_change }}</li>
+                            <li><strong>Registros de auditoría:</strong> Ver <a href="{{ url_for('admin.audit_logs') }}">logs completos</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

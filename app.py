@@ -97,11 +97,16 @@ def create_app(config_name=None):
             admin_user = User(
                 username='admin',
                 email='admin@isms.local',
-                password_hash=generate_password_hash('admin123'),
+                first_name='Administrador',
+                last_name='del Sistema',
                 role_id=admin_role.id,
                 is_active=True,
+                must_change_password=True,  # Forzar cambio de contraseña en primer login
                 created_at=datetime.utcnow()
             )
+            # Usar el método set_password que inicializa password_changed_at
+            admin_user.set_password('admin123')
+
             db.session.add(admin_user)
             db.session.commit()
 

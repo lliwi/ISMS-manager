@@ -41,6 +41,8 @@ services:
       - ./logs:/app/logs
       - ./services:/app/services
       - ./knowledge:/app/knowledge
+      - ./utils:/app/utils
+      - ./forms:/app/forms
       - ./config.py:/app/config.py
       - ./blueprints:/app/blueprints
       - ./models.py:/app/models.py

@@ -10,13 +10,26 @@ ISMS Manager es una aplicación web desarrollada en Flask que ayuda a las organi
 
 - **Gestión del SOA (Statement of Applicability)**: Control de aplicabilidad de controles ISO 27001
 - **Gestión de Riesgos**: Identificación, evaluación y tratamiento de riesgos
-- **Gestión de Documentación**: Control de versiones y aprobaciones
+- **Gestión de Documentación**: Control de versiones y aprobaciones con verificación IA
 - **Dashboard de Indicadores**: KPIs y métricas del sistema ISMS
 - **Gestión de Incidentes**: Registro y seguimiento de incidentes de seguridad
 - **Auditorías Internas**: Planificación y seguimiento de auditorías
 - **No Conformidades**: Gestión de hallazgos y acciones correctivas
 - **Tareas Periódicas**: Seguimiento de tareas del sistema
 - **Formación y Concienciación**: Registro de sesiones de entrenamiento
+- **Gestión de Usuarios**: Sistema completo de administración con seguridad avanzada
+
+### Características de Seguridad (ISO 27001)
+
+- ✅ **Autenticación Robusta**: Hash PBKDF2-SHA256 con salt de 16 bytes
+- ✅ **Políticas de Contraseñas**: Validación de complejidad y prevención de contraseñas comunes
+- ✅ **Bloqueo de Cuentas**: Protección contra fuerza bruta (5 intentos, bloqueo 30 min)
+- ✅ **Expiración de Contraseñas**: Caducidad automática a los 90 días
+- ✅ **Auditoría Completa**: Registro de todas las acciones con trazabilidad total
+- ✅ **Control de Acceso**: RBAC (Role-Based Access Control) con 5 roles
+- ✅ **Tracking de Sesiones**: IP, user agent y actividad del usuario
+- ✅ **Protección CSRF**: Validación de tokens en todos los formularios
+- ✅ **Sesiones Seguras**: HttpOnly, SameSite, timeout configurable
 
 ## Requisitos
 
@@ -145,11 +158,36 @@ flake8 .
 
 ### Roles de Usuario
 
-- **Administrador del Sistema**: Acceso completo
-- **Responsable de Seguridad (CISO)**: Todos los módulos con permisos de aprobación
-- **Auditor Interno**: Módulo de auditorías + lectura en otros
-- **Propietario de Proceso**: Módulos específicos según responsabilidad
-- **Usuario General**: Acceso limitado a funcionalidades básicas
+El sistema implementa un modelo RBAC (Role-Based Access Control) con 5 roles predefinidos:
+
+| Rol | Código | Permisos | Uso |
+|-----|--------|----------|-----|
+| **Administrador del Sistema** | `admin` | Acceso total + Gestión de usuarios | Configuración y administración |
+| **Responsable de Seguridad (CISO)** | `ciso` | Todos los módulos + Aprobaciones | Dirección de seguridad |
+| **Auditor Interno** | `auditor` | Auditorías + Lectura general | Auditorías internas |
+| **Propietario de Proceso** | `owner` | Módulos específicos asignados | Gestión operativa |
+| **Usuario General** | `user` | Dashboard + Incidentes + Documentos | Usuarios finales |
+
+### Gestión de Usuarios
+
+El módulo de administración de usuarios (`/admin/users`) permite:
+
+- ✅ Crear, editar y eliminar usuarios
+- ✅ Asignar roles y permisos
+- ✅ Activar/Desactivar cuentas
+- ✅ Resetear contraseñas de usuarios
+- ✅ Desbloquear cuentas bloqueadas
+- ✅ Ver historial de actividad por usuario
+- ✅ Filtros avanzados y búsqueda
+- ✅ Exportar logs de auditoría
+
+**Acceso:** Solo usuarios con rol `admin` o `ciso`
+
+**Políticas de Seguridad:**
+- Las contraseñas deben tener mínimo 8 caracteres con complejidad
+- Las cuentas se bloquean automáticamente tras 5 intentos fallidos
+- Las contraseñas expiran cada 90 días
+- Se registra toda la actividad en el audit log
 
 ## Configuración del Agente IA (Opcional)
 
