@@ -199,8 +199,7 @@ RESPONDE EN FORMATO JSON ESTRICTO:
                 response = client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"},
-                    timeout=self.timeout
+                    response_format={"type": "json_object"}
                 )
 
                 analysis = json.loads(response.choices[0].message.content)
@@ -221,8 +220,7 @@ RESPONDE EN FORMATO JSON ESTRICTO:
                 response = client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"},
-                    timeout=self.timeout
+                    response_format={"type": "json_object"}
                 )
 
                 analysis = json.loads(response.choices[0].message.content)

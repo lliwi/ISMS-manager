@@ -162,10 +162,10 @@
                             <tr>
                                 <td>
                                     <strong>{{ doc.title }}</strong>
-                                    <br><small class="text-muted">{{ doc.document_type|title }}</small>
+                                    <br><small class="text-muted">{{ doc.document_type.name if doc.document_type else 'Sin tipo' }}</small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-light text-dark">{{ doc.document_type|title }}</span>
+                                    <span class="badge bg-light text-dark">{{ doc.document_type.name if doc.document_type else 'Sin tipo' }}</span>
                                 </td>
                                 <td>{{ doc.version }}</td>
                                 <td>
