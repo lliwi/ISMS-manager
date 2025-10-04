@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Tipos de Activos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">Tipos de Activos</h1>
+        <p class="text-muted">Gestión de tipos de activos del inventario</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Configuración
+        </a>
+        <a href="{{ url_for('admin.create_asset_type') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Nuevo Tipo de Activo
+        </a>
+    </div>
+</div>
+
+<!-- Información -->
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <strong>Control 5.9 - Inventario de información y otros activos asociados:</strong>
+    Los tipos de activos permiten clasificar y organizar el inventario de activos según categorías específicas de tu organización.
+</div>
+
+<!-- Tabla de tipos de activos -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-cubes"></i> Tipos de Activos Configurados ({{ asset_types|length }})
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if asset_types %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="60">Icono</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th width="80" class="text-center">Orden</th>
+                        <th width="80" class="text-center">Estado</th>
+                        <th width="160" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset_type in asset_types %}
+                    <tr>
+                        <td class="text-center">
+                            <i class="fas {{ asset_type.icon }} fa-2x text-{{ asset_type.color }}"></i>
+                        </td>
+                        <td><code>{{ asset_type.code }}</code></td>
+                        <td>
+                            <strong>{{ asset_type.name }}</strong>
+                            <span class="badge bg-{{ asset_type.color }} ms-2">{{ asset_type.color }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark">{{ asset_type.category.value }}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ asset_type.description[:100] }}{% if asset_type.description|length > 100 %}...{% endif %}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ asset_type.order }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if asset_type.is_active %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('admin.edit_asset_type', id=asset_type.id) }}"
+                                   class="btn btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.toggle_asset_type_active', id=asset_type.id) }}"
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-outline-warning"
+                                            title="{% if asset_type.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                        <i class="fas fa-{% if asset_type.is_active %}toggle-on{% else %}toggle-off{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_asset_type', id=asset_type.id) }}"
+                                      onsubmit="return confirm('¿Estás seguro de eliminar este tipo de activo?');"
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
+            <p class="text-muted">No hay tipos de activos configurados</p>
+            <a href="{{ url_for('admin.create_asset_type') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Crear Primer Tipo de Activo
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Distribución por categorías -->
+{% if asset_types %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-chart-pie"></i> Distribución por Categorías
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% set categories = {} %}
+            {% for asset_type in asset_types %}
+                {% set category_name = asset_type.category.value %}
+                {% if category_name not in categories %}
+                    {% set _ = categories.update({category_name: 0}) %}
+                {% endif %}
+                {% set _ = categories.update({category_name: categories[category_name] + 1}) %}
+            {% endfor %}
+
+            {% for category, count in categories.items() %}
+            <div class="col-md-2 mb-3">
+                <div class="text-center">
+                    <h3 class="mb-0">{{ count }}</h3>
+                    <small class="text-muted">{{ category }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

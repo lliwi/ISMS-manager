@@ -650,6 +650,35 @@ class AssetCategory(enum.Enum):
     FACILITIES = "Instalaciones"
 
 
+class AssetType(db.Model):
+    """Tipos de activos configurables por categoría"""
+    __tablename__ = 'asset_types'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(Enum(AssetCategory), nullable=False)
+
+    # Configuración visual
+    icon = db.Column(db.String(50), default='fa-cube')
+    color = db.Column(db.String(20), default='primary')
+
+    # Campos personalizados por tipo (JSON)
+    custom_fields = db.Column(db.JSON)  # Define campos adicionales específicos del tipo
+
+    # Estado
+    is_active = db.Column(db.Boolean, default=True)
+    order = db.Column(db.Integer, default=0)
+
+    # Auditoría
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<AssetType {self.code}: {self.name}>'
+
+
 class ClassificationLevel(enum.Enum):
     """Niveles de clasificación de información (Control 5.12)"""
     PUBLIC = "Público"
@@ -689,6 +718,10 @@ class Asset(db.Model):
     # Categorización
     category = db.Column(Enum(AssetCategory), nullable=False)
     subcategory = db.Column(db.String(100))
+
+    # Tipo de activo (relación con AssetType)
+    asset_type_id = db.Column(db.Integer, db.ForeignKey('asset_types.id'))
+    asset_type = db.relationship('AssetType', backref='assets')
 
     # Propietario del activo (requerido por Control 5.9)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import User, Role, AuditLog, DocumentType, ISOVersion, db
+from models import User, Role, AuditLog, DocumentType, ISOVersion, AssetType, AssetCategory, db
 from forms.user_forms import UserCreateForm, UserEditForm, ChangePasswordForm, ResetPasswordForm, UserSearchForm
 from utils.decorators import role_required, audit_action
 from utils.audit_helper import log_user_changes, log_password_change, log_account_lock, log_account_unlock, get_user_activity
@@ -433,10 +433,12 @@ def settings():
     """Página de configuración general del sistema"""
     doc_types_count = DocumentType.query.count()
     iso_versions_count = ISOVersion.query.count()
+    asset_types_count = AssetType.query.count()
 
     return render_template('admin/settings.html',
                          doc_types_count=doc_types_count,
-                         iso_versions_count=iso_versions_count)
+                         iso_versions_count=iso_versions_count,
+                         asset_types_count=asset_types_count)
 
 
 @admin_bp.route('/settings/document-types')
@@ -750,3 +752,185 @@ def toggle_iso_version_active(id):
         flash(f'Error al cambiar el estado de la versión ISO: {str(e)}', 'danger')
 
     return redirect(url_for('admin.iso_versions'))
+
+
+# ========================================================================
+# TIPOS DE ACTIVOS
+# ========================================================================
+
+@admin_bp.route('/settings/asset-types')
+@login_required
+@role_required('admin', 'ciso')
+def asset_types():
+    """Gestión de tipos de activos"""
+    asset_types_list = AssetType.query.order_by(AssetType.category, AssetType.order).all()
+    return render_template('admin/asset_types.html', asset_types=asset_types_list)
+
+
+@admin_bp.route('/settings/asset-types/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_asset_type():
+    """Crea un nuevo tipo de activo"""
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            category = request.form.get('category')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name or not category:
+                flash('Los campos Código, Nombre y Categoría son obligatorios', 'danger')
+                return render_template('admin/asset_type_form.html',
+                                     form_data=request.form,
+                                     categories=AssetCategory)
+
+            # Verificar que el código no exista
+            existing_type = AssetType.query.filter_by(code=code).first()
+            if existing_type:
+                flash(f'Ya existe un tipo de activo con el código {code}', 'danger')
+                return render_template('admin/asset_type_form.html',
+                                     form_data=request.form,
+                                     categories=AssetCategory)
+
+            new_type = AssetType(
+                code=code,
+                name=name,
+                description=description,
+                category=AssetCategory[category],
+                icon=icon or 'fa-cube',
+                color=color or 'primary',
+                is_active=is_active,
+                order=int(order) if order else 0
+            )
+
+            db.session.add(new_type)
+            db.session.commit()
+
+            flash(f'Tipo de activo {name} creado exitosamente', 'success')
+            return redirect(url_for('admin.asset_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el tipo de activo: {str(e)}', 'danger')
+            return render_template('admin/asset_type_form.html',
+                                 form_data=request.form,
+                                 categories=AssetCategory)
+
+    return render_template('admin/asset_type_form.html',
+                         form_data=None,
+                         categories=AssetCategory)
+
+
+@admin_bp.route('/settings/asset-types/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_asset_type(id):
+    """Edita un tipo de activo existente"""
+    asset_type = AssetType.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            category = request.form.get('category')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name or not category:
+                flash('Los campos Código, Nombre y Categoría son obligatorios', 'danger')
+                return render_template('admin/asset_type_form.html',
+                                     asset_type=asset_type,
+                                     form_data=request.form,
+                                     categories=AssetCategory)
+
+            # Verificar que el código no exista (excepto el actual)
+            existing_type = AssetType.query.filter_by(code=code).first()
+            if existing_type and existing_type.id != id:
+                flash(f'Ya existe un tipo de activo con el código {code}', 'danger')
+                return render_template('admin/asset_type_form.html',
+                                     asset_type=asset_type,
+                                     form_data=request.form,
+                                     categories=AssetCategory)
+
+            asset_type.code = code
+            asset_type.name = name
+            asset_type.description = description
+            asset_type.category = AssetCategory[category]
+            asset_type.icon = icon or 'fa-cube'
+            asset_type.color = color or 'primary'
+            asset_type.is_active = is_active
+            asset_type.order = int(order) if order else 0
+            asset_type.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            flash(f'Tipo de activo {name} actualizado exitosamente', 'success')
+            return redirect(url_for('admin.asset_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el tipo de activo: {str(e)}', 'danger')
+            return render_template('admin/asset_type_form.html',
+                                 asset_type=asset_type,
+                                 form_data=request.form,
+                                 categories=AssetCategory)
+
+    return render_template('admin/asset_type_form.html',
+                         asset_type=asset_type,
+                         form_data=None,
+                         categories=AssetCategory)
+
+
+@admin_bp.route('/settings/asset-types/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def delete_asset_type(id):
+    """Elimina un tipo de activo"""
+    asset_type = AssetType.query.get_or_404(id)
+
+    try:
+        # Verificar si el tipo está siendo usado en activos
+        if asset_type.assets:
+            flash(f'No se puede eliminar el tipo de activo {asset_type.name} porque está siendo usado en {len(asset_type.assets)} activo(s)', 'danger')
+            return redirect(url_for('admin.asset_types'))
+
+        db.session.delete(asset_type)
+        db.session.commit()
+
+        flash(f'Tipo de activo {asset_type.name} eliminado exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el tipo de activo: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.asset_types'))
+
+
+@admin_bp.route('/settings/asset-types/<int:id>/toggle-active', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def toggle_asset_type_active(id):
+    """Activa o desactiva un tipo de activo"""
+    asset_type = AssetType.query.get_or_404(id)
+
+    try:
+        asset_type.is_active = not asset_type.is_active
+        asset_type.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        status = 'activado' if asset_type.is_active else 'desactivado'
+        flash(f'Tipo de activo {asset_type.name} {status} exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar el estado del tipo de activo: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.asset_types'))

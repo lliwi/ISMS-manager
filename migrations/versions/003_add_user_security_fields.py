@@ -1,7 +1,7 @@
 """Add user security and audit fields
 
 Revision ID: 003
-Revises: 002
+Revises: 002_update_document_type
 Create Date: 2025-10-04
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '003'
-down_revision = '002'
+down_revision = '002_update_document_type'
 branch_labels = None
 depends_on = None
 

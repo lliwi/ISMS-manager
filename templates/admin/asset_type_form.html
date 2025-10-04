@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}{% if asset_type %}Editar{% else %}Nuevo{% endif %} Tipo de Activo - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">{% if asset_type %}Editar{% else %}Nuevo{% endif %} Tipo de Activo</h1>
+        <p class="text-muted">Configuración de tipo de activo para el inventario</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.asset_types') }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cube"></i> Información del Tipo de Activo
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Código -->
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Código <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="code" name="code"
+                               value="{{ asset_type.code if asset_type else (form_data.code if form_data else '') }}"
+                               placeholder="ej: SERVIDOR, LAPTOP, BASE_DATOS" required>
+                        <small class="form-text text-muted">
+                            Código único para identificar el tipo de activo (sin espacios, mayúsculas)
+                        </small>
+                    </div>
+
+                    <!-- Nombre -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ asset_type.name if asset_type else (form_data.name if form_data else '') }}"
+                               placeholder="ej: Servidor, Laptop, Base de Datos" required>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Descripción detallada del tipo de activo">{{ asset_type.description if asset_type else (form_data.description if form_data else '') }}</textarea>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Categoría ISO 27001 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Seleccionar categoría...</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.name }}"
+                                    {% if (asset_type and asset_type.category == cat) or (form_data and form_data.category == cat.name) %}selected{% endif %}>
+                                {{ cat.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            Categoría según Control 5.9 de ISO 27001
+                        </small>
+                    </div>
+
+                    <hr>
+
+                    <!-- Configuración Visual -->
+                    <h6 class="mb-3"><i class="fas fa-palette"></i> Configuración Visual</h6>
+
+                    <div class="row">
+                        <!-- Icono -->
+                        <div class="col-md-6 mb-3">
+                            <label for="icon" class="form-label">Icono FontAwesome</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i id="icon-preview" class="fas {{ asset_type.icon if asset_type else 'fa-cube' }}"></i></span>
+                                <input type="text" class="form-control" id="icon" name="icon"
+                                       value="{{ asset_type.icon if asset_type else (form_data.icon if form_data else 'fa-cube') }}"
+                                       placeholder="fa-cube">
+                            </div>
+                            <small class="form-text text-muted">
+                                <a href="https://fontawesome.com/icons" target="_blank">Ver iconos disponibles</a>
+                            </small>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="col-md-6 mb-3">
+                            <label for="color" class="form-label">Color Bootstrap</label>
+                            <select class="form-select" id="color" name="color">
+                                {% set colors = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'dark'] %}
+                                {% for c in colors %}
+                                <option value="{{ c }}"
+                                        {% if (asset_type and asset_type.color == c) or (form_data and form_data.color == c) or (not asset_type and not form_data and c == 'primary') %}selected{% endif %}>
+                                    {{ c|capitalize }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Configuración adicional -->
+                    <h6 class="mb-3"><i class="fas fa-sliders-h"></i> Configuración Adicional</h6>
+
+                    <div class="row">
+                        <!-- Orden -->
+                        <div class="col-md-6 mb-3">
+                            <label for="order" class="form-label">Orden de Visualización</label>
+                            <input type="number" class="form-control" id="order" name="order"
+                                   value="{{ asset_type.order if asset_type else (form_data.order if form_data else '0') }}"
+                                   min="0">
+                            <small class="form-text text-muted">Orden en listas (menor número = primero)</small>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estado</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                                       {% if (asset_type and asset_type.is_active) or (form_data and form_data.is_active) or (not asset_type and not form_data) %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Activo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('admin.asset_types') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> {% if asset_type %}Actualizar{% else %}Crear{% endif %} Tipo de Activo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel lateral con vista previa -->
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 1rem;">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-eye"></i> Vista Previa
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <i id="preview-icon" class="fas {{ asset_type.icon if asset_type else 'fa-cube' }} fa-4x mb-3"
+                   style="color: var(--bs-{{ asset_type.color if asset_type else 'primary' }})"></i>
+                <h5 id="preview-name">{{ asset_type.name if asset_type else 'Nombre del Tipo' }}</h5>
+                <p id="preview-code" class="text-muted"><code>{{ asset_type.code if asset_type else 'CODIGO' }}</code></p>
+                <span id="preview-category" class="badge bg-dark">
+                    {{ asset_type.category.value if asset_type else 'Categoría' }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Ayuda -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-question-circle"></i> Ayuda
+                </h6>
+            </div>
+            <div class="card-body">
+                <small>
+                    <p><strong>Categorías ISO 27001:</strong></p>
+                    <ul class="small">
+                        <li><strong>Hardware:</strong> Equipos físicos (servidores, PCs, etc.)</li>
+                        <li><strong>Software:</strong> Aplicaciones y sistemas</li>
+                        <li><strong>Información:</strong> Bases de datos, documentos</li>
+                        <li><strong>Servicios:</strong> Servicios cloud, outsourcing</li>
+                        <li><strong>Personas:</strong> Personal clave</li>
+                        <li><strong>Instalaciones:</strong> Espacios físicos</li>
+                    </ul>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Actualizar vista previa en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const iconInput = document.getElementById('icon');
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    const categorySelect = document.getElementById('category');
+    const colorSelect = document.getElementById('color');
+
+    const previewIcon = document.getElementById('preview-icon');
+    const iconPreview = document.getElementById('icon-preview');
+    const previewName = document.getElementById('preview-name');
+    const previewCode = document.getElementById('preview-code');
+    const previewCategory = document.getElementById('preview-category');
+
+    iconInput.addEventListener('input', function() {
+        const iconClass = this.value || 'fa-cube';
+        previewIcon.className = `fas ${iconClass} fa-4x mb-3`;
+        iconPreview.className = `fas ${iconClass}`;
+    });
+
+    nameInput.addEventListener('input', function() {
+        previewName.textContent = this.value || 'Nombre del Tipo';
+    });
+
+    codeInput.addEventListener('input', function() {
+        previewCode.innerHTML = `<code>${this.value || 'CODIGO'}</code>`;
+    });
+
+    categorySelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        previewCategory.textContent = selectedOption.text || 'Categoría';
+    });
+
+    colorSelect.addEventListener('change', function() {
+        const color = this.value;
+        previewIcon.style.color = `var(--bs-${color})`;
+    });
+});
+</script>
+
+{% endblock %}
