@@ -448,10 +448,305 @@ def document_types():
     return render_template('admin/document_types.html', document_types=doc_types)
 
 
+@admin_bp.route('/settings/document-types/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_document_type():
+    """Crea un nuevo tipo de documento"""
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            review_period_months = request.form.get('review_period_months')
+            requires_approval = request.form.get('requires_approval') == 'on'
+            approval_workflow = request.form.get('approval_workflow')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name:
+                flash('Los campos Código y Nombre son obligatorios', 'danger')
+                return render_template('admin/document_type_form.html', form_data=request.form)
+
+            # Verificar que el código no exista
+            existing_type = DocumentType.query.filter_by(code=code).first()
+            if existing_type:
+                flash(f'Ya existe un tipo de documento con el código {code}', 'danger')
+                return render_template('admin/document_type_form.html', form_data=request.form)
+
+            new_type = DocumentType(
+                code=code,
+                name=name,
+                description=description,
+                review_period_months=int(review_period_months) if review_period_months else 12,
+                requires_approval=requires_approval,
+                approval_workflow=approval_workflow,
+                icon=icon or 'fa-file',
+                color=color or 'primary',
+                is_active=is_active,
+                order=int(order) if order else 0
+            )
+
+            db.session.add(new_type)
+            db.session.commit()
+
+            flash(f'Tipo de documento {name} creado exitosamente', 'success')
+            return redirect(url_for('admin.document_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el tipo de documento: {str(e)}', 'danger')
+            return render_template('admin/document_type_form.html', form_data=request.form)
+
+    return render_template('admin/document_type_form.html', form_data=None)
+
+
+@admin_bp.route('/settings/document-types/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_document_type(id):
+    """Edita un tipo de documento existente"""
+    doc_type = DocumentType.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            code = request.form.get('code')
+            name = request.form.get('name')
+            description = request.form.get('description')
+            review_period_months = request.form.get('review_period_months')
+            requires_approval = request.form.get('requires_approval') == 'on'
+            approval_workflow = request.form.get('approval_workflow')
+            icon = request.form.get('icon')
+            color = request.form.get('color')
+            is_active = request.form.get('is_active') == 'on'
+            order = request.form.get('order')
+
+            # Validaciones
+            if not code or not name:
+                flash('Los campos Código y Nombre son obligatorios', 'danger')
+                return render_template('admin/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+            # Verificar que el código no exista (excepto el actual)
+            existing_type = DocumentType.query.filter_by(code=code).first()
+            if existing_type and existing_type.id != id:
+                flash(f'Ya existe un tipo de documento con el código {code}', 'danger')
+                return render_template('admin/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+            doc_type.code = code
+            doc_type.name = name
+            doc_type.description = description
+            doc_type.review_period_months = int(review_period_months) if review_period_months else 12
+            doc_type.requires_approval = requires_approval
+            doc_type.approval_workflow = approval_workflow
+            doc_type.icon = icon or 'fa-file'
+            doc_type.color = color or 'primary'
+            doc_type.is_active = is_active
+            doc_type.order = int(order) if order else 0
+            doc_type.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            flash(f'Tipo de documento {name} actualizado exitosamente', 'success')
+            return redirect(url_for('admin.document_types'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el tipo de documento: {str(e)}', 'danger')
+            return render_template('admin/document_type_form.html', doc_type=doc_type, form_data=request.form)
+
+    return render_template('admin/document_type_form.html', doc_type=doc_type, form_data=None)
+
+
+@admin_bp.route('/settings/document-types/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def delete_document_type(id):
+    """Elimina un tipo de documento"""
+    doc_type = DocumentType.query.get_or_404(id)
+
+    try:
+        # Verificar si el tipo está siendo usado en documentos
+        if doc_type.documents:
+            flash(f'No se puede eliminar el tipo de documento {doc_type.name} porque está siendo usado en {len(doc_type.documents)} documento(s)', 'danger')
+            return redirect(url_for('admin.document_types'))
+
+        db.session.delete(doc_type)
+        db.session.commit()
+
+        flash(f'Tipo de documento {doc_type.name} eliminado exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el tipo de documento: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.document_types'))
+
+
+@admin_bp.route('/settings/document-types/<int:id>/toggle-active', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def toggle_document_type_active(id):
+    """Activa o desactiva un tipo de documento"""
+    doc_type = DocumentType.query.get_or_404(id)
+
+    try:
+        doc_type.is_active = not doc_type.is_active
+        doc_type.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        status = 'activado' if doc_type.is_active else 'desactivado'
+        flash(f'Tipo de documento {doc_type.name} {status} exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar el estado del tipo de documento: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.document_types'))
+
+
 @admin_bp.route('/settings/iso-versions')
 @login_required
 @role_required('admin', 'ciso')
 def iso_versions():
     """Gestión de versiones ISO"""
-    iso_versions = ISOVersion.query.order_by(ISOVersion.year.desc()).all()
-    return render_template('admin/iso_versions.html', iso_versions=iso_versions)
+    iso_versions_list = ISOVersion.query.order_by(ISOVersion.year.desc()).all()
+    return render_template('admin/iso_versions.html', iso_versions=iso_versions_list)
+
+
+@admin_bp.route('/settings/iso-versions/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_iso_version():
+    """Crea una nueva versión ISO"""
+    if request.method == 'POST':
+        try:
+            version = request.form.get('version')
+            year = request.form.get('year')
+            title = request.form.get('title')
+            description = request.form.get('description')
+            number_of_controls = request.form.get('number_of_controls')
+            is_active = request.form.get('is_active') == 'on'
+
+            # Validaciones
+            if not version or not year or not title:
+                flash('Los campos Versión, Año y Título son obligatorios', 'danger')
+                return render_template('admin/iso_version_form.html', form_data=request.form)
+
+            # Verificar que la versión no exista
+            existing_version = ISOVersion.query.filter_by(version=version).first()
+            if existing_version:
+                flash(f'Ya existe una versión ISO con el código {version}', 'danger')
+                return render_template('admin/iso_version_form.html', form_data=request.form)
+
+            new_version = ISOVersion(
+                version=version,
+                year=int(year),
+                title=title,
+                description=description,
+                number_of_controls=int(number_of_controls) if number_of_controls else None,
+                is_active=is_active
+            )
+
+            db.session.add(new_version)
+            db.session.commit()
+
+            flash(f'Versión ISO {version} creada exitosamente', 'success')
+            return redirect(url_for('admin.iso_versions'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la versión ISO: {str(e)}', 'danger')
+            return render_template('admin/iso_version_form.html', form_data=request.form)
+
+    return render_template('admin/iso_version_form.html', form_data=None)
+
+
+@admin_bp.route('/settings/iso-versions/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_iso_version(id):
+    """Edita una versión ISO existente"""
+    version = ISOVersion.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            version_code = request.form.get('version')
+            year = request.form.get('year')
+            title = request.form.get('title')
+            description = request.form.get('description')
+            number_of_controls = request.form.get('number_of_controls')
+            is_active = request.form.get('is_active') == 'on'
+
+            # Validaciones
+            if not version_code or not year or not title:
+                flash('Los campos Versión, Año y Título son obligatorios', 'danger')
+                return render_template('admin/iso_version_form.html', version=version, form_data=request.form)
+
+            # Verificar que la versión no exista (excepto la actual)
+            existing_version = ISOVersion.query.filter_by(version=version_code).first()
+            if existing_version and existing_version.id != id:
+                flash(f'Ya existe una versión ISO con el código {version_code}', 'danger')
+                return render_template('admin/iso_version_form.html', version=version, form_data=request.form)
+
+            version.version = version_code
+            version.year = int(year)
+            version.title = title
+            version.description = description
+            version.number_of_controls = int(number_of_controls) if number_of_controls else None
+            version.is_active = is_active
+            version.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            flash(f'Versión ISO {version_code} actualizada exitosamente', 'success')
+            return redirect(url_for('admin.iso_versions'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la versión ISO: {str(e)}', 'danger')
+            return render_template('admin/iso_version_form.html', version=version, form_data=request.form)
+
+    return render_template('admin/iso_version_form.html', version=version, form_data=None)
+
+
+@admin_bp.route('/settings/iso-versions/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def delete_iso_version(id):
+    """Elimina una versión ISO"""
+    version = ISOVersion.query.get_or_404(id)
+
+    try:
+        # TODO: Verificar si la versión está siendo usada en algún SOA
+        # Si está en uso, no permitir eliminar
+        db.session.delete(version)
+        db.session.commit()
+
+        flash(f'Versión ISO {version.version} eliminada exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la versión ISO: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.iso_versions'))
+
+
+@admin_bp.route('/settings/iso-versions/<int:id>/toggle-active', methods=['POST'])
+@login_required
+@role_required('admin', 'ciso')
+def toggle_iso_version_active(id):
+    """Activa o desactiva una versión ISO"""
+    version = ISOVersion.query.get_or_404(id)
+
+    try:
+        version.is_active = not version.is_active
+        version.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        status = 'activada' if version.is_active else 'desactivada'
+        flash(f'Versión ISO {version.version} {status} exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar el estado de la versión ISO: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.iso_versions'))

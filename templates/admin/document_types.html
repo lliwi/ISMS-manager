@@ -9,6 +9,9 @@
         <p class="text-muted">Gestionar tipos de documentos del sistema</p>
     </div>
     <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_document_type') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus"></i> Nuevo Tipo
+        </a>
         <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver a Configuración
         </a>
@@ -17,10 +20,12 @@
 
 <div class="card">
     <div class="card-body">
+        {% if document_types %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th>Orden</th>
                         <th>Icono</th>
                         <th>Código</th>
                         <th>Nombre</th>
@@ -28,17 +33,19 @@
                         <th>Revisión</th>
                         <th>Aprobación</th>
                         <th>Estado</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for doc_type in document_types %}
                     <tr>
+                        <td>{{ doc_type.order }}</td>
                         <td>
-                            <i class="fas {{ doc_type.icon }} text-{{ doc_type.color }}"></i>
+                            <i class="fas {{ doc_type.icon }} text-{{ doc_type.color }} fa-lg"></i>
                         </td>
                         <td><code>{{ doc_type.code }}</code></td>
                         <td><strong>{{ doc_type.name }}</strong></td>
-                        <td><small class="text-muted">{{ doc_type.description[:80] }}...</small></td>
+                        <td><small class="text-muted">{{ doc_type.description[:80] if doc_type.description else '-' }}{{ '...' if doc_type.description and doc_type.description|length > 80 else '' }}</small></td>
                         <td>{{ doc_type.review_period_months }} meses</td>
                         <td>
                             {% if doc_type.requires_approval %}
@@ -54,18 +61,65 @@
                                 <span class="badge bg-secondary">Inactivo</span>
                             {% endif %}
                         </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.edit_document_type', id=doc_type.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('admin.toggle_document_type_active', id=doc_type.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if doc_type.is_active else 'success' }}" title="{{ 'Desactivar' if doc_type.is_active else 'Activar' }}">
+                                    <i class="fas fa-{{ 'toggle-off' if doc_type.is_active else 'toggle-on' }}"></i>
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                    onclick="confirmDelete('{{ doc_type.name }}', '{{ url_for('admin.delete_document_type', id=doc_type.id) }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            No hay tipos de documentos configurados en el sistema.
+        </div>
+        <div class="text-center">
+            <a href="{{ url_for('admin.create_document_type') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Crear Primer Tipo
+            </a>
+        </div>
+        {% endif %}
 
-        <div class="alert alert-info mt-3">
+        <div class="alert alert-info mt-3 mb-0">
             <i class="fas fa-info-circle"></i>
-            <strong>Nota:</strong> Los tipos de documentos son configurables pero requieren acceso directo a la base de datos.
-            Próximamente se habilitará la gestión desde esta interfaz.
+            <strong>Información:</strong> Los tipos de documentos definen las categorías disponibles para clasificar documentos en el sistema. Cada tipo puede tener su propio flujo de aprobación y período de revisión.
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmDelete(name, url) {
+    if (confirm('¿Estás seguro de que deseas eliminar el tipo de documento "' + name + '"?\n\nEsta acción no se puede deshacer.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 {% endblock %}

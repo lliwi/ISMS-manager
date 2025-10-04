@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if doc_type else 'Nuevo' }} Tipo de Documento - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.settings') }}">Configuración</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.document_types') }}">Tipos de Documentos</a></li>
+                <li class="breadcrumb-item active">{{ 'Editar' if doc_type else 'Nuevo' }} Tipo</li>
+            </ol>
+        </nav>
+        <h1 class="h2">{{ 'Editar' if doc_type else 'Nuevo' }} Tipo de Documento</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-{{ 'edit' if doc_type else 'plus' }} me-2"></i>
+                    Datos del Tipo de Documento
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.edit_document_type', id=doc_type.id) if doc_type else url_for('admin.create_document_type') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Información Básica -->
+                    <h6 class="mb-3 text-muted">
+                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="code" class="form-label">Código <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="code"
+                                   name="code"
+                                   value="{{ form_data.code if form_data else (doc_type.code if doc_type else '') }}"
+                                   placeholder="ej: policy, procedure"
+                                   required>
+                            <small class="form-text text-muted">Identificador único del tipo (sin espacios)</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="name"
+                                   name="name"
+                                   value="{{ form_data.name if form_data else (doc_type.name if doc_type else '') }}"
+                                   placeholder="ej: Política, Procedimiento"
+                                   required>
+                            <small class="form-text text-muted">Nombre descriptivo del tipo de documento</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control"
+                                  id="description"
+                                  name="description"
+                                  rows="3"
+                                  placeholder="Descripción del tipo de documento...">{{ form_data.description if form_data else (doc_type.description if doc_type else '') }}</textarea>
+                        <small class="form-text text-muted">Descripción detallada del tipo de documento (opcional)</small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Configuración de Revisión y Aprobación -->
+                    <h6 class="mb-3 text-muted">
+                        <i class="fas fa-cog me-2"></i>Configuración de Revisión y Aprobación
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="review_period_months" class="form-label">Período de Revisión (meses)</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="review_period_months"
+                                   name="review_period_months"
+                                   value="{{ form_data.review_period_months if form_data else (doc_type.review_period_months if doc_type else '12') }}"
+                                   min="1"
+                                   max="120">
+                            <small class="form-text text-muted">Cada cuántos meses se debe revisar este tipo de documento</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="approval_workflow" class="form-label">Flujo de Aprobación</label>
+                            <select class="form-select" id="approval_workflow" name="approval_workflow">
+                                <option value="">-- Seleccione --</option>
+                                <option value="management" {{ 'selected' if (form_data.approval_workflow if form_data else (doc_type.approval_workflow if doc_type else '')) == 'management' }}>Revisión de Gerencia</option>
+                                <option value="technical" {{ 'selected' if (form_data.approval_workflow if form_data else (doc_type.approval_workflow if doc_type else '')) == 'technical' }}>Aprobación Técnica</option>
+                                <option value="responsible" {{ 'selected' if (form_data.approval_workflow if form_data else (doc_type.approval_workflow if doc_type else '')) == 'responsible' }}>Revisión de Responsable</option>
+                                <option value="automatic" {{ 'selected' if (form_data.approval_workflow if form_data else (doc_type.approval_workflow if doc_type else '')) == 'automatic' }}>Validación Automática</option>
+                            </select>
+                            <small class="form-text text-muted">Tipo de flujo de aprobación para este documento</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="requires_approval"
+                                   name="requires_approval"
+                                   {% if form_data %}
+                                       {{ 'checked' if form_data.requires_approval == 'on' else '' }}
+                                   {% else %}
+                                       {{ 'checked' if doc_type and doc_type.requires_approval else 'checked' if not doc_type else '' }}
+                                   {% endif %}>
+                            <label class="form-check-label" for="requires_approval">
+                                Requiere Aprobación
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Indica si los documentos de este tipo requieren aprobación formal
+                            </small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Presentación Visual -->
+                    <h6 class="mb-3 text-muted">
+                        <i class="fas fa-palette me-2"></i>Presentación Visual
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="icon" class="form-label">Icono (FontAwesome)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas {{ form_data.icon if form_data else (doc_type.icon if doc_type else 'fa-file') }}"></i>
+                                </span>
+                                <input type="text"
+                                       class="form-control"
+                                       id="icon"
+                                       name="icon"
+                                       value="{{ form_data.icon if form_data else (doc_type.icon if doc_type else 'fa-file') }}"
+                                       placeholder="fa-file">
+                            </div>
+                            <small class="form-text text-muted">Icono FontAwesome (ej: fa-file, fa-gavel, fa-clipboard)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="color" class="form-label">Color (Bootstrap)</label>
+                            <select class="form-select" id="color" name="color">
+                                <option value="primary" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else 'primary')) == 'primary' }}>Primary (Azul)</option>
+                                <option value="secondary" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'secondary' }}>Secondary (Gris)</option>
+                                <option value="success" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'success' }}>Success (Verde)</option>
+                                <option value="danger" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'danger' }}>Danger (Rojo)</option>
+                                <option value="warning" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'warning' }}>Warning (Amarillo)</option>
+                                <option value="info" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'info' }}>Info (Celeste)</option>
+                                <option value="dark" {{ 'selected' if (form_data.color if form_data else (doc_type.color if doc_type else '')) == 'dark' }}>Dark (Negro)</option>
+                            </select>
+                            <small class="form-text text-muted">Color de presentación del tipo de documento</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="order" class="form-label">Orden</label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="order"
+                                   name="order"
+                                   value="{{ form_data.order if form_data else (doc_type.order if doc_type else '0') }}"
+                                   min="0">
+                            <small class="form-text text-muted">Orden de visualización (menor número aparece primero)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label d-block">Estado</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="is_active"
+                                       name="is_active"
+                                       {% if form_data %}
+                                           {{ 'checked' if form_data.is_active == 'on' else '' }}
+                                       {% else %}
+                                           {{ 'checked' if doc_type and doc_type.is_active else 'checked' if not doc_type else '' }}
+                                       {% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Tipo Activo
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    Los tipos activos estarán disponibles para crear documentos
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.document_types') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{{ 'Guardar Cambios' if doc_type else 'Crear Tipo' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Actualizar preview del icono cuando cambia
+document.getElementById('icon').addEventListener('input', function(e) {
+    const iconPreview = document.querySelector('.input-group-text i');
+    iconPreview.className = 'fas ' + e.target.value;
+});
+</script>
+{% endblock %}

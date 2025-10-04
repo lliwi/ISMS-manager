@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if version else 'Nueva' }} Versión ISO - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.settings') }}">Configuración</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.iso_versions') }}">Versiones ISO</a></li>
+                <li class="breadcrumb-item active">{{ 'Editar' if version else 'Nueva' }} Versión</li>
+            </ol>
+        </nav>
+        <h1 class="h2">{{ 'Editar' if version else 'Nueva' }} Versión ISO 27001</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-{{ 'edit' if version else 'plus' }} me-2"></i>
+                    Datos de la Versión ISO
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.edit_iso_version', id=version.id) if version else url_for('admin.create_iso_version') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="version" class="form-label">Versión <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="version"
+                                   name="version"
+                                   value="{{ form_data.version if form_data else (version.version if version else '') }}"
+                                   placeholder="ej: 2022, 2013"
+                                   required>
+                            <small class="form-text text-muted">Código de la versión ISO (ej: 2022, 2013)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="year" class="form-label">Año <span class="text-danger">*</span></label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="year"
+                                   name="year"
+                                   value="{{ form_data.year if form_data else (version.year if version else '') }}"
+                                   placeholder="ej: 2022"
+                                   min="1990"
+                                   max="2100"
+                                   required>
+                            <small class="form-text text-muted">Año de publicación de la norma</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text"
+                               class="form-control"
+                               id="title"
+                               name="title"
+                               value="{{ form_data.title if form_data else (version.title if version else '') }}"
+                               placeholder="ej: ISO/IEC 27001:2022 - Actualización"
+                               required>
+                        <small class="form-text text-muted">Título descriptivo de la versión</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control"
+                                  id="description"
+                                  name="description"
+                                  rows="4"
+                                  placeholder="Descripción de los cambios principales de esta versión...">{{ form_data.description if form_data else (version.description if version else '') }}</textarea>
+                        <small class="form-text text-muted">Descripción detallada de la versión (opcional)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="number_of_controls" class="form-label">Número de Controles</label>
+                        <input type="number"
+                               class="form-control"
+                               id="number_of_controls"
+                               name="number_of_controls"
+                               value="{{ form_data.number_of_controls if form_data else (version.number_of_controls if version else '') }}"
+                               placeholder="ej: 93, 114"
+                               min="0">
+                        <small class="form-text text-muted">Cantidad total de controles del Anexo A (opcional)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="is_active"
+                                   name="is_active"
+                                   {% if form_data %}
+                                       {{ 'checked' if form_data.is_active == 'on' else '' }}
+                                   {% else %}
+                                       {{ 'checked' if version and version.is_active else 'checked' if not version else '' }}
+                                   {% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Versión Activa
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Las versiones activas estarán disponibles para seleccionar al crear SOAs
+                            </small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.iso_versions') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{{ 'Guardar Cambios' if version else 'Crear Versión' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
