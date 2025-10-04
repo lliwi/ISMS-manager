@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Tipos de Documentos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">Tipos de Documentos</h1>
+        <p class="text-muted">Gestionar tipos de documentos del sistema</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Configuración
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Icono</th>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Revisión</th>
+                        <th>Aprobación</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc_type in document_types %}
+                    <tr>
+                        <td>
+                            <i class="fas {{ doc_type.icon }} text-{{ doc_type.color }}"></i>
+                        </td>
+                        <td><code>{{ doc_type.code }}</code></td>
+                        <td><strong>{{ doc_type.name }}</strong></td>
+                        <td><small class="text-muted">{{ doc_type.description[:80] }}...</small></td>
+                        <td>{{ doc_type.review_period_months }} meses</td>
+                        <td>
+                            {% if doc_type.requires_approval %}
+                                <span class="badge bg-warning">Requiere</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No requiere</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc_type.is_active %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i>
+            <strong>Nota:</strong> Los tipos de documentos son configurables pero requieren acceso directo a la base de datos.
+            Próximamente se habilitará la gestión desde esta interfaz.
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Usuario - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2 mb-0">Editar Usuario: {{ user.username }}</h1>
+        <p class="text-muted">Modificar información del usuario</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user-edit"></i> Información del Usuario</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+                    {{ form.hidden_tag() }}
+                    {{ form.user_id(value=user.id) }}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.username.label }}</label>
+                            {{ form.username(class="form-control", value=user.username, readonly=True) }}
+                            <small class="text-muted">El nombre de usuario no se puede modificar</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.email.label }} *</label>
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.email.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.first_name.label }} *</label>
+                            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.first_name.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.last_name.label }} *</label>
+                            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.last_name.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.phone.label }}</label>
+                            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else "")) }}
+                            {% if form.phone.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.phone.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.role_id.label }} *</label>
+                            {{ form.role_id(class="form-select" + (" is-invalid" if form.role_id.errors else "")) }}
+                            {% if form.role_id.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.role_id.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.department.label }}</label>
+                            {{ form.department(class="form-control" + (" is-invalid" if form.department.errors else "")) }}
+                            {% if form.department.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.department.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.position.label }}</label>
+                            {{ form.position(class="form-control" + (" is-invalid" if form.position.errors else "")) }}
+                            {% if form.position.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.position.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.is_active(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.is_active.label }}</label>
+                            </div>
+                            {% if user.id == current_user.id %}
+                            <small class="text-warning"><i class="fas fa-exclamation-triangle"></i> No puedes desactivar tu propia cuenta</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-info-circle"></i> Información</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Creado:</dt>
+                    <dd class="col-sm-7">{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}</dd>
+
+                    <dt class="col-sm-5">Última actualización:</dt>
+                    <dd class="col-sm-7">{{ user.updated_at.strftime('%d/%m/%Y %H:%M') if user.updated_at else '-' }}</dd>
+
+                    <dt class="col-sm-5">Último login:</dt>
+                    <dd class="col-sm-7">{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Nunca' }}</dd>
+
+                    {% if user.last_login_ip %}
+                    <dt class="col-sm-5">IP último login:</dt>
+                    <dd class="col-sm-7"><code>{{ user.last_login_ip }}</code></dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin.reset_password', user_id=user.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-key"></i> Resetear Contraseña
+                    </a>
+
+                    {% if user.is_account_locked() %}
+                    <form method="POST" action="{{ url_for('admin.unlock_user', user_id=user.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-info btn-sm w-100">
+                            <i class="fas fa-unlock"></i> Desbloquear Cuenta
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('admin.toggle_active', user_id=user.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-{{ 'secondary' if user.is_active else 'success' }} btn-sm w-100"
+                                {% if user.id == current_user.id %}disabled title="No puedes desactivar tu propia cuenta"{% endif %}>
+                            <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                            {{ 'Desactivar' if user.is_active else 'Activar' }} Usuario
+                        </button>
+                    </form>
+
+                    {% if user.id != current_user.id %}
+                    <hr>
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                          onsubmit="return confirm('¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                            <i class="fas fa-trash"></i> Eliminar Usuario
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import User, Role, AuditLog, db
+from models import User, Role, AuditLog, DocumentType, ISOVersion, db
 from forms.user_forms import UserCreateForm, UserEditForm, ChangePasswordForm, ResetPasswordForm, UserSearchForm
 from utils.decorators import role_required, audit_action
 from utils.audit_helper import log_user_changes, log_password_change, log_account_lock, log_account_unlock, get_user_activity
@@ -420,3 +420,38 @@ def audit_logs():
                          action_filter=action_filter,
                          user_filter=user_filter,
                          entity_filter=entity_filter)
+
+
+# ========================================================================
+# CONFIGURACIÓN DEL SISTEMA
+# ========================================================================
+
+@admin_bp.route('/settings')
+@login_required
+@role_required('admin', 'ciso')
+def settings():
+    """Página de configuración general del sistema"""
+    doc_types_count = DocumentType.query.count()
+    iso_versions_count = ISOVersion.query.count()
+
+    return render_template('admin/settings.html',
+                         doc_types_count=doc_types_count,
+                         iso_versions_count=iso_versions_count)
+
+
+@admin_bp.route('/settings/document-types')
+@login_required
+@role_required('admin', 'ciso')
+def document_types():
+    """Gestión de tipos de documentos"""
+    doc_types = DocumentType.query.order_by(DocumentType.order).all()
+    return render_template('admin/document_types.html', document_types=doc_types)
+
+
+@admin_bp.route('/settings/iso-versions')
+@login_required
+@role_required('admin', 'ciso')
+def iso_versions():
+    """Gestión de versiones ISO"""
+    iso_versions = ISOVersion.query.order_by(ISOVersion.year.desc()).all()
+    return render_template('admin/iso_versions.html', iso_versions=iso_versions)

@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">{{ user.full_name }}</h1>
+        <p class="text-muted">@{{ user.username }}</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información del Usuario -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user"></i> Información Personal</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Nombre Completo:</dt>
+                    <dd class="col-sm-9">{{ user.full_name }}</dd>
+
+                    <dt class="col-sm-3">Usuario:</dt>
+                    <dd class="col-sm-9"><code>{{ user.username }}</code></dd>
+
+                    <dt class="col-sm-3">Email:</dt>
+                    <dd class="col-sm-9"><a href="mailto:{{ user.email }}">{{ user.email }}</a></dd>
+
+                    {% if user.phone %}
+                    <dt class="col-sm-3">Teléfono:</dt>
+                    <dd class="col-sm-9">{{ user.phone }}</dd>
+                    {% endif %}
+
+                    <dt class="col-sm-3">Departamento:</dt>
+                    <dd class="col-sm-9">{{ user.department or '-' }}</dd>
+
+                    <dt class="col-sm-3">Cargo:</dt>
+                    <dd class="col-sm-9">{{ user.position or '-' }}</dd>
+
+                    <dt class="col-sm-3">Rol:</dt>
+                    <dd class="col-sm-9">
+                        {% if user.role.name == 'admin' %}
+                            <span class="badge bg-danger"><i class="fas fa-crown"></i> Administrador</span>
+                        {% elif user.role.name == 'ciso' %}
+                            <span class="badge bg-primary"><i class="fas fa-shield-alt"></i> CISO</span>
+                        {% elif user.role.name == 'auditor' %}
+                            <span class="badge bg-info"><i class="fas fa-search"></i> Auditor</span>
+                        {% elif user.role.name == 'owner' %}
+                            <span class="badge bg-success"><i class="fas fa-user-tie"></i> Propietario</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-user"></i> Usuario</span>
+                        {% endif %}
+                        - {{ user.role.description }}
+                    </dd>
+
+                    <dt class="col-sm-3">Estado:</dt>
+                    <dd class="col-sm-9">
+                        {% if user.is_active %}
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Activo</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-times"></i> Inactivo</span>
+                        {% endif %}
+
+                        {% if user.is_account_locked() %}
+                            <span class="badge bg-danger ms-2"><i class="fas fa-lock"></i> Cuenta Bloqueada</span>
+                        {% endif %}
+
+                        {% if user.needs_password_change() %}
+                            <span class="badge bg-warning ms-2"><i class="fas fa-exclamation-triangle"></i> Requiere Cambio de Contraseña</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-history"></i> Actividad Reciente</h5>
+            </div>
+            <div class="card-body">
+                {% if user_activity %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Acción</th>
+                                <th>Descripción</th>
+                                <th>IP</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in user_activity %}
+                            <tr>
+                                <td class="text-nowrap">{{ log.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    {% if log.action == 'login_success' %}
+                                        <span class="badge bg-success"><i class="fas fa-sign-in-alt"></i> Login</span>
+                                    {% elif log.action == 'login_failed' %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Login Fallido</span>
+                                    {% elif log.action == 'password_changed' %}
+                                        <span class="badge bg-primary"><i class="fas fa-key"></i> Cambio de Contraseña</span>
+                                    {% elif log.action.startswith('user_') %}
+                                        <span class="badge bg-info"><i class="fas fa-user-edit"></i> {{ log.action.replace('_', ' ').title() }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ log.action }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ log.description or '-' }}</small></td>
+                                <td><code class="small">{{ log.ip_address or '-' }}</code></td>
+                                <td>
+                                    {% if log.status == 'success' %}
+                                        <span class="text-success"><i class="fas fa-check"></i></span>
+                                    {% else %}
+                                        <span class="text-danger"><i class="fas fa-times"></i></span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center my-4">
+                    <i class="fas fa-info-circle"></i> No hay actividad registrada para este usuario
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral -->
+    <div class="col-md-4">
+        <!-- Estadísticas -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Estadísticas</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-6">Último login:</dt>
+                    <dd class="col-6 text-end">
+                        {% if user.last_login %}
+                            {{ user.last_login.strftime('%d/%m/%Y') }}<br>
+                            <small class="text-muted">{{ user.last_login.strftime('%H:%M') }}</small>
+                        {% else %}
+                            <span class="text-muted">Nunca</span>
+                        {% endif %}
+                    </dd>
+
+                    {% if user.last_login_ip %}
+                    <dt class="col-6">IP último login:</dt>
+                    <dd class="col-6 text-end"><code class="small">{{ user.last_login_ip }}</code></dd>
+                    {% endif %}
+
+                    <dt class="col-6">Intentos fallidos:</dt>
+                    <dd class="col-6 text-end">
+                        <span class="badge bg-{{ 'danger' if user.failed_login_attempts >= 3 else 'secondary' }}">
+                            {{ user.failed_login_attempts or 0 }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-6">Contraseña cambiada:</dt>
+                    <dd class="col-6 text-end">
+                        {% if user.password_changed_at %}
+                            {{ user.password_changed_at.strftime('%d/%m/%Y') }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-6">Cuenta creada:</dt>
+                    <dd class="col-6 text-end">{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else '-' }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-cog"></i> Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> Editar Usuario
+                    </a>
+
+                    <a href="{{ url_for('admin.reset_password', user_id=user.id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-key"></i> Resetear Contraseña
+                    </a>
+
+                    {% if user.is_account_locked() %}
+                    <form method="POST" action="{{ url_for('admin.unlock_user', user_id=user.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-info btn-sm w-100">
+                            <i class="fas fa-unlock"></i> Desbloquear Cuenta
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('admin.toggle_active', user_id=user.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-{{ 'secondary' if user.is_active else 'success' }} btn-sm w-100"
+                                {% if user.id == current_user.id %}disabled title="No puedes desactivar tu propia cuenta"{% endif %}>
+                            <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                            {{ 'Desactivar' if user.is_active else 'Activar' }} Usuario
+                        </button>
+                    </form>
+
+                    {% if user.id != current_user.id and current_user.has_role('admin') %}
+                    <hr>
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                          onsubmit="return confirm('¿Estás seguro? Esta acción no se puede deshacer.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                            <i class="fas fa-trash"></i> Eliminar Usuario
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

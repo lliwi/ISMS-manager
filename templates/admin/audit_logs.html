@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Logs de Auditoría - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">Logs de Auditoría</h1>
+        <p class="text-muted">Registro completo de acciones del sistema</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.audit_logs') }}" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Acción</label>
+                <select class="form-select" name="action">
+                    <option value="">Todas las acciones</option>
+                    {% for action in actions %}
+                    <option value="{{ action }}" {% if action_filter == action %}selected{% endif %}>
+                        {{ action }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tipo de Entidad</label>
+                <select class="form-select" name="entity_type">
+                    <option value="">Todas las entidades</option>
+                    {% for entity_type in entity_types %}
+                    <option value="{{ entity_type }}" {% if entity_filter == entity_type %}selected{% endif %}>
+                        {{ entity_type }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Usuario</label>
+                <input type="number" class="form-control" name="user_id" value="{{ user_filter or '' }}" placeholder="ID del usuario">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Logs Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Entidad</th>
+                        <th>Descripción</th>
+                        <th>IP</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="text-nowrap">
+                            <small>{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ log.username }}</strong>
+                            {% if log.user_id %}
+                            <br><small class="text-muted">ID: {{ log.user_id }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.action == 'login_success' %}
+                                <span class="badge bg-success"><i class="fas fa-sign-in-alt"></i> Login</span>
+                            {% elif log.action == 'login_failed' %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Login Fallido</span>
+                            {% elif log.action == 'user_create' %}
+                                <span class="badge bg-info"><i class="fas fa-user-plus"></i> Crear Usuario</span>
+                            {% elif log.action == 'user_update' %}
+                                <span class="badge bg-warning"><i class="fas fa-user-edit"></i> Modificar Usuario</span>
+                            {% elif log.action == 'user_delete' %}
+                                <span class="badge bg-danger"><i class="fas fa-user-times"></i> Eliminar Usuario</span>
+                            {% elif log.action == 'password_changed' %}
+                                <span class="badge bg-primary"><i class="fas fa-key"></i> Cambio Contraseña</span>
+                            {% elif log.action == 'password_reset_by_admin' %}
+                                <span class="badge bg-warning"><i class="fas fa-key"></i> Reset Contraseña</span>
+                            {% elif log.action == 'account_locked' %}
+                                <span class="badge bg-danger"><i class="fas fa-lock"></i> Cuenta Bloqueada</span>
+                            {% elif log.action == 'account_unlocked' %}
+                                <span class="badge bg-success"><i class="fas fa-unlock"></i> Cuenta Desbloqueada</span>
+                            {% elif log.action == 'access_denied' %}
+                                <span class="badge bg-danger"><i class="fas fa-ban"></i> Acceso Denegado</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.entity_type %}
+                                <small>
+                                    <strong>{{ log.entity_type }}</strong>
+                                    {% if log.entity_id %}
+                                        <br>ID: {{ log.entity_id }}
+                                    {% endif %}
+                                </small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ log.description[:100] if log.description else '-' }}</small>
+                            {% if log.error_message %}
+                                <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> {{ log.error_message[:50] }}</small>
+                            {% endif %}
+                        </td>
+                        <td><code class="small">{{ log.ip_address or '-' }}</code></td>
+                        <td>
+                            {% if log.status == 'success' %}
+                                <span class="text-success"><i class="fas fa-check"></i></span>
+                            {% elif log.status == 'failed' %}
+                                <span class="text-danger"><i class="fas fa-times"></i></span>
+                            {% elif log.status == 'security_event' %}
+                                <span class="text-warning"><i class="fas fa-exclamation-triangle"></i></span>
+                            {% else %}
+                                <span class="text-muted"><i class="fas fa-circle"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle"></i> No se encontraron registros de auditoría
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mt-4">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.audit_logs', page=pagination.prev_num, action=action_filter, user_id=user_filter, entity_type=entity_filter) }}">
+                        Anterior
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num != pagination.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.audit_logs', page=page_num, action=action_filter, user_id=user_filter, entity_type=entity_filter) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.audit_logs', page=pagination.next_num, action=action_filter, user_id=user_filter, entity_type=entity_filter) }}">
+                        Siguiente
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        <!-- Stats -->
+        {% if logs %}
+        <div class="alert alert-info mt-4">
+            <i class="fas fa-info-circle"></i>
+            <strong>Total de registros:</strong> {{ pagination.total }} |
+            <strong>Mostrando:</strong> {{ logs|length }} de {{ pagination.total }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
