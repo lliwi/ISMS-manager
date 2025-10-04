@@ -36,13 +36,14 @@
                 <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
+                    <div class="mb-3">
+                        <label for="title" class="form-label"><strong>Título del Documento</strong> <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required
+                               placeholder="ej: Política de Seguridad de la Información">
+                    </div>
+
                     <div class="row mb-3">
-                        <div class="col-md-8">
-                            <label for="title" class="form-label"><strong>Título del Documento</strong> <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="title" name="title" required
-                                   placeholder="ej: Política de Seguridad de la Información">
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="document_type" class="form-label"><strong>Tipo de Documento</strong> <span class="text-danger">*</span></label>
                             <select class="form-select" id="document_type" name="document_type" required>
                                 <option value="">Seleccionar tipo...</option>
@@ -50,6 +51,17 @@
                                 <option value="{{ doc_type.code }}">{{ doc_type.name }}</option>
                                 {% endfor %}
                             </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="author_id" class="form-label"><strong>Autor</strong></label>
+                            <select class="form-select" id="author_id" name="author_id">
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {{ 'selected' if user.id == current_user.id }}>
+                                    {{ user.full_name or user.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Por defecto: usuario actual</small>
                         </div>
                     </div>
 

@@ -169,11 +169,18 @@ def create():
                 return redirect(url_for('documents.create'))
 
             # Crear documento base
+            # Usar el autor especificado o el usuario actual si no se especifica
+            author_id = request.form.get('author_id')
+            if not author_id:
+                author_id = current_user.id
+            else:
+                author_id = int(author_id)
+
             document = Document(
                 title=request.form['title'],
                 document_type_id=doc_type.id,
                 content=request.form.get('content', ''),
-                author_id=current_user.id,
+                author_id=author_id,
                 version='1.0'
             )
 
@@ -245,7 +252,10 @@ def create():
     # Obtener tipos de documento activos
     document_types = DocumentType.query.filter_by(is_active=True).order_by(DocumentType.order).all()
 
-    return render_template('documents/create.html', controls=controls, document_types=document_types)
+    # Obtener lista de usuarios para el selector de autor
+    users = User.query.filter_by(is_active=True).order_by(User.first_name, User.last_name, User.username).all()
+
+    return render_template('documents/create.html', controls=controls, document_types=document_types, users=users)
 
 @documents_bp.route('/<int:id>')
 @login_required
@@ -285,6 +295,11 @@ def edit(id):
             document.title = request.form['title']
             document.document_type_id = doc_type.id
             content = request.form.get('content', '')
+
+            # Actualizar autor si se proporciona
+            author_id = request.form.get('author_id')
+            if author_id:
+                document.author_id = int(author_id)
 
             # Obtener controles actuales antes de modificar
             old_control_ids = set([c.id for c in document.related_controls])
@@ -378,7 +393,10 @@ def edit(id):
     # Obtener tipos de documento activos
     document_types = DocumentType.query.filter_by(is_active=True).order_by(DocumentType.order).all()
 
-    return render_template('documents/edit.html', document=document, controls=controls, document_types=document_types)
+    # Obtener lista de usuarios para el selector de autor
+    users = User.query.filter_by(is_active=True).order_by(User.first_name, User.last_name, User.username).all()
+
+    return render_template('documents/edit.html', document=document, controls=controls, document_types=document_types, users=users)
 
 @documents_bp.route('/<int:id>/delete', methods=['POST'])
 @login_required

@@ -238,7 +238,11 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small>{{ doc.author.full_name or doc.author.username }}</small>
+                                    {% if doc.author %}
+                                        <small>{{ doc.author.full_name or doc.author.username }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Sin autor</small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <small class="text-muted">{{ doc.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
