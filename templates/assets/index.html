@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Inventario de Activos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0"><i class="fas fa-box me-2"></i>Inventario de Activos</h1>
+                <p class="text-muted">Control 5.9 - Inventario de información y otros activos asociados</p>
+            </div>
+            {% if current_user.can_access('assets') %}
+            <div>
+                <a href="{{ url_for('assets.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nuevo Activo
+                </a>
+                <a href="{{ url_for('assets.export') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-file-export me-2"></i>Exportar CSV
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Activos</h6>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Críticos</h6>
+                        <h3 class="mb-0">{{ stats.critical }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Hardware</h6>
+                        <h3 class="mb-0">{{ stats.by_category|selectattr('0.value', 'equalto', 'Hardware')|map(attribute='1')|first or 0 }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-server fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Software</h6>
+                        <h3 class="mb-0">{{ stats.by_category|selectattr('0.value', 'equalto', 'Software')|map(attribute='1')|first or 0 }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-laptop-code fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y búsqueda -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" placeholder="Buscar activos..."
+                   id="search-input" name="search" value="{{ request.args.get('search', '') }}">
+        </div>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="category-filter" name="category">
+            <option value="">Todas las categorías</option>
+            {% for cat in AssetCategory %}
+            <option value="{{ cat.name }}" {% if request.args.get('category') == cat.name %}selected{% endif %}>
+                {{ cat.value }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="classification-filter" name="classification">
+            <option value="">Todas las clasificaciones</option>
+            {% for cls in ClassificationLevel %}
+            <option value="{{ cls.name }}" {% if request.args.get('classification') == cls.name %}selected{% endif %}>
+                {{ cls.value }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="status-filter" name="status">
+            <option value="">Todos los estados</option>
+            {% for st in AssetStatus %}
+            <option value="{{ st.name }}" {% if request.args.get('status') == st.name %}selected{% endif %}>
+                {{ st.value }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="owner-filter" name="owner_id">
+            <option value="">Todos los propietarios</option>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if request.args.get('owner_id') == user.id|string %}selected{% endif %}>
+                {{ user.first_name }} {{ user.last_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Tabla de activos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="assets-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Propietario</th>
+                                <th>Clasificación</th>
+                                <th class="text-center">C</th>
+                                <th class="text-center">I</th>
+                                <th class="text-center">A</th>
+                                <th class="text-center">Valor</th>
+                                <th class="text-center">Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if assets %}
+                                {% for asset in assets %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('assets.view', id=asset.id) }}" class="text-decoration-none">
+                                            <strong>{{ asset.asset_code }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {{ asset.name }}
+                                        {% if asset.physical_location %}
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-map-marker-alt"></i> {{ asset.physical_location }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ asset.category.value if asset.category else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if asset.owner %}
+                                        <small>{{ asset.owner.first_name }} {{ asset.owner.last_name }}</small>
+                                        {% else %}
+                                        <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if asset.classification %}
+                                        {% set cls_color = {
+                                            'PUBLIC': 'success',
+                                            'INTERNAL': 'info',
+                                            'CONFIDENTIAL': 'warning',
+                                            'RESTRICTED': 'danger'
+                                        } %}
+                                        <span class="badge bg-{{ cls_color[asset.classification.name] }}">
+                                            {{ asset.classification.value }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ 'danger' if asset.confidentiality_level and asset.confidentiality_level.name == 'CRITICAL' else 'secondary' }}">
+                                            {{ asset.confidentiality_level.value[0] if asset.confidentiality_level else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ 'danger' if asset.integrity_level and asset.integrity_level.name == 'CRITICAL' else 'secondary' }}">
+                                            {{ asset.integrity_level.value[0] if asset.integrity_level else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ 'danger' if asset.availability_level and asset.availability_level.name == 'CRITICAL' else 'secondary' }}">
+                                            {{ asset.availability_level.value[0] if asset.availability_level else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="progress" style="height: 20px; min-width: 50px;">
+                                            <div class="progress-bar bg-{{ 'danger' if asset.business_value >= 8 else 'warning' if asset.business_value >= 5 else 'success' }}"
+                                                 role="progressbar" style="width: {{ asset.business_value * 10 }}%">
+                                                {{ asset.business_value }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if asset.status %}
+                                        {% set status_color = {
+                                            'ACTIVE': 'success',
+                                            'MAINTENANCE': 'warning',
+                                            'RETIRED': 'secondary',
+                                            'DISPOSED': 'dark'
+                                        } %}
+                                        <span class="badge bg-{{ status_color[asset.status.name] }}">
+                                            {{ asset.status.value }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('assets.view', id=asset.id) }}"
+                                               class="btn btn-outline-primary" title="Ver detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if current_user.can_access('assets') %}
+                                            <a href="{{ url_for('assets.edit', id=asset.id) }}"
+                                               class="btn btn-outline-secondary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        <p>No se encontraron activos</p>
+                                        {% if current_user.can_access('assets') %}
+                                        <a href="{{ url_for('assets.create') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus me-2"></i>Crear primer activo
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Aplicar filtros en tiempo real
+document.getElementById('search-input').addEventListener('keyup', function(e) {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
+
+document.getElementById('category-filter').addEventListener('change', applyFilters);
+document.getElementById('classification-filter').addEventListener('change', applyFilters);
+document.getElementById('status-filter').addEventListener('change', applyFilters);
+document.getElementById('owner-filter').addEventListener('change', applyFilters);
+
+function applyFilters() {
+    const search = document.getElementById('search-input').value;
+    const category = document.getElementById('category-filter').value;
+    const classification = document.getElementById('classification-filter').value;
+    const status = document.getElementById('status-filter').value;
+    const owner_id = document.getElementById('owner-filter').value;
+
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (category) params.append('category', category);
+    if (classification) params.append('classification', classification);
+    if (status) params.append('status', status);
+    if (owner_id) params.append('owner_id', owner_id);
+
+    window.location.href = '{{ url_for("assets.index") }}?' + params.toString();
+}
+</script>
+{% endblock %}

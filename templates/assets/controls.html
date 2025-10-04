@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Aplicar Controles - {{ asset.asset_code }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2"><i class="fas fa-tasks me-2"></i>Aplicar Controles de Seguridad</h1>
+        <p class="text-muted">Activo: <strong>{{ asset.asset_code }} - {{ asset.name }}</strong></p>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('assets.index') }}">Activos</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('assets.view', id=asset.id) }}">{{ asset.asset_code }}</a></li>
+                <li class="breadcrumb-item active">Controles</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('assets.manage_controls', id=asset.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row">
+        <!-- Selección de controles -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Seleccionar Controles del SOA</h5>
+                </div>
+                <div class="card-body">
+                    {% if soa_controls %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Seleccione los controles del SOA activo que desea aplicar a este activo.
+                        Los controles ya aplicados no se mostrarán.
+                    </div>
+
+                    <!-- Filtro de controles -->
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="control-filter"
+                               placeholder="🔍 Buscar controles por ID, título o categoría...">
+                    </div>
+
+                    <!-- Contador de controles -->
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <span id="selected-count">0</span> controles seleccionados de
+                            <span id="total-count">{{ soa_controls|length }}</span>
+                        </small>
+                    </div>
+
+                    <!-- Lista de controles -->
+                    <div class="border rounded p-3" style="max-height: 500px; overflow-y: auto;">
+                        <div class="row">
+                            {% for control in soa_controls %}
+                            <div class="col-md-12 mb-2 control-item"
+                                 data-control-text="{{ control.control_id|lower }} {{ control.title|lower }} {{ control.category|lower }}">
+                                <div class="form-check">
+                                    <input class="form-check-input control-checkbox" type="checkbox"
+                                           name="selected_controls" value="{{ control.id }}"
+                                           id="control_{{ control.id }}">
+                                    <label class="form-check-label" for="control_{{ control.id }}" style="cursor: pointer;">
+                                        <code class="text-primary">{{ control.control_id }}</code>
+                                        <strong>{{ control.title }}</strong>
+                                        <br><small class="text-muted">{{ control.category }}</small>
+                                        {% if control.maturity_level != 'no_implementado' %}
+                                        <span class="badge bg-info">{{ control.maturity_level_display }}</span>
+                                        {% endif %}
+                                        {% if control.implementation_status %}
+                                        <span class="badge bg-secondary">{{ control.implementation_status }}</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="no-results" class="alert alert-warning mt-2" style="display: none;">
+                        <i class="fas fa-search me-2"></i>No se encontraron controles que coincidan con la búsqueda.
+                    </div>
+
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No hay una versión de SOA activa o no hay controles aplicables.
+                        Por favor, <a href="{{ url_for('soa.index') }}" class="alert-link">configure el SOA</a> primero.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuración común -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Configuración de Controles</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">
+                        Esta configuración se aplicará a todos los controles seleccionados.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="implementation_status" class="form-label">
+                            Estado de Implementación <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="implementation_status" name="implementation_status" required>
+                            <option value="Planificado" selected>Planificado</option>
+                            <option value="Parcialmente Implementado">Parcialmente Implementado</option>
+                            <option value="Implementado">Implementado</option>
+                            <option value="No Aplicable">No Aplicable</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="effectiveness" class="form-label">Efectividad (1-10)</label>
+                        <input type="range" class="form-range" min="1" max="10" value="5"
+                               id="effectiveness" name="effectiveness"
+                               oninput="document.getElementById('effectiveness_display').textContent = this.value">
+                        <div class="text-center">
+                            <span class="badge bg-secondary" id="effectiveness_display">5</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="responsible_id" class="form-label">Responsable del Control</label>
+                        <select class="form-select" id="responsible_id" name="responsible_id">
+                            <option value="">Seleccionar responsable...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="implementation_description" class="form-label">Descripción de la Implementación</label>
+                        <textarea class="form-control" id="implementation_description"
+                                  name="implementation_description" rows="3"
+                                  placeholder="Describe cómo se implementan estos controles en este activo..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="evidence" class="form-label">Evidencias</label>
+                        <textarea class="form-control" id="evidence" name="evidence" rows="2"
+                                  placeholder="Documentos, procedimientos, registros..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles ya aplicados -->
+            {% if asset.applied_controls %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Controles Ya Aplicados</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        {% for control in asset.applied_controls %}
+                        <div class="mb-1">
+                            <code class="text-success">{{ control.control_code }}</code>
+                            {{ control.control_name }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('assets.view', id=asset.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" id="submit-btn">
+                    <i class="fas fa-save me-2"></i>Aplicar Controles Seleccionados
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos
+    const filterInput = document.getElementById('control-filter');
+    const controlItems = document.querySelectorAll('.control-item');
+    const controlCheckboxes = document.querySelectorAll('.control-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const noResults = document.getElementById('no-results');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Función para actualizar el contador de seleccionados
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.control-checkbox:checked').length;
+        if (selectedCount) {
+            selectedCount.textContent = checked;
+        }
+
+        // Actualizar botón de envío
+        if (submitBtn) {
+            if (checked > 0) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Aplicar ' + checked + ' Control(es)';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Seleccione al menos un control';
+            }
+        }
+    }
+
+    // Filtro de controles
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            controlItems.forEach(item => {
+                const controlText = item.getAttribute('data-control-text');
+
+                if (controlText.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Mostrar/ocultar mensaje de sin resultados
+            if (noResults) {
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Actualizar contador cuando se marcan/desmarcan checkboxes
+    controlCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Inicializar contador y estado del botón
+    updateSelectedCount();
+
+    // Advertencia al salir sin guardar
+    let formModified = false;
+    const form = document.querySelector('form');
+
+    if (form) {
+        const inputs = form.querySelectorAll('input[type="checkbox"]');
+
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                formModified = true;
+            });
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formModified && document.querySelectorAll('.control-checkbox:checked').length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        form.addEventListener('submit', () => {
+            formModified = false;
+        });
+    }
+});
+</script>
+{% endblock %}

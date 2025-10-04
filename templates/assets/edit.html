@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Activo - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2"><i class="fas fa-edit me-2"></i>Editar Activo: {{ asset.asset_code }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('assets.index') }}">Activos</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('assets.view', id=asset.id) }}">{{ asset.asset_code }}</a></li>
+                <li class="breadcrumb-item active">Editar</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('assets.edit', id=asset.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Nombre del Activo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ asset.name }}" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="category" class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" value="{{ asset.category.value }}" disabled>
+                            <input type="hidden" name="category" value="{{ asset.category.name }}">
+                            <small class="text-muted">No se puede cambiar la categoría</small>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="subcategory" class="form-label">Subcategoría</label>
+                            <input type="text" class="form-control" id="subcategory" name="subcategory" value="{{ asset.subcategory or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ asset.description or '' }}</textarea>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-user-shield me-2"></i>Responsables</h5>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="owner_id" class="form-label">Propietario del Activo <span class="text-danger">*</span></label>
+                            <select class="form-select" id="owner_id" name="owner_id" required>
+                                <option value="">Seleccionar propietario...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if asset.owner_id == user.id %}selected{% endif %}>{{ user.first_name }} {{ user.last_name }} ({{ user.email }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Requerido por Control 5.9</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="custodian_id" class="form-label">Custodio/Responsable Técnico</label>
+                            <select class="form-select" id="custodian_id" name="custodian_id">
+                                <option value="">Seleccionar custodio...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if asset.custodian_id == user.id %}selected{% endif %}>{{ user.first_name }} {{ user.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-lock me-2"></i>Clasificación de Seguridad (Control 5.12)</h5>
+
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="classification" class="form-label">Clasificación <span class="text-danger">*</span></label>
+                            <select class="form-select" id="classification" name="classification" required>
+                                {% for cls in ClassificationLevel %}
+                                <option value="{{ cls.name }}" {% if asset.classification and asset.classification.name == cls.name %}selected{% endif %}>
+                                    {{ cls.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="confidentiality_level" class="form-label">Confidencialidad <span class="text-danger">*</span></label>
+                            <select class="form-select" id="confidentiality_level" name="confidentiality_level" required>
+                                {% for lvl in CIALevel %}
+                                <option value="{{ lvl.name }}" {% if asset.confidentiality_level and asset.confidentiality_level.name == lvl.name %}selected{% endif %}>
+                                    {{ lvl.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="integrity_level" class="form-label">Integridad <span class="text-danger">*</span></label>
+                            <select class="form-select" id="integrity_level" name="integrity_level" required>
+                                {% for lvl in CIALevel %}
+                                <option value="{{ lvl.name }}" {% if asset.integrity_level and asset.integrity_level.name == lvl.name %}selected{% endif %}>
+                                    {{ lvl.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="availability_level" class="form-label">Disponibilidad <span class="text-danger">*</span></label>
+                            <select class="form-select" id="availability_level" name="availability_level" required>
+                                {% for lvl in CIALevel %}
+                                <option value="{{ lvl.name }}" {% if asset.availability_level and asset.availability_level.name == lvl.name %}selected{% endif %}>
+                                    {{ lvl.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="business_value" class="form-label">Valor de Negocio (1-10)</label>
+                            <input type="range" class="form-range" min="1" max="10" value="5"
+                                   id="business_value" name="business_value" oninput="document.getElementById('business_value_display').textContent = this.value">
+                            <span id="business_value_display">5</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="criticality" class="form-label">Criticidad (1-10)</label>
+                            <input type="range" class="form-range" min="1" max="10" value="5"
+                                   id="criticality" name="criticality" oninput="document.getElementById('criticality_display').textContent = this.value">
+                            <span id="criticality_display">5</span>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-map-marker-alt me-2"></i>Ubicación</h5>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="physical_location" class="form-label">Ubicación Física</label>
+                            <input type="text" class="form-control" id="physical_location" name="physical_location">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="logical_location" class="form-label">Ubicación Lógica</label>
+                            <input type="text" class="form-control" id="logical_location" name="logical_location">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="department" class="form-label">Departamento</label>
+                            <input type="text" class="form-control" id="department" name="department">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-info me-2"></i>Información Técnica</h5>
+
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="manufacturer" class="form-label">Fabricante</label>
+                            <input type="text" class="form-control" id="manufacturer" name="manufacturer">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="model" class="form-label">Modelo</label>
+                            <input type="text" class="form-control" id="model" name="model">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="serial_number" class="form-label">Número de Serie</label>
+                            <input type="text" class="form-control" id="serial_number" name="serial_number">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="version" class="form-label">Versión</label>
+                            <input type="text" class="form-control" id="version" name="version">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="acquisition_date" class="form-label">Fecha de Adquisición</label>
+                            <input type="date" class="form-control" id="acquisition_date" name="acquisition_date">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="purchase_cost" class="form-label">Coste de Adquisición (€)</label>
+                            <input type="number" step="0.01" class="form-control" id="purchase_cost" name="purchase_cost">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="current_value" class="form-label">Valor Actual (€)</label>
+                            <input type="number" step="0.01" class="form-control" id="current_value" name="current_value">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-file-alt me-2"></i>Políticas y Requisitos</h5>
+
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Etiquetas</label>
+                        <input type="text" class="form-control" id="tags" name="tags"
+                               placeholder="Ej: Producción, Crítico, PCI-DSS">
+                        <small class="text-muted">Separar con comas</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="acceptable_use_policy" class="form-label">Política de Uso Aceptable (Control 5.10)</label>
+                        <textarea class="form-control" id="acceptable_use_policy" name="acceptable_use_policy" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="handling_requirements" class="form-label">Requisitos de Manejo</label>
+                        <textarea class="form-control" id="handling_requirements" name="handling_requirements" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notas Adicionales</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="card-title mb-4"><i class="fas fa-cog me-2"></i>Estado del Activo</h5>
+                    <div class="mb-4">
+                        <label for="status" class="form-label">Estado <span class="text-danger">*</span></label>
+                        <select class="form-select" id="status" name="status" required>
+                            {% for st in AssetStatus %}
+                            <option value="{{ st.name }}" {% if asset.status and asset.status.name == st.name %}selected{% endif %}>
+                                {{ st.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('assets.view', id=asset.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Actualizar Activo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}{{ asset.asset_code }} - {{ asset.name }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">
+                    <i class="fas fa-box me-2"></i>{{ asset.asset_code }} - {{ asset.name }}
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('assets.index') }}">Activos</a></li>
+                        <li class="breadcrumb-item active">{{ asset.asset_code }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                {% if current_user.can_access('assets') %}
+                <a href="{{ url_for('assets.edit', id=asset.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Editar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="assetTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details">
+            <i class="fas fa-info-circle me-2"></i>Detalles
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="classification-tab" data-bs-toggle="tab" data-bs-target="#classification">
+            <i class="fas fa-shield-alt me-2"></i>Clasificación
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="relationships-tab" data-bs-toggle="tab" data-bs-target="#relationships">
+            <i class="fas fa-project-diagram me-2"></i>Relaciones ({{ relationships|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="controls-tab" data-bs-toggle="tab" data-bs-target="#controls">
+            <i class="fas fa-tasks me-2"></i>Controles ({{ controls|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history">
+            <i class="fas fa-history me-2"></i>Historial
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="assetTabsContent">
+    <!-- Detalles Tab -->
+    <div class="tab-pane fade show active" id="details">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Código:</dt>
+                            <dd class="col-sm-8"><strong>{{ asset.asset_code }}</strong></dd>
+
+                            <dt class="col-sm-4">Nombre:</dt>
+                            <dd class="col-sm-8">{{ asset.name }}</dd>
+
+                            <dt class="col-sm-4">Categoría:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-secondary">{{ asset.category.value if asset.category else 'N/A' }}</span>
+                                {% if asset.subcategory %}
+                                / {{ asset.subcategory }}
+                                {% endif %}
+                            </dd>
+
+                            <dt class="col-sm-4">Descripción:</dt>
+                            <dd class="col-sm-8">{{ asset.description or '-' }}</dd>
+
+                            <dt class="col-sm-4">Propietario:</dt>
+                            <dd class="col-sm-8">
+                                {% if asset.owner %}
+                                {{ asset.owner.first_name }} {{ asset.owner.last_name }}
+                                <small class="text-muted">({{ asset.owner.email }})</small>
+                                {% endif %}
+                            </dd>
+
+                            {% if asset.custodian %}
+                            <dt class="col-sm-4">Custodio:</dt>
+                            <dd class="col-sm-8">{{ asset.custodian.first_name }} {{ asset.custodian.last_name }}</dd>
+                            {% endif %}
+
+                            <dt class="col-sm-4">Estado:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-{{ 'success' if asset.status and asset.status.name == 'ACTIVE' else 'warning' }}">
+                                    {{ asset.status.value if asset.status else 'N/A' }}
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Ubicación Física:</dt>
+                            <dd class="col-sm-8">{{ asset.physical_location or '-' }}</dd>
+
+                            <dt class="col-sm-4">Departamento:</dt>
+                            <dd class="col-sm-8">{{ asset.department or '-' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                {% if asset.manufacturer or asset.model or asset.serial_number %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Información Técnica</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            {% if asset.manufacturer %}<dt class="col-sm-4">Fabricante:</dt><dd class="col-sm-8">{{ asset.manufacturer }}</dd>{% endif %}
+                            {% if asset.model %}<dt class="col-sm-4">Modelo:</dt><dd class="col-sm-8">{{ asset.model }}</dd>{% endif %}
+                            {% if asset.serial_number %}<dt class="col-sm-4">Número de Serie:</dt><dd class="col-sm-8">{{ asset.serial_number }}</dd>{% endif %}
+                            {% if asset.version %}<dt class="col-sm-4">Versión:</dt><dd class="col-sm-8">{{ asset.version }}</dd>{% endif %}
+                        </dl>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-3 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Puntuación de Riesgo</h6>
+                        <h2 class="display-4 mb-0">{{ "%.1f"|format(risk_score) }}</h2>
+                        <small class="text-muted">sobre 10</small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Métricas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label small">Valor de Negocio</label>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: {{ asset.business_value * 10 }}%">{{ asset.business_value }}/10</div>
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small">Criticidad</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-danger" style="width: {{ asset.criticality * 10 }}%">{{ asset.criticality }}/10</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clasificación Tab -->
+    <div class="tab-pane fade" id="classification">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Clasificación de Seguridad (Control 5.12)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Clasificación General</h6>
+                        <span class="badge bg-warning fs-5">{{ asset.classification.value if asset.classification else 'N/A' }}</span>
+                    </div>
+                </div>
+                <hr>
+                <h6>Evaluación CIA</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6>Confidencialidad</h6>
+                                <h3>{{ asset.confidentiality_level.value if asset.confidentiality_level else 'N/A' }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6>Integridad</h6>
+                                <h3>{{ asset.integrity_level.value if asset.integrity_level else 'N/A' }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h6>Disponibilidad</h6>
+                                <h3>{{ asset.availability_level.value if asset.availability_level else 'N/A' }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relaciones Tab -->
+    <div class="tab-pane fade" id="relationships">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Relaciones con Otros Activos</h5>
+                <a href="{{ url_for('assets.manage_relationships', id=asset.id) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nueva Relación
+                </a>
+            </div>
+            <div class="card-body">
+                {% if relationships %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Tipo de Relación</th>
+                                <th>Activo Relacionado</th>
+                                <th>Criticidad</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rel in relationships %}
+                            <tr>
+                                <td>{{ rel.relationship_type.value }}</td>
+                                <td>
+                                    {% set related = rel.target_asset if rel.source_asset_id == asset.id else rel.source_asset %}
+                                    <a href="{{ url_for('assets.view', id=related.id) }}">
+                                        {{ related.asset_code }} - {{ related.name }}
+                                    </a>
+                                </td>
+                                <td><span class="badge bg-info">{{ rel.criticality }}/10</span></td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('assets.delete_relationship', id=rel.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta relación?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No hay relaciones definidas para este activo.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles Tab -->
+    <div class="tab-pane fade" id="controls">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Controles Aplicados</h5>
+                <a href="{{ url_for('assets.manage_controls', id=asset.id) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-2"></i>Aplicar Control
+                </a>
+            </div>
+            <div class="card-body">
+                {% if controls %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Control</th>
+                                <th>Estado</th>
+                                <th>Efectividad</th>
+                                <th>Responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for control in controls %}
+                            <tr>
+                                <td><strong>{{ control.control_code }}</strong> - {{ control.control_name }}</td>
+                                <td><span class="badge bg-success">{{ control.implementation_status }}</span></td>
+                                <td>
+                                    {% if control.effectiveness %}
+                                    <div class="progress" style="width: 100px;">
+                                        <div class="progress-bar" style="width: {{ control.effectiveness * 10 }}%">{{ control.effectiveness }}/10</div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if control.responsible %}
+                                    {{ control.responsible.first_name }} {{ control.responsible.last_name }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('assets.delete_control', id=control.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar este control?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No hay controles aplicados a este activo.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial Tab -->
+    <div class="tab-pane fade" id="history">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Eventos</h5>
+            </div>
+            <div class="card-body">
+                {% if events %}
+                <div class="timeline">
+                    {% for event in events %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge bg-primary">{{ event.event_type.value }}</span>
+                                <strong class="ms-2">{{ event.description }}</strong>
+                            </div>
+                            <small class="text-muted">{{ event.event_date.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                        {% if event.performed_by %}
+                        <small class="text-muted">
+                            Por: {{ event.performed_by.first_name }} {{ event.performed_by.last_name }}
+                        </small>
+                        {% endif %}
+                        {% if event.details %}
+                        <div class="mt-2"><small>{{ event.details }}</small></div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No hay eventos registrados.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
