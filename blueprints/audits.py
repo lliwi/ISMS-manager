@@ -1,42 +1,41 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from models import Audit, User, db
-from datetime import datetime
+"""
+Blueprint para Gestión de Auditorías
+Control 9.2 - Auditoría interna del sistema de gestión de seguridad de la información
+"""
+from flask import Blueprint, render_template
+from flask_login import login_required
 
 audits_bp = Blueprint('audits', __name__)
 
 @audits_bp.route('/')
 @login_required
 def index():
-    audits = Audit.query.order_by(Audit.start_date.desc()).all()
-    return render_template('audits/index.html', audits=audits)
+    """Página de gestión de auditorías - En construcción"""
+    return render_template('under_construction.html',
+        module_name='Gestión de Auditorías',
+        icon='fas fa-clipboard-check',
+        description='Sistema integral para planificar, ejecutar y hacer seguimiento de auditorías internas del SGSI conforme a ISO/IEC 27001 y ISO 19011.',
+        features=[
+            'Planificación de auditorías internas',
+            'Programa anual de auditorías',
+            'Gestión de auditores calificados',
+            'Registro de hallazgos y observaciones',
+            'Planes de acción correctiva',
+            'Seguimiento de cierre de hallazgos',
+            'Informes de auditoría',
+            'Evidencias y documentación de auditoría'
+        ],
+        progress=10
+    )
 
-@audits_bp.route('/new', methods=['GET', 'POST'])
+@audits_bp.route('/new')
 @login_required
 def create():
-    if not current_user.can_access('audits'):
-        flash('No tienes permisos para crear auditorías', 'error')
-        return redirect(url_for('audits.index'))
-
-    if request.method == 'POST':
-        audit = Audit(
-            title=request.form['title'],
-            audit_type=request.form['audit_type'],
-            scope=request.form['scope'],
-            start_date=datetime.strptime(request.form['start_date'], '%Y-%m-%d').date(),
-            lead_auditor_id=current_user.id
-        )
-
-        db.session.add(audit)
-        db.session.commit()
-
-        flash('Auditoría creada correctamente', 'success')
-        return redirect(url_for('audits.view', id=audit.id))
-
-    return render_template('audits/create.html')
+    """Redirigir a la página principal"""
+    return index()
 
 @audits_bp.route('/<int:id>')
 @login_required
 def view(id):
-    audit = Audit.query.get_or_404(id)
-    return render_template('audits/view.html', audit=audit)
+    """Redirigir a la página principal"""
+    return index()

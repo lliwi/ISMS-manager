@@ -1,44 +1,43 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from models import Task, User, db
-from datetime import datetime
+"""
+Blueprint para Gestión de Tareas Periódicas
+Control 5.37 - Procedimientos operativos documentados
+"""
+from flask import Blueprint, render_template
+from flask_login import login_required
 
 tasks_bp = Blueprint('tasks', __name__)
 
 @tasks_bp.route('/')
 @login_required
 def index():
-    tasks = Task.query.filter_by(assignee_id=current_user.id).order_by(Task.due_date).all()
-    return render_template('tasks/index.html', tasks=tasks)
+    """Página de gestión de tareas - En construcción"""
+    return render_template('under_construction.html',
+        module_name='Gestión de Tareas',
+        icon='fas fa-tasks',
+        description='Sistema de gestión de tareas periódicas y actividades operativas del SGSI con seguimiento y recordatorios automáticos.',
+        features=[
+            'Creación de tareas periódicas',
+            'Calendario de tareas',
+            'Asignación y delegación',
+            'Recordatorios automáticos',
+            'Tareas recurrentes (diarias, semanales, mensuales, anuales)',
+            'Estado de cumplimiento',
+            'Historial de ejecución',
+            'Notificaciones por email',
+            'Dashboard de tareas pendientes',
+            'Reportes de cumplimiento'
+        ],
+        progress=10
+    )
 
-@tasks_bp.route('/new', methods=['GET', 'POST'])
+@tasks_bp.route('/new')
 @login_required
 def create():
-    if not current_user.can_access('tasks'):
-        flash('No tienes permisos para crear tareas', 'error')
-        return redirect(url_for('tasks.index'))
-
-    if request.method == 'POST':
-        task = Task(
-            title=request.form['title'],
-            description=request.form['description'],
-            task_type=request.form['task_type'],
-            frequency=request.form['frequency'],
-            due_date=datetime.strptime(request.form['due_date'], '%Y-%m-%dT%H:%M'),
-            assignee_id=int(request.form['assignee_id'])
-        )
-
-        db.session.add(task)
-        db.session.commit()
-
-        flash('Tarea creada correctamente', 'success')
-        return redirect(url_for('tasks.view', id=task.id))
-
-    users = User.query.filter_by(is_active=True).all()
-    return render_template('tasks/create.html', users=users)
+    """Redirigir a la página principal"""
+    return index()
 
 @tasks_bp.route('/<int:id>')
 @login_required
 def view(id):
-    task = Task.query.get_or_404(id)
-    return render_template('tasks/view.html', task=task)
+    """Redirigir a la página principal"""
+    return index()

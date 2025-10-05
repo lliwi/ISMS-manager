@@ -1,42 +1,42 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from models import NonConformity, User, db
-from datetime import datetime
+"""
+Blueprint para Gestión de No Conformidades
+Control 10.1 - No conformidad y acción correctiva
+"""
+from flask import Blueprint, render_template
+from flask_login import login_required
 
 nonconformities_bp = Blueprint('nonconformities', __name__)
 
 @nonconformities_bp.route('/')
 @login_required
 def index():
-    nonconformities = NonConformity.query.order_by(NonConformity.created_at.desc()).all()
-    return render_template('nonconformities/index.html', nonconformities=nonconformities)
+    """Página de gestión de no conformidades - En construcción"""
+    return render_template('under_construction.html',
+        module_name='Gestión de No Conformidades',
+        icon='fas fa-exclamation-circle',
+        description='Sistema para detectar, registrar y gestionar no conformidades con acciones correctivas y preventivas según ISO/IEC 27001.',
+        features=[
+            'Registro de no conformidades',
+            'Clasificación por severidad y origen',
+            'Análisis de causa raíz (RCA)',
+            'Definición de acciones correctivas',
+            'Acciones preventivas',
+            'Seguimiento de implementación',
+            'Verificación de eficacia',
+            'Indicadores de no conformidades',
+            'Lecciones aprendidas'
+        ],
+        progress=10
+    )
 
-@nonconformities_bp.route('/new', methods=['GET', 'POST'])
+@nonconformities_bp.route('/new')
 @login_required
 def create():
-    if not current_user.can_access('nonconformities'):
-        flash('No tienes permisos para crear no conformidades', 'error')
-        return redirect(url_for('nonconformities.index'))
-
-    if request.method == 'POST':
-        nc = NonConformity(
-            title=request.form['title'],
-            description=request.form['description'],
-            source=request.form['source'],
-            severity=request.form['severity'],
-            responsible_id=current_user.id
-        )
-
-        db.session.add(nc)
-        db.session.commit()
-
-        flash('No conformidad creada correctamente', 'success')
-        return redirect(url_for('nonconformities.view', id=nc.id))
-
-    return render_template('nonconformities/create.html')
+    """Redirigir a la página principal"""
+    return index()
 
 @nonconformities_bp.route('/<int:id>')
 @login_required
 def view(id):
-    nc = NonConformity.query.get_or_404(id)
-    return render_template('nonconformities/view.html', nonconformity=nc)
+    """Redirigir a la página principal"""
+    return index()

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ module_name }} - En Construcción{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-body text-center py-5">
+                    <!-- Icono grande -->
+                    <div class="mb-4">
+                        <i class="{{ icon }} fa-6x text-warning"></i>
+                    </div>
+
+                    <!-- Título -->
+                    <h1 class="display-4 mb-3">
+                        <strong>{{ module_name }}</strong>
+                    </h1>
+
+                    <!-- Subtítulo -->
+                    <h3 class="text-muted mb-4">
+                        <i class="fas fa-hard-hat me-2"></i>Módulo en Construcción
+                    </h3>
+
+                    <!-- Descripción -->
+                    <div class="alert alert-info mx-auto" style="max-width: 600px;">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Este módulo está actualmente en desarrollo.</strong>
+                        <p class="mb-0 mt-2">{{ description }}</p>
+                    </div>
+
+                    <!-- Características planificadas -->
+                    {% if features %}
+                    <div class="mt-5">
+                        <h5 class="mb-3"><i class="fas fa-list-check me-2"></i>Características Planificadas:</h5>
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <ul class="list-group text-start">
+                                    {% for feature in features %}
+                                    <li class="list-group-item">
+                                        <i class="fas fa-circle-notch text-primary me-2"></i>
+                                        {{ feature }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Botón volver -->
+                    <div class="mt-5">
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-home me-2"></i>Volver al Dashboard
+                        </a>
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="mt-4 text-muted">
+                        <small>
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Estimado de disponibilidad: <strong>Próximamente</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta de progreso (opcional) -->
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="fas fa-tasks me-2"></i>Estado del Desarrollo</h6>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                             role="progressbar"
+                             style="width: {{ progress }}%;"
+                             aria-valuenow="{{ progress }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            {{ progress }}% Completado
+                        </div>
+                    </div>
+                    <p class="text-muted mt-2 mb-0 small">
+                        <i class="fas fa-code me-1"></i>
+                        El equipo de desarrollo está trabajando activamente en este módulo.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fa-6x {
+        font-size: 5em;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
+    }
+
+    .list-group-item {
+        border-left: 3px solid #0d6efd;
+    }
+</style>
+{% endblock %}
