@@ -231,6 +231,7 @@ backup_*.sql
 
 # claudeenvironment
 .claude/
+CLAUDE.md
 
 # Test files and scripts (development only)
 tests/

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 from models import Risk, Incident, NonConformity, Task, SOAControl, Audit
+from models import IncidentStatus
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
@@ -24,7 +25,7 @@ def index():
     kpis['total_risks'] = total_risks
 
     # Incident metrics
-    open_incidents = Incident.query.filter(~Incident.status.in_(['resolved', 'closed'])).count()
+    open_incidents = Incident.query.filter(~Incident.status.in_([IncidentStatus.RESOLVED, IncidentStatus.CLOSED])).count()
     total_incidents_month = Incident.query.filter(
         Incident.created_at >= datetime.utcnow() - timedelta(days=30)
     ).count()
