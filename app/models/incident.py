@@ -210,10 +210,43 @@ class Incident(db.Model):
         return None
 
     def calculate_resolution_time(self):
-        """Calcula tiempo de resolución en minutos"""
+        """Calcula tiempo de resolución en horas"""
         if self.reported_date and self.resolution_date:
             delta = self.resolution_date - self.reported_date
-            return int(delta.total_seconds() / 60)
+            return round(delta.total_seconds() / 3600, 2)  # Horas
+        return None
+
+    @property
+    def days_open(self):
+        """Calcula días que el incidente ha estado abierto"""
+        end_date = self.closure_date if self.closure_date else datetime.utcnow()
+        if self.discovery_date:
+            delta = end_date - self.discovery_date
+            return delta.days
+        return 0
+
+    @property
+    def is_72h_violation(self):
+        """Verifica si se violó el plazo de 72 horas RGPD para notificación"""
+        if self.is_data_breach and self.notification_date:
+            delta = self.notification_date - self.discovery_date
+            return delta.total_seconds() > (72 * 3600)  # 72 horas
+        return False
+
+    @property
+    def resolution_summary(self):
+        """Alias para resolution"""
+        return self.resolution
+
+    @resolution_summary.setter
+    def resolution_summary(self, value):
+        self.resolution = value
+
+    @property
+    def data_breach_details(self):
+        """Detalles de la brecha de datos"""
+        if self.is_data_breach:
+            return self.description
         return None
 
     def to_dict(self):
@@ -355,6 +388,42 @@ class IncidentAction(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    progress = db.Column(db.Integer, default=0)  # Progreso 0-100%
+
+    @property
+    def is_overdue(self):
+        """Verifica si la acción está vencida"""
+        if self.due_date and self.status != ActionStatus.COMPLETED:
+            return datetime.utcnow().date() > self.due_date
+        return False
+
+    @property
+    def assigned_to(self):
+        """Alias para responsible"""
+        return self.responsible
+
+    @assigned_to.setter
+    def assigned_to(self, value):
+        self.responsible = value
+
+    @property
+    def assigned_to_id(self):
+        """Alias para responsible_id"""
+        return self.responsible_id
+
+    @assigned_to_id.setter
+    def assigned_to_id(self, value):
+        self.responsible_id = value
+
+    @property
+    def created_date(self):
+        """Alias para created_at"""
+        return self.created_at
+
+    @property
+    def completed_date(self):
+        """Alias para completion_date"""
+        return self.completion_date
 
     def __repr__(self):
         return f'<IncidentAction {self.id} - {self.description[:50]}>'

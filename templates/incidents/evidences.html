@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Evidencias - {{ incident.incident_number }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .incident-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    .evidence-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .evidence-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .file-icon {
+        font-size: 3rem;
+        color: #6c757d;
+    }
+    .file-icon.image { color: #17a2b8; }
+    .file-icon.document { color: #fd7e14; }
+    .file-icon.archive { color: #6f42c1; }
+    .file-icon.log { color: #28a745; }
+    .file-icon.video { color: #e83e8c; }
+    .chain-of-custody {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .dropzone {
+        border: 2px dashed #ced4da;
+        border-radius: 8px;
+        padding: 3rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .dropzone:hover {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    .dropzone.dragover {
+        border-color: #0d6efd;
+        background-color: #cfe2ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="incident-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2><i class="fas fa-folder-open me-2"></i>Gestión de Evidencias</h2>
+                <h4 class="mb-0">{{ incident.incident_number }} - {{ incident.title }}</h4>
+                <p class="mb-0 mt-2 opacity-75">
+                    Control 5.28 - Recolección de evidencias
+                </p>
+            </div>
+            <a href="{{ url_for('incidents.view', id=incident.id) }}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Incidente
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Formulario Subida de Evidencia -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cloud-upload-alt me-2"></i>Subir Nueva Evidencia</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('incidents.evidences', id=incident.id) }}"
+                          enctype="multipart/form-data" id="evidenceForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label required">Archivo de Evidencia</label>
+                                <div class="dropzone" id="dropzone">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <p class="mb-2">Arrastre archivos aquí o haga clic para seleccionar</p>
+                                    <small class="text-muted">Tamaño máximo: 50 MB</small>
+                                    <input type="file" name="file" id="fileInput" class="d-none" required>
+                                </div>
+                                <div id="fileInfo" class="mt-2 d-none">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-file me-2"></i>
+                                        <span id="fileName"></span>
+                                        <span class="badge bg-secondary ms-2" id="fileSize"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label required">Descripción de la Evidencia</label>
+                                <textarea name="description" class="form-control" rows="3"
+                                          placeholder="Describa qué contiene esta evidencia y su relevancia para el incidente"
+                                          required></textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Tipo de Evidencia</label>
+                                <select name="evidence_type" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="LOG">Archivo de Log</option>
+                                    <option value="SCREENSHOT">Captura de Pantalla</option>
+                                    <option value="DOCUMENT">Documento</option>
+                                    <option value="EMAIL">Correo Electrónico</option>
+                                    <option value="NETWORK_CAPTURE">Captura de Red (PCAP)</option>
+                                    <option value="MEMORY_DUMP">Volcado de Memoria</option>
+                                    <option value="DISK_IMAGE">Imagen de Disco</option>
+                                    <option value="VIDEO">Video</option>
+                                    <option value="PHOTO">Fotografía</option>
+                                    <option value="OTHER">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Recolectado Por</label>
+                                <select name="collected_by_id" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}" {% if user.id == current_user.id %}selected{% endif %}>
+                                        {{ user.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Notas de Cadena de Custodia</label>
+                                <textarea name="chain_of_custody" class="form-control" rows="2"
+                                          placeholder="Información sobre cómo se recolectó, quién tuvo acceso, ubicación original..."></textarea>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Importante para mantener la integridad legal de la evidencia
+                                </small>
+                            </div>
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-upload me-2"></i>Subir Evidencia
+                                </button>
+                                <div class="spinner-border spinner-border-sm ms-2 d-none" id="uploadSpinner"></div>
+                                <span class="ms-2 text-muted d-none" id="uploadProgress">Subiendo...</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lista de Evidencias -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-database me-2"></i>Evidencias Registradas ({{ evidences|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if evidences %}
+                        <div class="row">
+                            {% for evidence in evidences %}
+                            <div class="col-md-6 mb-3">
+                                <div class="evidence-card p-3">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            {% set ext = evidence.file_name.split('.')[-1].lower() %}
+                                            {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp'] %}
+                                            <i class="fas fa-image file-icon image"></i>
+                                            {% elif ext in ['pdf', 'doc', 'docx', 'txt'] %}
+                                            <i class="fas fa-file-alt file-icon document"></i>
+                                            {% elif ext in ['zip', 'rar', '7z', 'tar', 'gz'] %}
+                                            <i class="fas fa-file-archive file-icon archive"></i>
+                                            {% elif ext in ['log', 'txt'] %}
+                                            <i class="fas fa-file-code file-icon log"></i>
+                                            {% elif ext in ['mp4', 'avi', 'mov'] %}
+                                            <i class="fas fa-file-video file-icon video"></i>
+                                            {% else %}
+                                            <i class="fas fa-file file-icon"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ evidence.file_name }}</h6>
+                                            <p class="text-muted mb-2 small">{{ evidence.description }}</p>
+                                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                                <span class="badge bg-secondary">{{ evidence.evidence_type }}</span>
+                                                <span class="badge bg-light text-dark">
+                                                    {{ (evidence.file_size / 1024)|round(2) }} KB
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block mb-2">
+                                                <i class="fas fa-user me-1"></i>{{ evidence.collected_by.name }}<br>
+                                                <i class="fas fa-calendar me-1"></i>{{ evidence.collected_date.strftime('%d/%m/%Y %H:%M') }}
+                                            </small>
+
+                                            <!-- Hash de Integridad -->
+                                            <div class="mb-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-fingerprint me-1"></i>
+                                                    <strong>SHA-256:</strong>
+                                                    <code style="font-size: 0.7rem;">{{ evidence.file_hash[:32] }}...</code>
+                                                </small>
+                                                <button class="btn btn-sm btn-link p-0"
+                                                        onclick="copyHash('{{ evidence.file_hash }}')">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Cadena de Custodia -->
+                                            {% if evidence.chain_of_custody %}
+                                            <div class="chain-of-custody">
+                                                <small>
+                                                    <strong><i class="fas fa-link me-1"></i>Cadena de Custodia:</strong><br>
+                                                    {{ evidence.chain_of_custody }}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+
+                                            <!-- Botones -->
+                                            <div class="mt-2">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ url_for('incidents.download_evidence', id=incident.id, evidence_id=evidence.id) }}"
+                                                       class="btn btn-outline-primary">
+                                                        <i class="fas fa-download me-1"></i>Descargar
+                                                    </a>
+                                                    <button class="btn btn-outline-info"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#verifyModal{{ evidence.id }}">
+                                                        <i class="fas fa-shield-alt me-1"></i>Verificar Hash
+                                                    </button>
+                                                    {% if current_user.role in ['ADMIN', 'SECURITY_MANAGER'] %}
+                                                    <button class="btn btn-outline-danger"
+                                                            onclick="deleteEvidence({{ evidence.id }})">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal Verificar Hash -->
+                            <div class="modal fade" id="verifyModal{{ evidence.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Verificar Integridad - {{ evidence.file_name }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>El hash SHA-256 de este archivo es:</p>
+                                            <div class="alert alert-secondary">
+                                                <code style="word-break: break-all;">{{ evidence.file_hash }}</code>
+                                            </div>
+                                            <p class="mb-2"><strong>Para verificar la integridad:</strong></p>
+                                            <ol>
+                                                <li>Descargue el archivo</li>
+                                                <li>Calcule su hash SHA-256</li>
+                                                <li>Compare con el hash mostrado arriba</li>
+                                            </ol>
+                                            <p class="mb-0"><small class="text-muted">
+                                                Linux/Mac: <code>shasum -a 256 archivo</code><br>
+                                                Windows: <code>certutil -hashfile archivo SHA256</code>
+                                            </small></p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                            <button type="button" class="btn btn-primary"
+                                                    onclick="copyHash('{{ evidence.file_hash }}')">
+                                                <i class="fas fa-copy me-1"></i>Copiar Hash
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No se han registrado evidencias para este incidente.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Información -->
+        <div class="col-md-4">
+            <!-- Guía de Control 5.28 -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-book me-2"></i>Control 5.28 - ISO 27001</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Recolección de Evidencias</h6>
+                    <p class="small">
+                        La organización debe establecer y aplicar procedimientos para la
+                        identificación, recolección, adquisición y preservación de evidencias.
+                    </p>
+                    <h6 class="mt-3">Requisitos Clave:</h6>
+                    <ul class="small">
+                        <li>Mantener cadena de custodia</li>
+                        <li>Preservar integridad de evidencias</li>
+                        <li>Documentar proceso de recolección</li>
+                        <li>Cumplir requisitos legales</li>
+                        <li>Proteger información sensible</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total de Evidencias</span>
+                        <strong>{{ evidences|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tamaño Total</span>
+                        <strong>{{ (evidences|sum(attribute='file_size') / 1024 / 1024)|round(2) }} MB</strong>
+                    </div>
+                    <hr>
+                    <h6>Por Tipo:</h6>
+                    {% set evidence_types = {} %}
+                    {% for evidence in evidences %}
+                        {% set _ = evidence_types.update({evidence.evidence_type: evidence_types.get(evidence.evidence_type, 0) + 1}) %}
+                    {% endfor %}
+                    {% for type, count in evidence_types.items() %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>{{ type }}</small>
+                        <span class="badge bg-secondary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Buenas Prácticas -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Buenas Prácticas</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Recolecte evidencias lo antes posible</li>
+                        <li>Documente el contexto de cada evidencia</li>
+                        <li>No modifique los archivos originales</li>
+                        <li>Use herramientas forenses cuando sea posible</li>
+                        <li>Mantenga copias de respaldo</li>
+                        <li>Cifre evidencias sensibles</li>
+                        <li>Registre quién accede a las evidencias</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dropzone functionality
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+
+dropzone.addEventListener('click', () => fileInput.click());
+
+dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+});
+
+dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+});
+
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateFileInfo();
+    }
+});
+
+fileInput.addEventListener('change', updateFileInfo);
+
+function updateFileInfo() {
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.classList.remove('d-none');
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+// Form submission
+document.getElementById('evidenceForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('uploadSpinner');
+    const progress = document.getElementById('uploadProgress');
+
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    progress.classList.remove('d-none');
+});
+
+// Copy hash to clipboard
+function copyHash(hash) {
+    navigator.clipboard.writeText(hash).then(() => {
+        alert('Hash copiado al portapapeles');
+    });
+}
+
+// Delete evidence
+function deleteEvidence(evidenceId) {
+    if (!confirm('¿Está seguro de eliminar esta evidencia? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/incidents/{{ incident.id }}/evidences/${evidenceId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

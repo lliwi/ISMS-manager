@@ -112,6 +112,11 @@ class User(UserMixin, db.Model):
             return f"{self.first_name} {self.last_name}"
         return self.username
 
+    @property
+    def name(self):
+        """Alias para full_name"""
+        return self.full_name
+
     def has_role(self, role_name):
         """Verifica si el usuario tiene un rol específico"""
         return self.role.name == role_name

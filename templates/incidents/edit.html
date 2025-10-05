@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Incidente {{ incident.incident_number }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .required:after {
+        content: " *";
+        color: red;
+    }
+    .form-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h5 {
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .incident-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <!-- Header -->
+            <div class="incident-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2><i class="fas fa-edit me-2"></i>Editar Incidente</h2>
+                        <h4 class="mb-0">{{ incident.incident_number }} - {{ incident.title }}</h4>
+                        <p class="mb-0 mt-2 opacity-75">
+                            <i class="fas fa-clock me-2"></i>Reportado: {{ incident.reported_date.strftime('%d/%m/%Y %H:%M') }}
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark fs-6">
+                            {{ incident.status.value }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('incidents.edit', id=incident.id) }}" id="incidentForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <!-- Información Básica -->
+                <div class="form-section">
+                    <h5><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label required">Título del Incidente</label>
+                            <input type="text" name="title" class="form-control"
+                                   placeholder="Resumen breve del incidente"
+                                   value="{{ incident.title }}"
+                                   required maxlength="200">
+                            <small class="text-muted">Describa el incidente en una frase concisa</small>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label required">Descripción Detallada</label>
+                            <textarea name="description" class="form-control" rows="4"
+                                      placeholder="Describa el incidente con el mayor detalle posible"
+                                      required>{{ incident.description }}</textarea>
+                            <small class="text-muted">
+                                Incluya: qué ocurrió, cuándo se detectó, cómo se descubrió, alcance estimado
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clasificación -->
+                <div class="form-section">
+                    <h5><i class="fas fa-tags me-2"></i>Clasificación del Incidente</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Categoría</label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for cat in IncidentCategory %}
+                                <option value="{{ cat.name }}" {% if incident.category == cat %}selected{% endif %}>
+                                    {{ cat.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Severidad</label>
+                            <select name="severity" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for sev in IncidentSeverity %}
+                                <option value="{{ sev.name }}" {% if incident.severity == sev %}selected{% endif %}>
+                                    {{ sev.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                <strong>Crítica:</strong> Impacto severo inmediato<br>
+                                <strong>Alta:</strong> Impacto significativo<br>
+                                <strong>Media:</strong> Impacto moderado<br>
+                                <strong>Baja:</strong> Impacto menor
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Prioridad</label>
+                            <select name="priority" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for pri in IncidentPriority %}
+                                <option value="{{ pri.name }}" {% if incident.priority == pri %}selected{% endif %}>
+                                    {{ pri.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Asignar a</label>
+                            <select name="assigned_to_id" class="form-select">
+                                <option value="">Sin asignar</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}"
+                                        {% if incident.assigned_to_id == user.id %}selected{% endif %}>
+                                    {{ user.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detección y Origen -->
+                <div class="form-section">
+                    <h5><i class="fas fa-search me-2"></i>Detección y Origen</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Fecha de Descubrimiento</label>
+                            <input type="datetime-local" name="discovery_date"
+                                   class="form-control" required
+                                   value="{{ incident.discovery_date.strftime('%Y-%m-%dT%H:%M') if incident.discovery_date else '' }}"
+                                   max="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Método de Detección</label>
+                            <select name="detection_method" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                {% for method in DetectionMethod %}
+                                <option value="{{ method.name }}"
+                                        {% if incident.detection_method == method %}selected{% endif %}>
+                                    {{ method.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Origen del Incidente</label>
+                            <select name="source" class="form-select">
+                                {% for source in IncidentSource %}
+                                <option value="{{ source.name }}"
+                                        {% if incident.source == source %}selected{% endif %}>
+                                    {{ source.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Detalles de la Detección</label>
+                            <textarea name="detection_details" class="form-control" rows="3"
+                                      placeholder="¿Cómo se detectó el incidente? ¿Qué indicadores o alertas se observaron?">{{ incident.detection_details or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Impacto CIA -->
+                <div class="form-section">
+                    <h5><i class="fas fa-shield-alt me-2"></i>Impacto en Confidencialidad, Integridad y Disponibilidad (CIA)</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Marque los aspectos de seguridad afectados por este incidente
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       id="impact_confidentiality" name="impact_confidentiality"
+                                       {% if incident.impact_confidentiality %}checked{% endif %}>
+                                <label class="form-check-label" for="impact_confidentiality">
+                                    <strong>Confidencialidad</strong><br>
+                                    <small class="text-muted">
+                                        Información expuesta o accedida sin autorización
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       id="impact_integrity" name="impact_integrity"
+                                       {% if incident.impact_integrity %}checked{% endif %}>
+                                <label class="form-check-label" for="impact_integrity">
+                                    <strong>Integridad</strong><br>
+                                    <small class="text-muted">
+                                        Información modificada, alterada o corrompida
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       id="impact_availability" name="impact_availability"
+                                       {% if incident.impact_availability %}checked{% endif %}>
+                                <label class="form-check-label" for="impact_availability">
+                                    <strong>Disponibilidad</strong><br>
+                                    <small class="text-muted">
+                                        Servicios o información no disponible
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activos Afectados -->
+                <div class="form-section">
+                    <h5><i class="fas fa-box me-2"></i>Activos Afectados</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Seleccione los activos afectados</label>
+                            <select name="affected_assets[]" class="form-select" multiple size="8">
+                                {% for asset in assets %}
+                                <option value="{{ asset.id }}"
+                                        {% if asset in incident.affected_assets %}selected{% endif %}>
+                                    {{ asset.name }} ({{ asset.category.value if asset.category else 'Sin categoría' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                Mantenga presionada la tecla Ctrl/Cmd para seleccionar múltiples activos
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Análisis y Resolución -->
+                <div class="form-section">
+                    <h5><i class="fas fa-microscope me-2"></i>Análisis y Resolución</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Análisis de Causa Raíz</label>
+                            <textarea name="root_cause" class="form-control" rows="4"
+                                      placeholder="¿Cuál fue la causa raíz del incidente? ¿Qué factores contribuyeron?">{{ incident.root_cause or '' }}</textarea>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Resolución Aplicada</label>
+                            <textarea name="resolution_summary" class="form-control" rows="4"
+                                      placeholder="¿Cómo se resolvió el incidente? ¿Qué acciones se tomaron?">{{ incident.resolution_summary or '' }}</textarea>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Lecciones Aprendidas (Control 5.27)</label>
+                            <textarea name="lessons_learned" class="form-control" rows="4"
+                                      placeholder="¿Qué aprendimos de este incidente? ¿Qué se puede mejorar?">{{ incident.lessons_learned or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brecha de Datos RGPD -->
+                <div class="form-section">
+                    <h5><i class="fas fa-user-shield me-2"></i>Brecha de Datos - RGPD</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       id="is_data_breach" name="is_data_breach"
+                                       {% if incident.is_data_breach %}checked{% endif %}
+                                       onchange="toggleDataBreachFields()">
+                                <label class="form-check-label" for="is_data_breach">
+                                    <strong>Este incidente es una brecha de datos personales</strong><br>
+                                    <small class="text-muted">
+                                        Requiere notificación a autoridad de protección de datos en 72 horas
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="dataBreachFields" style="{% if not incident.is_data_breach %}display: none;{% endif %}">
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>RGPD:</strong> Las brechas de datos personales deben notificarse a la autoridad
+                                    de protección de datos en un plazo de 72 horas desde que se tuvo conocimiento.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Fecha de Notificación a APD</label>
+                                <input type="datetime-local" name="notification_date"
+                                       class="form-control"
+                                       value="{{ incident.notification_date.strftime('%Y-%m-%dT%H:%M') if incident.notification_date else '' }}">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Detalles de la Brecha</label>
+                                <textarea name="data_breach_details" class="form-control" rows="3"
+                                          placeholder="Número aproximado de afectados, tipo de datos expuestos, medidas tomadas...">{{ incident.data_breach_details or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('incidents.view', id=incident.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    document.getElementById('incidentForm').addEventListener('submit', function(e) {
+        const title = document.querySelector('input[name="title"]').value;
+        const description = document.querySelector('textarea[name="description"]').value;
+
+        if (title.length < 10) {
+            e.preventDefault();
+            alert('El título debe tener al menos 10 caracteres');
+            return false;
+        }
+
+        if (description.length < 20) {
+            e.preventDefault();
+            alert('La descripción debe tener al menos 20 caracteres');
+            return false;
+        }
+    });
+
+    // Ayuda contextual para categorías
+    const categorySelect = document.querySelector('select[name="category"]');
+    categorySelect.addEventListener('change', function() {
+        const severity = document.querySelector('select[name="severity"]');
+        const priority = document.querySelector('select[name="priority"]');
+
+        // Sugerencias según categoría
+        if (['RANSOMWARE', 'DATA_BREACH', 'MALWARE'].includes(this.value)) {
+            if (!severity.value) severity.value = 'HIGH';
+            if (!priority.value) priority.value = 'URGENT';
+        }
+    });
+});
+
+function toggleDataBreachFields() {
+    const isDataBreach = document.getElementById('is_data_breach').checked;
+    const fields = document.getElementById('dataBreachFields');
+    fields.style.display = isDataBreach ? 'block' : 'none';
+}
+</script>
+{% endblock %}

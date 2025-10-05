@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block title %}{{ incident.incident_number }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .incident-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    .timeline-item {
+        position: relative;
+        padding-left: 50px;
+        margin-bottom: 30px;
+    }
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: -30px;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-item:last-child:before {
+        display: none;
+    }
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #007bff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+    .metric-card {
+        border-left: 4px solid #007bff;
+    }
+    .status-badge-large {
+        font-size: 1.1rem;
+        padding: 0.5rem 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header del Incidente -->
+    <div class="incident-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-bug me-2"></i>{{ incident.incident_number }}
+                </h2>
+                <h4 class="mb-3">{{ incident.title }}</h4>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-folder me-1"></i>{{ incident.category.value }}
+                    </span>
+                    <span class="badge
+                          {% if incident.severity.name == 'CRITICAL' %}bg-danger
+                          {% elif incident.severity.name == 'HIGH' %}bg-warning text-dark
+                          {% elif incident.severity.name == 'MEDIUM' %}bg-info
+                          {% else %}bg-success{% endif %}">
+                        <i class="fas fa-exclamation-triangle me-1"></i>{{ incident.severity.value }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-clock me-1"></i>Reportado: {{ incident.reported_date.strftime('%d/%m/%Y %H:%M') }}
+                    </span>
+                    {% if incident.assigned_to %}
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-user me-1"></i>{{ incident.assigned_to.name }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <h3 class="mb-3">
+                    <span class="badge status-badge-large
+                          {% if incident.status.name in ['NEW', 'EVALUATING'] %}bg-warning text-dark
+                          {% elif incident.status.name in ['IN_PROGRESS', 'CONFIRMED'] %}bg-primary
+                          {% elif incident.status.name == 'RESOLVED' %}bg-success
+                          {% elif incident.status.name == 'CLOSED' %}bg-secondary
+                          {% else %}bg-light text-dark{% endif %}">
+                        {{ incident.status.value }}
+                    </span>
+                </h3>
+                <div class="btn-group">
+                    <a href="{{ url_for('incidents.edit', id=incident.id) }}"
+                       class="btn btn-light">
+                        <i class="fas fa-edit me-1"></i>Editar
+                    </a>
+                    <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                               data-bs-target="#changeStatusModal">
+                            <i class="fas fa-exchange-alt me-2"></i>Cambiar Estado
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                               data-bs-target="#assignModal">
+                            <i class="fas fa-user-plus me-2"></i>Reasignar
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-download me-2"></i>Exportar PDF
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-md-8">
+            <!-- Descripción -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-align-left me-2"></i>Descripción</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ incident.description }}</p>
+
+                    {% if incident.detection_details %}
+                    <hr>
+                    <h6><i class="fas fa-search me-2"></i>Detalles de Detección</h6>
+                    <p>{{ incident.detection_details }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Impacto CIA -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Impacto en CIA</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3 {% if incident.impact_confidentiality %}bg-danger bg-opacity-10{% endif %}">
+                                <i class="fas fa-lock fa-2x {% if incident.impact_confidentiality %}text-danger{% else %}text-muted{% endif %}"></i>
+                                <h6 class="mt-2">Confidencialidad</h6>
+                                <span class="badge {% if incident.impact_confidentiality %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {% if incident.impact_confidentiality %}AFECTADA{% else %}NO AFECTADA{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 {% if incident.impact_integrity %}bg-warning bg-opacity-10{% endif %}">
+                                <i class="fas fa-check-circle fa-2x {% if incident.impact_integrity %}text-warning{% else %}text-muted{% endif %}"></i>
+                                <h6 class="mt-2">Integridad</h6>
+                                <span class="badge {% if incident.impact_integrity %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {% if incident.impact_integrity %}AFECTADA{% else %}NO AFECTADA{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 {% if incident.impact_availability %}bg-info bg-opacity-10{% endif %}">
+                                <i class="fas fa-signal fa-2x {% if incident.impact_availability %}text-info{% else %}text-muted{% endif %}"></i>
+                                <h6 class="mt-2">Disponibilidad</h6>
+                                <span class="badge {% if incident.impact_availability %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {% if incident.impact_availability %}AFECTADA{% else %}NO AFECTADA{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Análisis y Resolución -->
+            {% if incident.root_cause or incident.contributing_factors or incident.resolution %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-microscope me-2"></i>Análisis y Resolución</h5>
+                </div>
+                <div class="card-body">
+                    {% if incident.root_cause %}
+                    <h6><i class="fas fa-search-plus me-2"></i>Causa Raíz</h6>
+                    <p>{{ incident.root_cause }}</p>
+                    {% endif %}
+
+                    {% if incident.contributing_factors %}
+                    <h6><i class="fas fa-list me-2"></i>Factores Contribuyentes</h6>
+                    <p>{{ incident.contributing_factors }}</p>
+                    {% endif %}
+
+                    {% if incident.resolution %}
+                    <h6><i class="fas fa-check-circle me-2"></i>Resolución Aplicada</h6>
+                    <p>{{ incident.resolution }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lecciones Aprendidas (Control 5.27) -->
+            {% if incident.lessons_learned %}
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Lecciones Aprendidas (Control 5.27)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ incident.lessons_learned }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Activos Afectados -->
+            {% if incident.affected_assets %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-box me-2"></i>Activos Afectados</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for ia in incident.affected_assets %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ ia.asset.name }}</strong><br>
+                                <small class="text-muted">
+                                    {{ ia.asset.category.value if ia.asset.category else 'Sin categoría' }}
+                                </small>
+                                {% if ia.impact_description %}
+                                <br><small>{{ ia.impact_description }}</small>
+                                {% endif %}
+                            </div>
+                            <a href="{{ url_for('assets.view', id=ia.asset.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Acciones Correctivas -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Acciones Correctivas</h5>
+                    <a href="{{ url_for('incidents.actions', id=incident.id) }}"
+                       class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Agregar Acción
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if incident.actions %}
+                    <div class="list-group">
+                        {% for action in incident.actions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>{{ action.description }}</h6>
+                                    <p class="mb-1">
+                                        <span class="badge bg-secondary">{{ action.action_type }}</span>
+                                        {% if action.responsible %}
+                                        <span class="badge bg-info">{{ action.responsible.name }}</span>
+                                        {% endif %}
+                                        {% if action.due_date %}
+                                        <span class="badge bg-warning text-dark">
+                                            Vence: {{ action.due_date.strftime('%d/%m/%Y') }}
+                                        </span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <span class="badge
+                                      {% if action.status.name == 'COMPLETED' %}bg-success
+                                      {% elif action.status.name == 'IN_PROGRESS' %}bg-primary
+                                      {% elif action.status.name == 'CANCELLED' %}bg-secondary
+                                      {% else %}bg-warning text-dark{% endif %}">
+                                    {{ action.status.value }}
+                                </span>
+                            </div>
+                            {% if action.status.name == 'PENDING' or action.status.name == 'IN_PROGRESS' %}
+                            <div class="mt-2">
+                                <form method="POST" action="{{ url_for('incidents.complete_action', action_id=action.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check me-1"></i>Completar
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No hay acciones correctivas registradas</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Evidencias (Control 5.28) -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-archive me-2"></i>Evidencias (Control 5.28)
+                    </h5>
+                    <a href="{{ url_for('incidents.evidences', id=incident.id) }}"
+                       class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Agregar Evidencia
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if incident.evidences %}
+                    <div class="list-group">
+                        {% for evidence in incident.evidences %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6>
+                                        <i class="fas fa-file me-2"></i>{{ evidence.evidence_type.value }}
+                                    </h6>
+                                    <p class="mb-1">{{ evidence.description }}</p>
+                                    <small class="text-muted">
+                                        Recopilado por {{ evidence.collected_by.name }} el
+                                        {{ evidence.collection_date.strftime('%d/%m/%Y %H:%M') }}
+                                    </small>
+                                    {% if evidence.file_name %}
+                                    <br><small><i class="fas fa-paperclip me-1"></i>{{ evidence.file_name }}</small>
+                                    {% endif %}
+                                    {% if evidence.hash_value %}
+                                    <br><small class="font-monospace">SHA256: {{ evidence.hash_value[:16] }}...</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No hay evidencias registradas</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial del Incidente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for event in incident.timeline_events %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon
+                                  {% if event.action_type.name == 'CREATED' %}border-primary
+                                  {% elif event.action_type.name == 'STATUS_CHANGE' %}border-warning
+                                  {% elif event.action_type.name == 'RESOLUTION' %}border-success
+                                  {% else %}border-secondary{% endif %}">
+                                <i class="fas fa-circle fa-xs
+                                   {% if event.action_type.name == 'CREATED' %}text-primary
+                                   {% elif event.action_type.name == 'STATUS_CHANGE' %}text-warning
+                                   {% elif event.action_type.name == 'RESOLUTION' %}text-success
+                                   {% else %}text-secondary{% endif %}"></i>
+                            </div>
+                            <div class="card mb-2">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1">{{ event.description }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ event.user.name if event.user else 'Sistema' }} •
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ event.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-secondary">{{ event.action_type.value }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agregar Comentario -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-comment me-2"></i>Agregar Comentario</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('incidents.add_comment', id=incident.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <textarea name="comment" class="form-control" rows="3"
+                                      placeholder="Escribe un comentario..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Comentario
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Lateral -->
+        <div class="col-md-4">
+            <!-- Métricas -->
+            <div class="card metric-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Métricas de Tiempo</h6>
+                </div>
+                <div class="card-body">
+                    {% if metrics.response_time %}
+                    <div class="mb-3">
+                        <small class="text-muted">Tiempo de Respuesta</small>
+                        <h5>{{ metrics.response_time }} minutos</h5>
+                    </div>
+                    {% endif %}
+                    {% if metrics.resolution_time %}
+                    <div class="mb-3">
+                        <small class="text-muted">Tiempo de Resolución</small>
+                        <h5>{{ metrics.resolution_time }} minutos</h5>
+                    </div>
+                    {% endif %}
+                    {% if incident.downtime_minutes %}
+                    <div>
+                        <small class="text-muted">Tiempo de Inactividad</small>
+                        <h5>{{ incident.downtime_minutes }} minutos</h5>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información Adicional -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Adicional</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Reportado por:</dt>
+                        <dd class="col-sm-6">{{ incident.reported_by.name }}</dd>
+
+                        <dt class="col-sm-6">Método:</dt>
+                        <dd class="col-sm-6">{{ incident.detection_method.value }}</dd>
+
+                        <dt class="col-sm-6">Origen:</dt>
+                        <dd class="col-sm-6">{{ incident.source.value if incident.source else 'N/A' }}</dd>
+
+                        {% if incident.is_data_breach %}
+                        <dt class="col-sm-6">Brecha de Datos:</dt>
+                        <dd class="col-sm-6"><span class="badge bg-danger">SÍ</span></dd>
+                        {% endif %}
+
+                        {% if incident.requires_notification %}
+                        <dt class="col-sm-6">Req. Notificación:</dt>
+                        <dd class="col-sm-6"><span class="badge bg-warning text-dark">SÍ</span></dd>
+                        {% endif %}
+
+                        {% if incident.estimated_cost %}
+                        <dt class="col-sm-6">Costo Estimado:</dt>
+                        <dd class="col-sm-6">€{{ "%.2f"|format(incident.estimated_cost) }}</dd>
+                        {% endif %}
+
+                        {% if incident.affected_users_count %}
+                        <dt class="col-sm-6">Usuarios Afectados:</dt>
+                        <dd class="col-sm-6">{{ incident.affected_users_count }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Fechas Clave -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Fechas Clave</h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted">Descubierto:</small>
+                    <p>{{ incident.discovery_date.strftime('%d/%m/%Y %H:%M') }}</p>
+
+                    <small class="text-muted">Reportado:</small>
+                    <p>{{ incident.reported_date.strftime('%d/%m/%Y %H:%M') }}</p>
+
+                    {% if incident.containment_date %}
+                    <small class="text-muted">Contenido:</small>
+                    <p>{{ incident.containment_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+
+                    {% if incident.resolution_date %}
+                    <small class="text-muted">Resuelto:</small>
+                    <p>{{ incident.resolution_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+
+                    {% if incident.closure_date %}
+                    <small class="text-muted">Cerrado:</small>
+                    <p class="mb-0">{{ incident.closure_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar Estado -->
+<div class="modal fade" id="changeStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('incidents.change_status', id=incident.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Cambiar Estado del Incidente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nuevo Estado</label>
+                        <select name="status" class="form-select" required>
+                            {% for status in IncidentStatus %}
+                            <option value="{{ status.name }}"
+                                    {% if status == incident.status %}selected{% endif %}>
+                                {{ status.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comentario (opcional)</label>
+                        <textarea name="comment" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cambiar Estado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('incidents.assign', id=incident.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignar Incidente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Asignar a</label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            {% for user in incident.reported_by.__class__.query.filter_by(is_active=True).all() %}
+                            <option value="{{ user.id }}"
+                                    {% if incident.assigned_to and user.id == incident.assigned_to.id %}selected{% endif %}>
+                                {{ user.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

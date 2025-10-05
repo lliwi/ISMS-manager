@@ -101,7 +101,7 @@
                                 </small>
                             </div>
                             <p class="mb-1 text-truncate">{{ incident.description }}</p>
-                            <small class="text-muted">{{ incident.detection_date.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <small class="text-muted">{{ incident.discovery_date.strftime('%d/%m/%Y %H:%M') if incident.discovery_date else 'Sin fecha' }}</small>
                         </div>
                         {% endfor %}
                     </div>

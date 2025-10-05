@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Acciones Correctivas - {{ incident.incident_number }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .incident-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    .action-card {
+        border-left: 4px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+    .action-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .action-card.pending {
+        border-left-color: #ffc107;
+    }
+    .action-card.in-progress {
+        border-left-color: #0dcaf0;
+    }
+    .action-card.completed {
+        border-left-color: #28a745;
+    }
+    .action-card.cancelled {
+        border-left-color: #6c757d;
+    }
+    .action-card.overdue {
+        border-left-color: #dc3545;
+    }
+    .progress-indicator {
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .progress-bar-custom {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="incident-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2><i class="fas fa-tasks me-2"></i>Acciones Correctivas</h2>
+                <h4 class="mb-0">{{ incident.incident_number }} - {{ incident.title }}</h4>
+                <p class="mb-0 mt-2 opacity-75">
+                    Control 5.26 - Respuesta a incidentes de seguridad de la información
+                </p>
+            </div>
+            <a href="{{ url_for('incidents.view', id=incident.id) }}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Incidente
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Formulario Nueva Acción -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Nueva Acción Correctiva</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('incidents.actions', id=incident.id) }}" id="actionForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label required">Descripción de la Acción</label>
+                                <textarea name="description" class="form-control" rows="3"
+                                          placeholder="Describa la acción correctiva a implementar"
+                                          required></textarea>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label required">Tipo de Acción</label>
+                                <select name="action_type" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="IMMEDIATE">Inmediata</option>
+                                    <option value="SHORT_TERM">Corto Plazo</option>
+                                    <option value="LONG_TERM">Largo Plazo</option>
+                                    <option value="PREVENTIVE">Preventiva</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label required">Responsable</label>
+                                <select name="assigned_to_id" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label required">Fecha Límite</label>
+                                <input type="date" name="due_date" class="form-control" required
+                                       min="{{ now.strftime('%Y-%m-%d') }}">
+                            </div>
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Crear Acción
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lista de Acciones -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Acciones Registradas</h5>
+                </div>
+                <div class="card-body">
+                    {% if actions %}
+                        {% for action in actions %}
+                        <div class="card action-card {{ action.status.name.lower() }} {% if action.is_overdue %}overdue{% endif %} mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-9">
+                                        <div class="d-flex align-items-start mb-2">
+                                            <div class="me-3">
+                                                {% if action.status.name == 'COMPLETED' %}
+                                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                                                {% elif action.status.name == 'IN_PROGRESS' %}
+                                                <i class="fas fa-spinner fa-2x text-info"></i>
+                                                {% elif action.is_overdue %}
+                                                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                                                {% else %}
+                                                <i class="fas fa-circle fa-2x text-warning"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-2">{{ action.description }}</h6>
+                                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                                    <span class="badge bg-secondary">{{ action.action_type }}</span>
+                                                    <span class="badge
+                                                        {% if action.status.name == 'COMPLETED' %}bg-success
+                                                        {% elif action.status.name == 'IN_PROGRESS' %}bg-info
+                                                        {% elif action.status.name == 'CANCELLED' %}bg-dark
+                                                        {% else %}bg-warning text-dark{% endif %}">
+                                                        {{ action.status.value }}
+                                                    </span>
+                                                    {% if action.assigned_to %}
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-user me-1"></i>{{ action.assigned_to.name }}
+                                                    </span>
+                                                    {% endif %}
+                                                    {% if action.is_overdue %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-clock me-1"></i>Vencida
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    Creada: {{ action.created_date.strftime('%d/%m/%Y') }}
+                                                    {% if action.due_date %}
+                                                    | Límite: {{ action.due_date.strftime('%d/%m/%Y') }}
+                                                    {% endif %}
+                                                    {% if action.completed_date %}
+                                                    | Completada: {{ action.completed_date.strftime('%d/%m/%Y') }}
+                                                    {% endif %}
+                                                </small>
+
+                                                <!-- Barra de Progreso -->
+                                                {% if action.status.name == 'IN_PROGRESS' %}
+                                                <div class="mt-2">
+                                                    <div class="progress-indicator">
+                                                        <div class="progress-bar-custom bg-info" style="width: {{ action.progress or 0 }}%"></div>
+                                                    </div>
+                                                    <small class="text-muted">Progreso: {{ action.progress or 0 }}%</small>
+                                                </div>
+                                                {% endif %}
+
+                                                <!-- Notas -->
+                                                {% if action.notes %}
+                                                <div class="mt-2">
+                                                    <strong>Notas:</strong><br>
+                                                    <small>{{ action.notes }}</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <!-- Botones de Acción -->
+                                        {% if action.status.name != 'COMPLETED' and action.status.name != 'CANCELLED' %}
+                                        <div class="btn-group-vertical btn-group-sm w-100">
+                                            {% if action.status.name == 'PENDING' %}
+                                            <button class="btn btn-info" onclick="updateActionStatus({{ action.id }}, 'IN_PROGRESS')">
+                                                <i class="fas fa-play me-1"></i>Iniciar
+                                            </button>
+                                            {% endif %}
+                                            {% if action.status.name == 'IN_PROGRESS' %}
+                                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#progressModal{{ action.id }}">
+                                                <i class="fas fa-percentage me-1"></i>Actualizar Progreso
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-success" onclick="updateActionStatus({{ action.id }}, 'COMPLETED')">
+                                                <i class="fas fa-check me-1"></i>Completar
+                                            </button>
+                                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#notesModal{{ action.id }}">
+                                                <i class="fas fa-comment me-1"></i>Notas
+                                            </button>
+                                            <button class="btn btn-danger" onclick="updateActionStatus({{ action.id }}, 'CANCELLED')">
+                                                <i class="fas fa-times me-1"></i>Cancelar
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Progreso -->
+                        <div class="modal fade" id="progressModal{{ action.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Actualizar Progreso</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('incidents.update_action_progress', id=incident.id, action_id=action.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Progreso (%)</label>
+                                                <input type="range" class="form-range" name="progress"
+                                                       min="0" max="100" step="5"
+                                                       value="{{ action.progress or 0 }}"
+                                                       oninput="this.nextElementSibling.value = this.value">
+                                                <output>{{ action.progress or 0 }}</output>%
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Notas de Progreso</label>
+                                                <textarea name="notes" class="form-control" rows="3">{{ action.notes or '' }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary">Guardar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Notas -->
+                        <div class="modal fade" id="notesModal{{ action.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Agregar Notas</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('incidents.update_action_notes', id=incident.id, action_id=action.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Notas</label>
+                                                <textarea name="notes" class="form-control" rows="4">{{ action.notes or '' }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary">Guardar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No se han registrado acciones correctivas para este incidente.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Estadísticas -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Resumen de Acciones</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total de Acciones</span>
+                            <strong>{{ stats.total }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-circle text-warning me-1"></i>Pendientes</span>
+                            <strong>{{ stats.pending }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-spinner text-info me-1"></i>En Progreso</span>
+                            <strong>{{ stats.in_progress }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-check-circle text-success me-1"></i>Completadas</span>
+                            <strong>{{ stats.completed }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-exclamation-triangle text-danger me-1"></i>Vencidas</span>
+                            <strong>{{ stats.overdue }}</strong>
+                        </div>
+                    </div>
+
+                    {% if stats.total > 0 %}
+                    <hr>
+                    <div class="mb-2">
+                        <small class="text-muted">Tasa de Completitud</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 style="width: {{ (stats.completed / stats.total * 100)|round }}%">
+                                {{ (stats.completed / stats.total * 100)|round }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Guía de Tipos de Acciones -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Tipos de Acciones</h5>
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Inmediata</dt>
+                        <dd><small>Acción que debe ejecutarse de inmediato para contener el incidente.</small></dd>
+
+                        <dt>Corto Plazo</dt>
+                        <dd><small>Acción correctiva a implementar en días o semanas.</small></dd>
+
+                        <dt>Largo Plazo</dt>
+                        <dd><small>Mejoras estructurales a implementar en meses.</small></dd>
+
+                        <dt>Preventiva</dt>
+                        <dd><small>Medida para prevenir recurrencia del incidente.</small></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateActionStatus(actionId, newStatus) {
+    if (newStatus === 'CANCELLED' && !confirm('¿Está seguro de cancelar esta acción?')) {
+        return;
+    }
+
+    if (newStatus === 'COMPLETED' && !confirm('¿Confirma que esta acción ha sido completada?')) {
+        return;
+    }
+
+    // Crear formulario y enviarlo
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/incidents/{{ incident.id }}/actions/${actionId}/status`;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'status';
+    input.value = newStatus;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    document.getElementById('actionForm').addEventListener('submit', function(e) {
+        const description = document.querySelector('textarea[name="description"]').value;
+
+        if (description.length < 10) {
+            e.preventDefault();
+            alert('La descripción debe tener al menos 10 caracteres');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

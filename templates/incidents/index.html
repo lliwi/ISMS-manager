@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Incidentes - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .severity-badge {
+        font-size: 0.85rem;
+        padding: 0.4em 0.8em;
+    }
+    .incident-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #dee2e6;
+    }
+    .incident-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .incident-card.critical {
+        border-left-color: #dc3545;
+    }
+    .incident-card.high {
+        border-left-color: #fd7e14;
+    }
+    .incident-card.medium {
+        border-left-color: #ffc107;
+    }
+    .incident-card.low {
+        border-left-color: #28a745;
+    }
+    .stats-card {
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    .stats-card:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-bug me-2"></i>Gestión de Incidentes de Seguridad</h2>
+            <p class="text-muted">ISO/IEC 27001:2023 - Controles 5.24, 5.25, 5.26, 5.27, 5.28</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ url_for('incidents.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Reportar Incidente
+            </a>
+            <a href="{{ url_for('incidents.reports') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-chart-bar me-2"></i>Reportes
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Total Incidentes</h6>
+                            <h3 class="card-title mb-0">{{ stats.total }}</h3>
+                        </div>
+                        <i class="fas fa-bug fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Incidentes Abiertos</h6>
+                            <h3 class="card-title mb-0">{{ stats.open }}</h3>
+                        </div>
+                        <i class="fas fa-folder-open fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Críticos</h6>
+                            <h3 class="card-title mb-0">{{ stats.critical }}</h3>
+                        </div>
+                        <i class="fas fa-exclamation-circle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 opacity-75">Este Mes</h6>
+                            <h3 class="card-title mb-0">{{ stats.this_month }}</h3>
+                        </div>
+                        <i class="fas fa-calendar fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Número, título, descripción..."
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Estado</label>
+                    <select name="status" class="form-select">
+                        <option value="all">Todos</option>
+                        {% for status in IncidentStatus %}
+                        <option value="{{ status.name }}"
+                                {% if request.args.get('status') == status.name %}selected{% endif %}>
+                            {{ status.value }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Categoría</label>
+                    <select name="category" class="form-select">
+                        <option value="all">Todas</option>
+                        {% for cat in IncidentCategory %}
+                        <option value="{{ cat.name }}"
+                                {% if request.args.get('category') == cat.name %}selected{% endif %}>
+                            {{ cat.value }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Severidad</label>
+                    <select name="severity" class="form-select">
+                        <option value="all">Todas</option>
+                        {% for sev in IncidentSeverity %}
+                        <option value="{{ sev.name }}"
+                                {% if request.args.get('severity') == sev.name %}selected{% endif %}>
+                            {{ sev.value }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{{ url_for('incidents.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Incidentes -->
+    {% if incidents %}
+    <div class="row">
+        {% for incident in incidents %}
+        <div class="col-md-12 mb-3">
+            <div class="card incident-card {{ incident.severity.name.lower() }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3">
+                                    <span class="badge severity-badge
+                                          {% if incident.severity.name == 'CRITICAL' %}bg-danger
+                                          {% elif incident.severity.name == 'HIGH' %}bg-warning text-dark
+                                          {% elif incident.severity.name == 'MEDIUM' %}bg-info
+                                          {% else %}bg-success{% endif %}">
+                                        {{ incident.severity.value }}
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-2">
+                                        <a href="{{ url_for('incidents.view', id=incident.id) }}"
+                                           class="text-decoration-none">
+                                            {{ incident.incident_number }} - {{ incident.title }}
+                                        </a>
+                                    </h5>
+                                    <p class="text-muted mb-2">{{ incident.description[:150] }}{% if incident.description|length > 150 %}...{% endif %}</p>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge bg-secondary">{{ incident.category.value }}</span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ incident.reported_date.strftime('%d/%m/%Y %H:%M') }}
+                                        </span>
+                                        {% if incident.assigned_to %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>{{ incident.assigned_to.name }}
+                                        </span>
+                                        {% endif %}
+                                        {% if incident.is_data_breach %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-shield-alt me-1"></i>Brecha de Datos
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <span class="badge
+                                      {% if incident.status.name in ['NEW', 'EVALUATING'] %}bg-warning text-dark
+                                      {% elif incident.status.name in ['IN_PROGRESS', 'CONFIRMED'] %}bg-primary
+                                      {% elif incident.status.name == 'RESOLVED' %}bg-success
+                                      {% elif incident.status.name == 'CLOSED' %}bg-secondary
+                                      {% else %}bg-light text-dark{% endif %}">
+                                    {{ incident.status.value }}
+                                </span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('incidents.view', id=incident.id) }}"
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('incidents.edit', id=incident.id) }}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Paginación de incidentes">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('incidents.index', page=pagination.prev_num) }}">
+                    Anterior
+                </a>
+            </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('incidents.index', page=page_num) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('incidents.index', page=pagination.next_num) }}">
+                    Siguiente
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No se encontraron incidentes con los criterios especificados.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
