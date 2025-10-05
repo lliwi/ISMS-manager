@@ -105,9 +105,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Períodos de Amortización -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line"></i> Períodos de Amortización
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Configura los años de vida útil y método de depreciación para el cálculo automático del valor actual de activos
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">6</h3>
+                        <small class="text-muted">categorías configuradas</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-chart-line fa-3x text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.depreciation_periods') }}" class="btn btn-warning text-dark w-100">
+                    <i class="fas fa-cog"></i> Gestionar Períodos de Amortización
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="row">
     <!-- Roles del Sistema -->
     <div class="col-md-6 mb-4">
         <div class="card h-100">
@@ -139,7 +168,7 @@
     <!-- Configuración de Seguridad -->
     <div class="col-md-6 mb-4">
         <div class="card h-100">
-            <div class="card-header bg-warning text-dark">
+            <div class="card-header bg-danger text-white">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-shield-alt"></i> Configuración de Seguridad
                 </h5>
@@ -158,13 +187,15 @@
                 </ul>
             </div>
             <div class="card-footer">
-                <button class="btn btn-warning text-dark w-100" disabled>
+                <button class="btn btn-danger w-100" disabled>
                     <i class="fas fa-lock"></i> Configuración en código (seguridad)
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+<div class="row">
 
 <!-- Información Adicional -->
 <div class="row">

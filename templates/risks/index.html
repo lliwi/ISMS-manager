@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Riesgos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Gestión de Riesgos</h1>
+                <p class="text-muted">Identificación, evaluación y tratamiento de riesgos de seguridad</p>
+            </div>
+            {% if current_user.can_access('risks') %}
+            <div>
+                <a href="{{ url_for('risks.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nuevo Riesgo
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Categoría</th>
+                                <th>Probabilidad</th>
+                                <th>Impacto</th>
+                                <th>Nivel de Riesgo</th>
+                                <th>Tratamiento</th>
+                                <th>Propietario</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if risks %}
+                                {% for risk in risks %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('risks.view', id=risk.id) }}" class="text-decoration-none">
+                                            <strong>{{ risk.title }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ risk.category or 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if risk.probability >= 4 else 'warning' if risk.probability >= 3 else 'info' }}">
+                                            {{ risk.probability }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if risk.impact >= 4 else 'warning' if risk.impact >= 3 else 'info' }}">
+                                            {{ risk.impact }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% set risk_colors = {
+                                            'low': 'success',
+                                            'medium': 'warning',
+                                            'high': 'danger',
+                                            'critical': 'dark'
+                                        } %}
+                                        <span class="badge bg-{{ risk_colors[risk.risk_level] if risk.risk_level else 'secondary' }}">
+                                            {{ risk.risk_level|upper if risk.risk_level else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ risk.treatment or 'N/A' }}</td>
+                                    <td>
+                                        {% if risk.owner %}
+                                        {{ risk.owner.full_name }}
+                                        {% else %}
+                                        <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set status_colors = {
+                                            'identified': 'info',
+                                            'assessed': 'warning',
+                                            'treated': 'primary',
+                                            'monitored': 'success'
+                                        } %}
+                                        <span class="badge bg-{{ status_colors[risk.status] if risk.status else 'secondary' }}">
+                                            {{ risk.status if risk.status else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('risks.view', id=risk.id) }}"
+                                               class="btn btn-outline-primary" title="Ver detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        <p>No hay riesgos registrados</p>
+                                        {% if current_user.can_access('risks') %}
+                                        <a href="{{ url_for('risks.create') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus me-2"></i>Crear primer riesgo
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

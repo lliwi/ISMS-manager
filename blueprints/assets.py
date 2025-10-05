@@ -126,7 +126,7 @@ def create():
                 name=request.form['name'],
                 description=request.form.get('description'),
                 category=AssetCategory[category],
-                subcategory=request.form.get('subcategory'),
+                asset_type_id=int(request.form['asset_type_id']) if request.form.get('asset_type_id') else None,
                 owner_id=int(request.form['owner_id']),
                 custodian_id=int(request.form['custodian_id']) if request.form.get('custodian_id') else None,
                 physical_location=request.form.get('physical_location'),
@@ -232,14 +232,14 @@ def edit(id):
             # Guardar valores anteriores para el evento
             old_values = {
                 'classification': asset.classification,
-                'owner': asset.owner.name if asset.owner else None,
+                'owner': asset.owner.full_name if asset.owner else None,
                 'status': asset.status
             }
 
             # Actualizar campos
             asset.name = request.form['name']
             asset.description = request.form.get('description')
-            asset.subcategory = request.form.get('subcategory')
+            asset.asset_type_id = int(request.form['asset_type_id']) if request.form.get('asset_type_id') else None
             asset.owner_id = int(request.form['owner_id'])
             asset.custodian_id = int(request.form['custodian_id']) if request.form.get('custodian_id') else None
             asset.physical_location = request.form.get('physical_location')
@@ -516,6 +516,37 @@ def delete_control(id):
         flash(f'Error al eliminar el control: {str(e)}', 'error')
 
     return redirect(url_for('assets.view', id=asset_id))
+
+
+@assets_bp.route('/api/asset-types/<category>')
+@login_required
+def api_asset_types(category):
+    """API para obtener tipos de activos filtrados por categoría"""
+    from models import AssetType, AssetCategory
+
+    try:
+        # Convertir el string de categoría al enum
+        category_enum = AssetCategory[category]
+
+        # Obtener tipos activos para esta categoría
+        asset_types = AssetType.query.filter_by(
+            category=category_enum,
+            is_active=True
+        ).order_by(AssetType.order, AssetType.name).all()
+
+        return jsonify([
+            {
+                'id': at.id,
+                'code': at.code,
+                'name': at.name,
+                'description': at.description,
+                'icon': at.icon,
+                'color': at.color
+            }
+            for at in asset_types
+        ])
+    except KeyError:
+        return jsonify({'error': 'Categoría inválida'}), 400
 
 
 @assets_bp.route('/api/search')

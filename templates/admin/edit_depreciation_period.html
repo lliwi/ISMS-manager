@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Período de Amortización - Administración - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2"><i class="fas fa-edit me-2"></i>Editar Período de Amortización: {{ period.category.value }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.index') }}">Administración</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.settings') }}">Configuración</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.depreciation_periods') }}">Períodos de Amortización</a></li>
+                <li class="breadcrumb-item active">Editar {{ period.category.value }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.edit_depreciation_period', id=period.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Categoría:</strong></label>
+                        <p class="form-control-plaintext">{{ period.category.value }}</p>
+                        <small class="text-muted">La categoría no se puede modificar</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="years" class="form-label">Años de Vida Útil <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="years" name="years"
+                                   value="{{ period.years }}" min="0" max="100" required>
+                            <small class="text-muted">Período en años para depreciar completamente el activo</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="residual_value_percentage" class="form-label">Valor Residual (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="residual_value_percentage"
+                                   name="residual_value_percentage" value="{{ period.residual_value_percentage }}"
+                                   min="0" max="100" step="0.01" required>
+                            <small class="text-muted">Porcentaje del valor original que mantiene al final de su vida útil</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="method" class="form-label">Método de Depreciación <span class="text-danger">*</span></label>
+                        <select class="form-select" id="method" name="method" required>
+                            <option value="linear" {% if period.method == 'linear' %}selected{% endif %}>
+                                Lineal (depreciación constante)
+                            </option>
+                            <!-- Futuros métodos pueden añadirse aquí -->
+                            <!-- <option value="accelerated">Acelerada</option> -->
+                        </select>
+                        <small class="text-muted">Método usado para calcular la depreciación</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ period.description or '' }}</textarea>
+                        <small class="text-muted">Descripción o notas sobre este período de amortización</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                                   {% if period.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Período Activo
+                            </label>
+                        </div>
+                        <small class="text-muted">Desactivar si no deseas usar este período de depreciación temporalmente</small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Vista Previa de Cálculo</h5>
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div id="preview-calculation">
+                                <p class="mb-2"><strong>Ejemplo con los valores actuales:</strong></p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1 small">Coste de adquisición: <strong>10,000 €</strong></p>
+                                        <p class="mb-1 small">Años de vida útil: <strong><span id="preview-years">{{ period.years }}</span> años</strong></p>
+                                        <p class="mb-1 small">Valor residual: <strong><span id="preview-residual">{{ period.residual_value_percentage }}</span>%</strong></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1 small">Valor residual: <strong><span id="calc-residual-value">0</span> €</strong></p>
+                                        <p class="mb-1 small">Valor depreciable: <strong><span id="calc-depreciable">0</span> €</strong></p>
+                                        <p class="mb-1 small">Depreciación anual: <strong><span id="calc-annual">0</span> €</strong></p>
+                                    </div>
+                                </div>
+                                <hr class="my-2">
+                                <p class="mb-0"><strong>Después de 2 años:</strong> <span id="calc-current" class="text-success">0 €</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.depreciation_periods') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Ayuda</h6>
+            </div>
+            <div class="card-body">
+                <h6>Años de Vida Útil</h6>
+                <p class="small">Indica cuántos años tarda un activo en depreciarse completamente. Por ejemplo:</p>
+                <ul class="small">
+                    <li>Hardware: 3-5 años</li>
+                    <li>Software: 2-3 años</li>
+                    <li>Instalaciones: 20-50 años</li>
+                </ul>
+
+                <hr>
+
+                <h6>Valor Residual</h6>
+                <p class="small">Porcentaje del valor original que mantiene el activo al final de su vida útil. Por ejemplo:</p>
+                <ul class="small mb-0">
+                    <li>0%: El activo no tiene valor al final</li>
+                    <li>10%: Mantiene el 10% de su valor inicial</li>
+                    <li>100%: No se deprecia (ej: información)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Metadatos</h6>
+            </div>
+            <div class="card-body small">
+                <p class="mb-1"><strong>Creado:</strong> {{ period.created_at.strftime('%d/%m/%Y %H:%M') if period.created_at else 'N/A' }}</p>
+                <p class="mb-1"><strong>Última actualización:</strong> {{ period.updated_at.strftime('%d/%m/%Y %H:%M') if period.updated_at else 'N/A' }}</p>
+                {% if period.updated_by %}
+                <p class="mb-0"><strong>Actualizado por:</strong> {{ period.updated_by.full_name }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Actualizar vista previa del cálculo
+function updatePreview() {
+    const years = parseFloat(document.getElementById('years').value) || 0;
+    const residualPercentage = parseFloat(document.getElementById('residual_value_percentage').value) || 0;
+    const purchaseCost = 10000; // Ejemplo fijo
+
+    // Actualizar valores mostrados
+    document.getElementById('preview-years').textContent = years;
+    document.getElementById('preview-residual').textContent = residualPercentage.toFixed(2);
+
+    // Calcular valores
+    const residualValue = purchaseCost * (residualPercentage / 100);
+    const depreciableValue = purchaseCost - residualValue;
+    const annualDepreciation = years > 0 ? depreciableValue / years : 0;
+
+    // Después de 2 años
+    const yearsElapsed = 2;
+    const accumulatedDepreciation = Math.min(annualDepreciation * yearsElapsed, depreciableValue);
+    const currentValue = purchaseCost - accumulatedDepreciation;
+
+    // Mostrar resultados
+    document.getElementById('calc-residual-value').textContent = residualValue.toFixed(2);
+    document.getElementById('calc-depreciable').textContent = depreciableValue.toFixed(2);
+    document.getElementById('calc-annual').textContent = annualDepreciation.toFixed(2);
+    document.getElementById('calc-current').textContent = currentValue.toFixed(2);
+}
+
+// Actualizar al cargar y al cambiar valores
+document.addEventListener('DOMContentLoaded', updatePreview);
+document.getElementById('years').addEventListener('input', updatePreview);
+document.getElementById('residual_value_percentage').addEventListener('input', updatePreview);
+</script>
+{% endblock %}

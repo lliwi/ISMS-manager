@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import User, Role, AuditLog, DocumentType, ISOVersion, AssetType, AssetCategory, db
+from models import User, Role, AuditLog, DocumentType, ISOVersion, AssetType, AssetCategory, DepreciationPeriod, db
 from forms.user_forms import UserCreateForm, UserEditForm, ChangePasswordForm, ResetPasswordForm, UserSearchForm
 from utils.decorators import role_required, audit_action
 from utils.audit_helper import log_user_changes, log_password_change, log_account_lock, log_account_unlock, get_user_activity
@@ -934,3 +934,94 @@ def toggle_asset_type_active(id):
         flash(f'Error al cambiar el estado del tipo de activo: {str(e)}', 'danger')
 
     return redirect(url_for('admin.asset_types'))
+
+
+# ==================== GESTIÓN DE PERÍODOS DE DEPRECIACIÓN ====================
+
+@admin_bp.route('/settings/depreciation')
+@login_required
+@role_required('admin', 'ciso')
+def depreciation_periods():
+    """Vista de gestión de períodos de depreciación"""
+    periods = DepreciationPeriod.query.order_by(DepreciationPeriod.category).all()
+    return render_template('admin/depreciation_periods.html', periods=periods, AssetCategory=AssetCategory)
+
+
+@admin_bp.route('/settings/depreciation/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_depreciation_period(id):
+    """Editar período de depreciación"""
+    period = DepreciationPeriod.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            period.years = int(request.form['years'])
+            period.description = request.form.get('description', '')
+            period.method = request.form.get('method', 'linear')
+            period.residual_value_percentage = float(request.form.get('residual_value_percentage', 0.0))
+            period.is_active = 'is_active' in request.form
+            period.updated_at = datetime.utcnow()
+            period.updated_by_id = current_user.id
+
+            db.session.commit()
+
+            flash(f'Período de depreciación para {period.category.value} actualizado exitosamente', 'success')
+            return redirect(url_for('admin.depreciation_periods'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el período de depreciación: {str(e)}', 'danger')
+
+    return render_template('admin/edit_depreciation_period.html', period=period)
+
+
+@admin_bp.route('/api/depreciation/calculate', methods=['POST'])
+@login_required
+def calculate_depreciation_api():
+    """API para calcular depreciación en tiempo real"""
+    try:
+        data = request.get_json()
+        category_name = data.get('category')
+        purchase_cost = float(data.get('purchase_cost', 0))
+        acquisition_date_str = data.get('acquisition_date')
+
+        if not all([category_name, purchase_cost, acquisition_date_str]):
+            return jsonify({'error': 'Faltan parámetros requeridos'}), 400
+
+        # Parsear fecha
+        acquisition_date = datetime.strptime(acquisition_date_str, '%Y-%m-%d').date()
+
+        # Obtener categoría
+        category = AssetCategory[category_name]
+
+        # Obtener período de depreciación
+        period = DepreciationPeriod.query.filter_by(category=category, is_active=True).first()
+
+        if not period:
+            return jsonify({
+                'current_value': purchase_cost,
+                'depreciation': 0.0,
+                'message': 'No hay configuración de depreciación para esta categoría'
+            })
+
+        # Calcular depreciación
+        current_value = period.calculate_depreciation(purchase_cost, acquisition_date)
+        depreciation = purchase_cost - current_value
+
+        # Calcular años transcurridos
+        today = datetime.now().date()
+        days_elapsed = (today - acquisition_date).days
+        years_elapsed = days_elapsed / 365.25
+
+        return jsonify({
+            'current_value': round(current_value, 2),
+            'depreciation': round(depreciation, 2),
+            'years_elapsed': round(years_elapsed, 2),
+            'depreciation_years': period.years,
+            'annual_depreciation': round(depreciation / years_elapsed, 2) if years_elapsed > 0 else 0,
+            'residual_percentage': period.residual_value_percentage
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

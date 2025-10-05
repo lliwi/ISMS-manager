@@ -650,6 +650,76 @@ class AssetCategory(enum.Enum):
     FACILITIES = "Instalaciones"
 
 
+class DepreciationPeriod(db.Model):
+    """
+    Períodos de amortización por categoría de activo
+    Permite configurar los años de vida útil para calcular depreciación
+    """
+    __tablename__ = 'depreciation_periods'
+
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(Enum(AssetCategory), nullable=False, unique=True)
+    years = db.Column(db.Integer, nullable=False)  # Años de vida útil
+    description = db.Column(db.Text)
+
+    # Método de depreciación (lineal por defecto, futuras expansiones: acelerada, etc.)
+    method = db.Column(db.String(50), default='linear')  # linear, accelerated, etc.
+
+    # Valor residual (% del valor original que mantiene al final de vida útil)
+    residual_value_percentage = db.Column(db.Float, default=0.0)  # 0-100
+
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
+
+    def __repr__(self):
+        return f'<DepreciationPeriod {self.category.value}: {self.years} años>'
+
+    def calculate_depreciation(self, purchase_cost, acquisition_date):
+        """
+        Calcula el valor depreciado de un activo
+
+        Args:
+            purchase_cost: Coste de adquisición
+            acquisition_date: Fecha de adquisición
+
+        Returns:
+            Valor actual depreciado
+        """
+        if not purchase_cost or not acquisition_date:
+            return purchase_cost or 0.0
+
+        # Calcular años transcurridos
+        today = datetime.now().date()
+        if isinstance(acquisition_date, datetime):
+            acquisition_date = acquisition_date.date()
+
+        days_elapsed = (today - acquisition_date).days
+        years_elapsed = days_elapsed / 365.25  # Considera años bisiestos
+
+        # Si ya superó la vida útil, devolver valor residual
+        if years_elapsed >= self.years:
+            return purchase_cost * (self.residual_value_percentage / 100.0)
+
+        # Depreciación lineal
+        if self.method == 'linear':
+            # Valor depreciable (coste - valor residual)
+            depreciable_value = purchase_cost * (1 - self.residual_value_percentage / 100.0)
+            # Depreciación anual
+            annual_depreciation = depreciable_value / self.years
+            # Depreciación acumulada
+            accumulated_depreciation = annual_depreciation * years_elapsed
+            # Valor actual
+            current_value = purchase_cost - accumulated_depreciation
+
+            return max(current_value, purchase_cost * (self.residual_value_percentage / 100.0))
+
+        # Otros métodos pueden añadirse aquí en el futuro
+        return purchase_cost
+
+
 class AssetType(db.Model):
     """Tipos de activos configurables por categoría"""
     __tablename__ = 'asset_types'
@@ -814,6 +884,37 @@ class Asset(db.Model):
 
         # Promedio ponderado con valor de negocio
         return ((c_score + i_score + a_score) / 3) * (self.business_value / 10)
+
+    def calculate_current_value(self):
+        """
+        Calcula el valor actual del activo basado en depreciación
+
+        Returns:
+            float: Valor actual depreciado, o el valor manual si existe
+        """
+        # Si ya hay un valor actual manual, usarlo
+        if self.current_value is not None:
+            return self.current_value
+
+        # Si no hay coste de adquisición o fecha, no se puede calcular
+        if not self.purchase_cost or not self.acquisition_date:
+            return None
+
+        # Obtener período de depreciación para esta categoría
+        depreciation_period = DepreciationPeriod.query.filter_by(
+            category=self.category,
+            is_active=True
+        ).first()
+
+        if not depreciation_period:
+            # Si no hay configuración, devolver el coste de compra
+            return self.purchase_cost
+
+        # Calcular y devolver valor depreciado
+        return depreciation_period.calculate_depreciation(
+            self.purchase_cost,
+            self.acquisition_date
+        )
 
     def get_all_relationships(self):
         """Obtiene todas las relaciones del activo"""

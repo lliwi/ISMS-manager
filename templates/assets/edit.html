@@ -34,12 +34,15 @@
                         <div class="col-md-3 mb-3">
                             <label for="category" class="form-label">Categoría <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" value="{{ asset.category.value }}" disabled>
-                            <input type="hidden" name="category" value="{{ asset.category.name }}">
+                            <input type="hidden" id="category" name="category" value="{{ asset.category.name }}">
                             <small class="text-muted">No se puede cambiar la categoría</small>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label for="subcategory" class="form-label">Subcategoría</label>
-                            <input type="text" class="form-control" id="subcategory" name="subcategory" value="{{ asset.subcategory or '' }}">
+                            <label for="asset_type_id" class="form-label">Tipo de Activo</label>
+                            <select class="form-select" id="asset_type_id" name="asset_type_id">
+                                <option value="">Cargando tipos...</option>
+                            </select>
+                            <small class="text-muted">Según la categoría</small>
                         </div>
                     </div>
 
@@ -189,7 +192,16 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="current_value" class="form-label">Valor Actual (€)</label>
-                            <input type="number" step="0.01" class="form-control" id="current_value" name="current_value">
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" id="current_value" name="current_value" readonly>
+                                <button class="btn btn-outline-secondary" type="button" id="calculate_value_btn" title="Calcular valor automáticamente">
+                                    <i class="fas fa-calculator"></i>
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" id="manual_value_btn" title="Introducir valor manualmente">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted" id="depreciation_info"></small>
                         </div>
                     </div>
 
@@ -248,4 +260,157 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Cargar tipos de activo según la categoría actual
+document.addEventListener('DOMContentLoaded', function() {
+    const category = document.getElementById('category').value;
+    const assetTypeSelect = document.getElementById('asset_type_id');
+    const currentAssetTypeId = {{ asset.asset_type_id if asset.asset_type_id else 'null' }};
+
+    if (category) {
+        // Hacer petición AJAX para obtener tipos
+        fetch(`/activos/api/asset-types/${category}`)
+            .then(response => response.json())
+            .then(data => {
+                assetTypeSelect.innerHTML = '<option value="">Seleccionar tipo...</option>';
+
+                data.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.name;
+                    option.title = type.description;
+
+                    // Preseleccionar el tipo actual
+                    if (type.id === currentAssetTypeId) {
+                        option.selected = true;
+                    }
+
+                    assetTypeSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error cargando tipos:', error);
+                assetTypeSelect.innerHTML = '<option value="">Error cargando tipos</option>';
+            });
+    }
+});
+
+// Inicializar valores de los sliders
+document.getElementById('business_value').value = {{ asset.business_value if asset.business_value else 5 }};
+document.getElementById('business_value_display').textContent = {{ asset.business_value if asset.business_value else 5 }};
+document.getElementById('criticality').value = {{ asset.criticality if asset.criticality else 5 }};
+document.getElementById('criticality_display').textContent = {{ asset.criticality if asset.criticality else 5 }};
+
+// Inicializar valores de campos
+document.getElementById('physical_location').value = '{{ asset.physical_location or '' }}';
+document.getElementById('logical_location').value = '{{ asset.logical_location or '' }}';
+document.getElementById('department').value = '{{ asset.department or '' }}';
+document.getElementById('manufacturer').value = '{{ asset.manufacturer or '' }}';
+document.getElementById('model').value = '{{ asset.model or '' }}';
+document.getElementById('serial_number').value = '{{ asset.serial_number or '' }}';
+document.getElementById('version').value = '{{ asset.version or '' }}';
+document.getElementById('tags').value = '{{ asset.tags or '' }}';
+document.getElementById('acceptable_use_policy').value = '{{ asset.acceptable_use_policy or '' }}';
+document.getElementById('handling_requirements').value = '{{ asset.handling_requirements or '' }}';
+document.getElementById('notes').value = '{{ asset.notes or '' }}';
+
+{% if asset.acquisition_date %}
+document.getElementById('acquisition_date').value = '{{ asset.acquisition_date.strftime("%Y-%m-%d") }}';
+{% endif %}
+{% if asset.purchase_cost %}
+document.getElementById('purchase_cost').value = {{ asset.purchase_cost }};
+{% endif %}
+{% if asset.current_value %}
+document.getElementById('current_value').value = {{ asset.current_value }};
+{% endif %}
+
+// Sistema de cálculo de depreciación
+let isManualValue = {{ 'true' if asset.current_value else 'false' }};
+
+document.getElementById('manual_value_btn').addEventListener('click', function() {
+    isManualValue = true;
+    document.getElementById('current_value').readOnly = false;
+    document.getElementById('current_value').focus();
+    document.getElementById('depreciation_info').textContent = 'Valor manual';
+});
+
+document.getElementById('calculate_value_btn').addEventListener('click', function() {
+    calculateDepreciation();
+});
+
+// Calcular automáticamente cuando cambien los campos relevantes
+['purchase_cost', 'acquisition_date'].forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.addEventListener('change', function() {
+            if (!isManualValue) {
+                calculateDepreciation();
+            }
+        });
+    }
+});
+
+function calculateDepreciation() {
+    const category = document.getElementById('category').value;
+    const purchaseCost = parseFloat(document.getElementById('purchase_cost').value);
+    const acquisitionDate = document.getElementById('acquisition_date').value;
+
+    if (!category || !purchaseCost || !acquisitionDate) {
+        document.getElementById('depreciation_info').textContent = 'Completa categoría, coste y fecha';
+        document.getElementById('current_value').value = '';
+        return;
+    }
+
+    // Obtener token CSRF
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    // Llamar a la API para calcular depreciación
+    fetch('/admin/api/depreciation/calculate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            category: category,
+            purchase_cost: purchaseCost,
+            acquisition_date: acquisitionDate
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Error response:', text);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            document.getElementById('depreciation_info').textContent = 'Error: ' + data.error;
+            return;
+        }
+
+        isManualValue = false;
+        document.getElementById('current_value').value = data.current_value;
+        document.getElementById('current_value').readOnly = true;
+
+        const infoText = `Depreciación: ${data.depreciation.toFixed(2)}€ en ${data.years_elapsed.toFixed(1)} años (${data.depreciation_years} años vida útil)`;
+        document.getElementById('depreciation_info').textContent = infoText;
+    })
+    .catch(error => {
+        console.error('Error calculando depreciación:', error);
+        document.getElementById('depreciation_info').textContent = 'Error al calcular: ' + error.message;
+    });
+}
+
+// Calcular automáticamente al cargar si no hay valor manual
+if (!isManualValue && document.getElementById('purchase_cost').value && document.getElementById('acquisition_date').value) {
+    setTimeout(calculateDepreciation, 500);
+}
+</script>
 {% endblock %}

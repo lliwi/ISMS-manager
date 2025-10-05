@@ -172,7 +172,11 @@
                                     </td>
                                     <td>
                                         {{ asset.name }}
-                                        {% if asset.physical_location %}
+                                        {% if asset.asset_type %}
+                                        <small class="text-muted d-block">
+                                            <i class="{{ asset.asset_type.icon }}"></i> {{ asset.asset_type.name }}
+                                        </small>
+                                        {% elif asset.physical_location %}
                                         <small class="text-muted d-block">
                                             <i class="fas fa-map-marker-alt"></i> {{ asset.physical_location }}
                                         </small>
@@ -250,6 +254,11 @@
                                                class="btn btn-outline-secondary" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="confirmDelete({{ asset.id }}, '{{ asset.asset_code }}')"
+                                                    title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                             {% endif %}
                                         </div>
                                     </td>
@@ -306,6 +315,29 @@ function applyFilters() {
     if (owner_id) params.append('owner_id', owner_id);
 
     window.location.href = '{{ url_for("assets.index") }}?' + params.toString();
+}
+
+// Confirmación de eliminación
+function confirmDelete(assetId, assetCode) {
+    if (confirm(`¿Estás seguro de que deseas eliminar el activo ${assetCode}?\n\nEl activo será marcado como "Eliminado" pero permanecerá en el sistema para trazabilidad.`)) {
+        // Crear y enviar formulario de eliminación
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/activos/${assetId}/delete`;
+
+        // Agregar token CSRF
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrf_token';
+            input.value = csrfToken.content;
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 {% endblock %}

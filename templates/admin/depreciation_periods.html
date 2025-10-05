@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Períodos de Amortización - Administración - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0"><i class="fas fa-chart-line me-2"></i>Períodos de Amortización</h1>
+                <p class="text-muted">Configura los años de vida útil y método de depreciación por categoría de activo</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Configuración
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Información:</strong> Los períodos de amortización se usan para calcular automáticamente el valor actual de los activos basándose en su coste de adquisición y fecha de compra.
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Años de Vida Útil</th>
+                                <th>Valor Residual</th>
+                                <th>Método</th>
+                                <th>Descripción</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for period in periods %}
+                            <tr>
+                                <td>
+                                    <strong>{{ period.category.value }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        {{ period.years }} año{{ 's' if period.years != 1 else '' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ period.residual_value_percentage }}%
+                                </td>
+                                <td>
+                                    {% if period.method == 'linear' %}
+                                    <span class="badge bg-info">Lineal</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ period.method }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ period.description or 'Sin descripción' }}</small>
+                                </td>
+                                <td>
+                                    {% if period.is_active %}
+                                    <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin.edit_depreciation_period', id=period.id) }}"
+                                       class="btn btn-sm btn-outline-primary" title="Editar">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if not periods %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay períodos de amortización configurados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ejemplo de cálculo -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Ejemplo de Cálculo</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Fórmula de depreciación lineal:</strong></p>
+                <code class="d-block p-2 bg-light">
+                    Valor Actual = Coste Adquisición - (Depreciación Anual × Años Transcurridos)
+                </code>
+                <p class="mt-3"><strong>Donde:</strong></p>
+                <ul class="small">
+                    <li><strong>Depreciación Anual</strong> = (Coste - Valor Residual) / Años de Vida Útil</li>
+                    <li><strong>Valor Residual</strong> = Coste × (% Valor Residual / 100)</li>
+                    <li><strong>Valor Mínimo</strong> = Valor Residual (no deprecia por debajo de este valor)</li>
+                </ul>
+
+                <hr>
+
+                <p class="mb-2"><strong>Ejemplo práctico:</strong></p>
+                <div class="small">
+                    <p class="mb-1">Activo: Servidor (Hardware - 4 años, 10% residual)</p>
+                    <p class="mb-1">Coste: 10,000€ | Comprado hace: 2 años</p>
+                    <p class="mb-1">Depreciación anual: (10,000€ - 1,000€) / 4 = 2,250€/año</p>
+                    <p class="mb-1">Depreciación acumulada: 2,250€ × 2 = 4,500€</p>
+                    <p class="mb-0 text-success"><strong>Valor Actual: 5,500€</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recomendaciones</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>Hardware:</strong> Normalmente 3-5 años según el tipo de equipo</li>
+                    <li><strong>Software:</strong> 2-3 años, considerando actualizaciones frecuentes</li>
+                    <li><strong>Instalaciones:</strong> 20-50 años dependiendo del tipo de edificio</li>
+                    <li><strong>Servicios:</strong> Normalmente se deprecian en 1 año (suscripciones)</li>
+                    <li><strong>Información:</strong> No suele depreciarse (valor constante o creciente)</li>
+                    <li class="mt-3 text-muted"><small><i class="fas fa-exclamation-circle"></i> Estos son valores estándar. Ajústalos según las políticas contables de tu organización.</small></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
