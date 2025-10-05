@@ -21,9 +21,10 @@ class Config:
 
     # Session Settings
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
-    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_HTTPONLY = os.environ.get('SESSION_COOKIE_HTTPONLY', 'True').lower() == 'true'
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(seconds=int(os.environ.get('PERMANENT_SESSION_LIFETIME', '3600')))
+    SESSION_COOKIE_NAME = 'isms_session'
 
     # Email Settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
@@ -45,8 +46,10 @@ class Config:
     ITEMS_PER_PAGE = int(os.environ.get('ITEMS_PER_PAGE', '20'))
 
     # Security Settings
+    WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600
     WTF_CSRF_SSL_STRICT = False
+    WTF_CSRF_CHECK_DEFAULT = True
 
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
@@ -86,8 +89,9 @@ class ProductionConfig(Config):
     TESTING = False
 
     # Enhanced security for production
-    SESSION_COOKIE_SECURE = True
-    WTF_CSRF_SSL_STRICT = True
+    # Set SESSION_COOKIE_SECURE=True in .env when using HTTPS
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    WTF_CSRF_SSL_STRICT = False
 
     # Production database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

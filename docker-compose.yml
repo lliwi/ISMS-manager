@@ -23,10 +23,14 @@ services:
   # Flask Application
   web:
     build: .
+    user: "1000:1000"
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://isms:isms_secure_password@db:5432/isms_db
       - SECRET_KEY=your-production-secret-key-change-this
+      - SESSION_COOKIE_SECURE=False
+      - SESSION_COOKIE_HTTPONLY=False
+      - WTF_CSRF_SSL_STRICT=False
       - AI_VERIFICATION_ENABLED=${AI_VERIFICATION_ENABLED:-False}
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
       - AI_MODEL=${AI_MODEL:-llama3:8b}

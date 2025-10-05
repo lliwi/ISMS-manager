@@ -1,0 +1,94 @@
+control_id,title,description,category,applicability_status,implementation_status
+A.5.1,Políticas de seguridad de la información,Proporcionar dirección y apoyo de la gestión para la seguridad de la información de acuerdo con los requisitos del negocio y las leyes y regulaciones relevantes.,Organizacional,aplicable,not_implemented
+A.5.2,Roles y responsabilidades de seguridad de la información,Asegurar y apoyar la seguridad de la información de acuerdo con la política de seguridad de la información de la organización.,Organizacional,aplicable,not_implemented
+A.5.3,Segregación de funciones,Reducir las oportunidades de modificación no autorizada o no intencionada o el mal uso de los activos de información.,Organizacional,aplicable,not_implemented
+A.5.4,Responsabilidades de la dirección,Establecer y mantener un enfoque de gestión para dirigir supervisar y mejorar la seguridad de la información.,Organizacional,aplicable,not_implemented
+A.5.5,Contacto con autoridades,Mantener contactos apropiados con las autoridades relevantes.,Organizacional,aplicable,not_implemented
+A.5.6,Contacto con grupos de interés especial,Mantener contactos apropiados con grupos de interés especial u otros foros y asociaciones profesionales de seguridad.,Organizacional,aplicable,not_implemented
+A.5.7,Inteligencia de amenazas,Recopilar y analizar información sobre amenazas de seguridad de la información para producir inteligencia de amenazas.,Organizacional,aplicable,not_implemented
+A.5.8,Seguridad de la información en la gestión de proyectos,Integrar la seguridad de la información en la gestión de proyectos.,Organizacional,aplicable,not_implemented
+A.5.9,Inventario de información y otros activos asociados,Identificar los activos de información y otros activos asociados para establecer y mantener la propiedad y proteger adecuadamente estos activos.,Organizacional,aplicable,not_implemented
+A.5.10,Uso aceptable de la información y otros activos asociados,Identificar documentar e implementar reglas para el uso aceptable de la información y otros activos asociados.,Organizacional,aplicable,not_implemented
+A.5.11,Devolución de activos,Prevenir la divulgación modificación eliminación o destrucción no autorizadas de información almacenada en los activos devueltos.,Organizacional,aplicable,not_implemented
+A.5.12,Clasificación de la información,Asegurar que la información reciba un nivel apropiado de protección de acuerdo con su importancia para la organización.,Organizacional,aplicable,not_implemented
+A.5.13,Etiquetado de la información,Asegurar que se conozca el nivel apropiado de protección de la información.,Organizacional,aplicable,not_implemented
+A.5.14,Transferencia de información,Mantener la seguridad de la información transferida dentro de la organización y con cualquier parte externa.,Organizacional,aplicable,not_implemented
+A.5.15,Control de acceso,Gestionar el acceso físico y lógico a la información y otros activos asociados.,Organizacional,aplicable,not_implemented
+A.5.16,Gestión de identidades,Gestionar el ciclo de vida completo de las identidades.,Organizacional,aplicable,not_implemented
+A.5.17,Información de autenticación,Asignar y gestionar la información de autenticación.,Organizacional,aplicable,not_implemented
+A.5.18,Derechos de acceso,Proporcionar acceso a la información y otros activos asociados según lo autorizado.,Organizacional,aplicable,not_implemented
+A.5.19,Seguridad de la información en las relaciones con proveedores,Procesos y procedimientos para gestionar la seguridad de la información en las relaciones con proveedores.,Organizacional,aplicable,not_implemented
+A.5.20,Abordar la seguridad de la información en los acuerdos con proveedores,Establecer y acordar con cada proveedor los requisitos de seguridad de la información relevantes.,Organizacional,aplicable,not_implemented
+A.5.21,Gestión de la seguridad de la información en la cadena de suministro de TIC,Gestionar los riesgos de seguridad de la información asociados con la cadena de suministro de productos y servicios de TIC.,Organizacional,aplicable,not_implemented
+A.5.22,Monitoreo revisión y gestión de cambios de los servicios del proveedor,Mantener un nivel acordado de seguridad de la información y prestación de servicios en línea con los acuerdos de proveedores.,Organizacional,aplicable,not_implemented
+A.5.23,Seguridad de la información para el uso de servicios en la nube,Adquirir utilizar gestionar y salir de los servicios en la nube de acuerdo con los requisitos de seguridad de la información.,Organizacional,aplicable,not_implemented
+A.5.24,Planificación y preparación de la gestión de incidentes de seguridad de la información,Asegurar un enfoque rápido efectivo y ordenado para gestionar los incidentes de seguridad de la información.,Organizacional,aplicable,not_implemented
+A.5.25,Evaluación y decisión sobre eventos de seguridad de la información,Clasificar los eventos de seguridad de la información y decidir sobre el tratamiento de los mismos.,Organizacional,aplicable,not_implemented
+A.5.26,Respuesta a incidentes de seguridad de la información,Responder a los incidentes de seguridad de la información de acuerdo con los procedimientos documentados.,Organizacional,aplicable,not_implemented
+A.5.27,Aprender de los incidentes de seguridad de la información,Maximizar las lecciones aprendidas de los incidentes de seguridad de la información.,Organizacional,aplicable,not_implemented
+A.5.28,Recopilación de evidencia,Establecer y aplicar procedimientos para la identificación recopilación adquisición y preservación de evidencia.,Organizacional,aplicable,not_implemented
+A.5.29,Seguridad de la información durante una interrupción,Planificar cómo mantener la seguridad de la información a un nivel apropiado durante una interrupción.,Organizacional,aplicable,not_implemented
+A.5.30,Preparación de las TIC para la continuidad del negocio,Asegurar la disponibilidad de las instalaciones de procesamiento de información.,Organizacional,aplicable,not_implemented
+A.5.31,Requisitos legales estatutarios regulatorios y contractuales,Evitar violaciones de las obligaciones legales estatutarias regulatorias o contractuales relacionadas con la seguridad de la información.,Organizacional,aplicable,not_implemented
+A.5.32,Derechos de propiedad intelectual,Proteger la propiedad intelectual.,Organizacional,aplicable,not_implemented
+A.5.33,Protección de registros,Proteger los registros contra pérdida destrucción falsificación acceso no autorizado y liberación no autorizada.,Organizacional,aplicable,not_implemented
+A.5.34,Privacidad y protección de información de identificación personal,Asegurar el cumplimiento de las obligaciones relacionadas con la privacidad y protección de PII.,Organizacional,aplicable,not_implemented
+A.5.35,Revisión independiente de la seguridad de la información,Asegurar que el enfoque de la organización para gestionar la seguridad de la información y su implementación sea adecuado y efectivo.,Organizacional,aplicable,not_implemented
+A.5.36,Cumplimiento de políticas reglas y normas de seguridad de la información,Asegurar que la seguridad de la información se implemente y opere de acuerdo con las políticas reglas y normas organizacionales.,Organizacional,aplicable,not_implemented
+A.5.37,Procedimientos operativos documentados,Asegurar operaciones correctas y seguras de las instalaciones de procesamiento de información.,Organizacional,aplicable,not_implemented
+A.6.1,Selección,Asegurar que los candidatos para el empleo sean apropiados y calificados para los roles para los que se están considerando.,Personas,aplicable,not_implemented
+A.6.2,Términos y condiciones de empleo,Asegurar que el personal y los contratistas entiendan y cumplan con sus responsabilidades de seguridad de la información.,Personas,aplicable,not_implemented
+A.6.3,Concienciación educación y capacitación en seguridad de la información,Asegurar que el personal y los contratistas relevantes sean conscientes y cumplan con sus responsabilidades de seguridad de la información.,Personas,aplicable,not_implemented
+A.6.4,Proceso disciplinario,Apoyar un proceso disciplinario formal para el personal que haya cometido una violación de seguridad de la información.,Personas,aplicable,not_implemented
+A.6.5,Responsabilidades después de la terminación o cambio de empleo,Proteger los intereses de seguridad de la información de la organización como parte del proceso de cambio o terminación del empleo.,Personas,aplicable,not_implemented
+A.6.6,Acuerdos de confidencialidad o no divulgación,Proteger el acceso a la información de la organización.,Personas,aplicable,not_implemented
+A.6.7,Trabajo remoto,Mantener la seguridad cuando el personal trabaja de forma remota.,Personas,aplicable,not_implemented
+A.6.8,Reporte de eventos de seguridad de la información,Asegurar que los eventos de seguridad de la información sean reportados a través de canales de gestión apropiados lo más rápido posible.,Personas,aplicable,not_implemented
+A.7.1,Perímetros de seguridad física,Prevenir el acceso físico no autorizado daño e interferencia a las instalaciones y la información de la organización.,Físico,aplicable,not_implemented
+A.7.2,Entrada física,Asegurar que se otorgue acceso solo al personal y otras partes autorizadas.,Físico,aplicable,not_implemented
+A.7.3,Seguridad de oficinas salas e instalaciones,Reducir los riesgos de acceso físico no autorizado daño e interferencia a las oficinas salas e instalaciones de la organización.,Físico,aplicable,not_implemented
+A.7.4,Monitoreo de seguridad física,Detectar y disuadir el acceso físico no autorizado a las instalaciones de la organización.,Físico,aplicable,not_implemented
+A.7.5,Protección contra amenazas físicas y ambientales,Proporcionar protección contra amenazas físicas y ambientales como desastres naturales y otros desastres intencionales o no intencionales.,Físico,aplicable,not_implemented
+A.7.6,Trabajo en áreas seguras,Reducir los riesgos de trabajo en áreas seguras.,Físico,aplicable,not_implemented
+A.7.7,Escritorio limpio y pantalla limpia,Reducir los riesgos de acceso no autorizado pérdida y daño de información durante y fuera del horario de trabajo normal.,Físico,aplicable,not_implemented
+A.7.8,Ubicación y protección del equipo,Prevenir la pérdida daño robo o compromiso de activos e interrupción de las operaciones de la organización.,Físico,aplicable,not_implemented
+A.7.9,Seguridad de los activos fuera de las instalaciones,Prevenir la pérdida daño robo o compromiso de los activos fuera de las instalaciones.,Físico,aplicable,not_implemented
+A.7.10,Medios de almacenamiento,Prevenir la divulgación modificación eliminación o destrucción no autorizadas de información almacenada en medios de almacenamiento.,Físico,aplicable,not_implemented
+A.7.11,Servicios de soporte,Asegurar la disponibilidad integridad y confidencialidad de la información y otros activos asociados.,Físico,aplicable,not_implemented
+A.7.12,Seguridad del cableado,Prevenir la interceptación interferencia o daño a los cables que transportan energía datos o servicios de información.,Físico,aplicable,not_implemented
+A.7.13,Mantenimiento del equipo,Asegurar la disponibilidad integridad y confidencialidad de la información y otros activos asociados.,Físico,aplicable,not_implemented
+A.7.14,Eliminación o reutilización segura del equipo,Prevenir la fuga de información.,Físico,aplicable,not_implemented
+A.8.1,Dispositivos de punto final de usuario,Proteger la información almacenada procesada o accesible a través de dispositivos de punto final de usuario.,Tecnológico,aplicable,not_implemented
+A.8.2,Derechos de acceso privilegiado,Prevenir el acceso no autorizado a sistemas e información.,Tecnológico,aplicable,not_implemented
+A.8.3,Restricción de acceso a la información,Prevenir el acceso no autorizado a la información.,Tecnológico,aplicable,not_implemented
+A.8.4,Acceso al código fuente,Asegurar que el acceso al código fuente las herramientas de desarrollo y las bibliotecas de software no comprometan la seguridad.,Tecnológico,aplicable,not_implemented
+A.8.5,Autenticación segura,Asegurar que se verifique la identidad de los usuarios.,Tecnológico,aplicable,not_implemented
+A.8.6,Gestión de capacidad,Asegurar que los recursos estén disponibles y puedan usarse de manera efectiva y eficiente.,Tecnológico,aplicable,not_implemented
+A.8.7,Protección contra malware,Proteger la información contra malware.,Tecnológico,aplicable,not_implemented
+A.8.8,Gestión de vulnerabilidades técnicas,Prevenir la explotación de vulnerabilidades técnicas.,Tecnológico,aplicable,not_implemented
+A.8.9,Gestión de configuración,Asegurar que las configuraciones de hardware software servicios y redes se establezcan y mantengan correctamente.,Tecnológico,aplicable,not_implemented
+A.8.10,Eliminación de información,Prevenir la exposición de información almacenada en sistemas de información dispositivos o en cualquier otro medio de almacenamiento.,Tecnológico,aplicable,not_implemented
+A.8.11,Enmascaramiento de datos,Limitar la exposición de datos sensibles.,Tecnológico,aplicable,not_implemented
+A.8.12,Prevención de fuga de datos,Detectar y prevenir la divulgación modificación eliminación o destrucción no autorizadas de información.,Tecnológico,aplicable,not_implemented
+A.8.13,Respaldo de información,Mantener la disponibilidad de la información.,Tecnológico,aplicable,not_implemented
+A.8.14,Redundancia de las instalaciones de procesamiento de información,Asegurar la disponibilidad de las instalaciones de procesamiento de información.,Tecnológico,aplicable,not_implemented
+A.8.15,Registro,Producir conservar y proteger evidencia relacionada con eventos que tienen lugar en sistemas y redes.,Tecnológico,aplicable,not_implemented
+A.8.16,Actividades de monitoreo,Detectar comportamientos anómalos y posibles incidentes de seguridad de la información.,Tecnológico,aplicable,not_implemented
+A.8.17,Sincronización de reloj,Asegurar la precisión de los registros de tiempo para actividades relevantes para la seguridad de la información.,Tecnológico,aplicable,not_implemented
+A.8.18,Uso de programas de utilidad privilegiados,Prevenir el uso indebido o el compromiso de sistemas e información mediante el uso de programas de utilidad privilegiados.,Tecnológico,aplicable,not_implemented
+A.8.19,Instalación de software en sistemas operativos,Asegurar la integridad de los sistemas operativos.,Tecnológico,aplicable,not_implemented
+A.8.20,Seguridad de redes,Asegurar la protección de la información en redes y la protección de las instalaciones de red de soporte.,Tecnológico,aplicable,not_implemented
+A.8.21,Seguridad de los servicios de red,Asegurar que las características de seguridad niveles de servicio y requisitos de servicio de los servicios de red se identifiquen implementen y monitoreen.,Tecnológico,aplicable,not_implemented
+A.8.22,Segregación de redes,Mantener la seguridad de los servicios de la información y de los usuarios en redes.,Tecnológico,aplicable,not_implemented
+A.8.23,Filtrado web,Prevenir el acceso a contenido web potencialmente malicioso.,Tecnológico,aplicable,not_implemented
+A.8.24,Uso de criptografía,Asegurar el uso apropiado y efectivo de la criptografía para proteger la confidencialidad autenticidad e integridad de la información.,Tecnológico,aplicable,not_implemented
+A.8.25,Ciclo de vida de desarrollo seguro,Asegurar que la seguridad de la información esté diseñada e implementada dentro del ciclo de vida de desarrollo de sistemas de información.,Tecnológico,aplicable,not_implemented
+A.8.26,Requisitos de seguridad de las aplicaciones,Asegurar que los sistemas de información sean seguros por diseño.,Tecnológico,aplicable,not_implemented
+A.8.27,Arquitectura de sistemas seguros y principios de ingeniería,Asegurar que la seguridad de la información esté diseñada e implementada dentro del ciclo de vida de desarrollo de sistemas de información.,Tecnológico,aplicable,not_implemented
+A.8.28,Codificación segura,Asegurar el desarrollo seguro de aplicaciones.,Tecnológico,aplicable,not_implemented
+A.8.29,Pruebas de seguridad en desarrollo y aceptación,Asegurar que las actividades de prueba de seguridad estén definidas e implementadas en el ciclo de vida de desarrollo.,Tecnológico,aplicable,not_implemented
+A.8.30,Desarrollo externalizado,Asegurar que la organización supervise y monitoree las actividades de desarrollo de sistemas externalizadas.,Tecnológico,aplicable,not_implemented
+A.8.31,Separación de los entornos de desarrollo prueba y producción,Reducir los riesgos de acceso o cambios no autorizados al entorno de producción.,Tecnológico,aplicable,not_implemented
+A.8.32,Gestión de cambios,Prevenir interrupciones del sistema y errores de seguridad de la información causados por cambios.,Tecnológico,aplicable,not_implemented
+A.8.33,Información de prueba,Asegurar la protección de los datos de prueba.,Tecnológico,aplicable,not_implemented
+A.8.34,Protección de los sistemas de información durante las pruebas de auditoría,Prevenir interrupciones de los sistemas de producción y proteger la información durante las pruebas de auditoría.,Tecnológico,aplicable,not_implemented
