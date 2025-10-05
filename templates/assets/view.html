@@ -224,24 +224,131 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Tipo de Relación</th>
-                                <th>Activo Relacionado</th>
-                                <th>Criticidad</th>
-                                <th>Acciones</th>
+                                <th width="40%">Relación</th>
+                                <th width="10%">Dirección</th>
+                                <th width="15%">Criticidad</th>
+                                <th width="25%">Descripción</th>
+                                <th width="10%">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for rel in relationships %}
                             <tr>
-                                <td>{{ rel.relationship_type.value }}</td>
+                                {% if rel.source_asset_id == asset.id %}
+                                    {# Este activo es el origen (source) - Relación SALIENTE #}
+                                    {% set relationship_label = rel.relationship_type.value %}
+                                    {% set relationship_icon = '' %}
+                                    {% set relationship_color = 'secondary' %}
+
+                                    {# Configurar icono y color según el tipo de relación #}
+                                    {% if rel.relationship_type.name == 'DEPENDS_ON' %}
+                                        {% set relationship_icon = 'link' %}
+                                        {% set relationship_color = 'warning' %}
+                                    {% elif rel.relationship_type.name == 'CONTAINS' %}
+                                        {% set relationship_icon = 'box' %}
+                                        {% set relationship_color = 'primary' %}
+                                    {% elif rel.relationship_type.name == 'CONNECTS_TO' %}
+                                        {% set relationship_icon = 'network-wired' %}
+                                        {% set relationship_color = 'info' %}
+                                    {% elif rel.relationship_type.name == 'PROCESSES' %}
+                                        {% set relationship_icon = 'cogs' %}
+                                        {% set relationship_color = 'success' %}
+                                    {% elif rel.relationship_type.name == 'STORES' %}
+                                        {% set relationship_icon = 'database' %}
+                                        {% set relationship_color = 'dark' %}
+                                    {% elif rel.relationship_type.name == 'USES' %}
+                                        {% set relationship_icon = 'hand-pointer' %}
+                                        {% set relationship_color = 'secondary' %}
+                                    {% elif rel.relationship_type.name == 'PROTECTS' %}
+                                        {% set relationship_icon = 'shield-alt' %}
+                                        {% set relationship_color = 'danger' %}
+                                    {% elif rel.relationship_type.name == 'SUPPORTS' %}
+                                        {% set relationship_icon = 'hands-helping' %}
+                                        {% set relationship_color = 'success' %}
+                                    {% endif %}
+
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <strong class="text-primary">{{ asset.asset_code }}</strong>
+                                            <i class="fas fa-arrow-right mx-2 text-success"></i>
+                                            <span class="badge bg-{{ relationship_color }}">
+                                                <i class="fas fa-{{ relationship_icon }} me-1"></i>{{ relationship_label }}
+                                            </span>
+                                            <i class="fas fa-arrow-right mx-2 text-success"></i>
+                                            <a href="{{ url_for('assets.view', id=rel.target_asset.id) }}" class="text-decoration-none">
+                                                <strong>{{ rel.target_asset.asset_code }}</strong>
+                                                <small class="text-muted ms-1">{{ rel.target_asset.name }}</small>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="fas fa-arrow-right text-success" title="Relación saliente"></i>
+                                    </td>
+                                {% else %}
+                                    {# Este activo es el destino (target) - Relación ENTRANTE #}
+                                    {# Invertir la descripción para que tenga sentido #}
+                                    {% set relationship_label_inverse = '' %}
+                                    {% set relationship_icon = '' %}
+                                    {% set relationship_color = 'secondary' %}
+
+                                    {# Ajustar descripción inversa y estilo #}
+                                    {% if rel.relationship_type.name == 'DEPENDS_ON' %}
+                                        {% set relationship_label_inverse = 'Es requerido por' %}
+                                        {% set relationship_icon = 'link' %}
+                                        {% set relationship_color = 'warning' %}
+                                    {% elif rel.relationship_type.name == 'CONTAINS' %}
+                                        {% set relationship_label_inverse = 'Está contenido en' %}
+                                        {% set relationship_icon = 'box' %}
+                                        {% set relationship_color = 'primary' %}
+                                    {% elif rel.relationship_type.name == 'CONNECTS_TO' %}
+                                        {% set relationship_label_inverse = 'Se conecta con' %}
+                                        {% set relationship_icon = 'network-wired' %}
+                                        {% set relationship_color = 'info' %}
+                                    {% elif rel.relationship_type.name == 'PROCESSES' %}
+                                        {% set relationship_label_inverse = 'Es procesado por' %}
+                                        {% set relationship_icon = 'cogs' %}
+                                        {% set relationship_color = 'success' %}
+                                    {% elif rel.relationship_type.name == 'STORES' %}
+                                        {% set relationship_label_inverse = 'Es almacenado en' %}
+                                        {% set relationship_icon = 'database' %}
+                                        {% set relationship_color = 'dark' %}
+                                    {% elif rel.relationship_type.name == 'USES' %}
+                                        {% set relationship_label_inverse = 'Es usado por' %}
+                                        {% set relationship_icon = 'hand-pointer' %}
+                                        {% set relationship_color = 'secondary' %}
+                                    {% elif rel.relationship_type.name == 'PROTECTS' %}
+                                        {% set relationship_label_inverse = 'Es protegido por' %}
+                                        {% set relationship_icon = 'shield-alt' %}
+                                        {% set relationship_color = 'danger' %}
+                                    {% elif rel.relationship_type.name == 'SUPPORTS' %}
+                                        {% set relationship_label_inverse = 'Está soportado por' %}
+                                        {% set relationship_icon = 'hands-helping' %}
+                                        {% set relationship_color = 'success' %}
+                                    {% endif %}
+
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <strong class="text-primary">{{ asset.asset_code }}</strong>
+                                            <i class="fas fa-arrow-left mx-2 text-info"></i>
+                                            <span class="badge bg-{{ relationship_color }}">
+                                                <i class="fas fa-{{ relationship_icon }} me-1"></i>{{ relationship_label_inverse }}
+                                            </span>
+                                            <i class="fas fa-arrow-left mx-2 text-info"></i>
+                                            <a href="{{ url_for('assets.view', id=rel.source_asset.id) }}" class="text-decoration-none">
+                                                <strong>{{ rel.source_asset.asset_code }}</strong>
+                                                <small class="text-muted ms-1">{{ rel.source_asset.name }}</small>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="fas fa-arrow-left text-info" title="Relación entrante"></i>
+                                    </td>
+                                {% endif %}
+                                <td class="text-center"><span class="badge bg-info">{{ rel.criticality }}/10</span></td>
                                 <td>
-                                    {% set related = rel.target_asset if rel.source_asset_id == asset.id else rel.source_asset %}
-                                    <a href="{{ url_for('assets.view', id=related.id) }}">
-                                        {{ related.asset_code }} - {{ related.name }}
-                                    </a>
+                                    <small class="text-muted">{{ rel.description or '-' }}</small>
                                 </td>
-                                <td><span class="badge bg-info">{{ rel.criticality }}/10</span></td>
-                                <td>
+                                <td class="text-center">
                                     <form method="POST" action="{{ url_for('assets.delete_relationship', id=rel.id) }}" style="display:inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta relación?')">
