@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'create' %}Nuevo Servicio{% else %}Editar Servicio{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('services.index') }}">Servicios</a></li>
+                    {% if action == 'edit' %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('services.detail', service_id=service.id) }}">{{ service.service_code }}</a></li>
+                    <li class="breadcrumb-item active">Editar</li>
+                    {% else %}
+                    <li class="breadcrumb-item active">Nuevo Servicio</li>
+                    {% endif %}
+                </ol>
+            </nav>
+            <h2>
+                <i class="fas fa-server me-2"></i>
+                {% if action == 'create' %}Nuevo Servicio{% else %}Editar Servicio{% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" action="{% if action == 'create' %}{{ url_for('services.create') }}{% else %}{{ url_for('services.edit', service_id=service.id) }}{% endif %}">
+        <div class="row">
+            <!-- Left Column: Main Information -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Información Básica</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="service_code" class="form-label">Código del Servicio <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="service_code" name="service_code"
+                                       value="{{ service.service_code if service else '' }}"
+                                       placeholder="SRV-001" required>
+                                <small class="text-muted">Código único para identificar el servicio</small>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="name" class="form-label">Nombre del Servicio <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="{{ service.name if service else '' }}"
+                                       placeholder="Portal Web Corporativo" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Describe el propósito y alcance del servicio...">{{ service.description if service else '' }}</textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="service_type" class="form-label">Tipo de Servicio <span class="text-danger">*</span></label>
+                                <select class="form-select" id="service_type" name="service_type" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for type in service_types %}
+                                    <option value="{{ type.name }}"
+                                            {% if service and service.service_type == type %}selected{% endif %}>
+                                        {{ type.value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">Estado</label>
+                                <select class="form-select" id="status" name="status">
+                                    {% for status in service_statuses %}
+                                    <option value="{{ status.name }}"
+                                            {% if service and service.status == status %}selected{% elif not service and status.name == 'ACTIVE' %}selected{% endif %}>
+                                        {{ status.value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="department" class="form-label">Departamento</label>
+                                <input type="text" class="form-control" id="department" name="department"
+                                       value="{{ service.department if service else '' }}"
+                                       placeholder="IT, Operaciones, etc."
+                                       list="department-list">
+                                <datalist id="department-list">
+                                    <option value="IT">
+                                    <option value="Operaciones">
+                                    <option value="Finanzas">
+                                    <option value="RRHH">
+                                    <option value="Ventas">
+                                    <option value="Marketing">
+                                </datalist>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="operating_hours" class="form-label">Horario de Operación</label>
+                                <input type="text" class="form-control" id="operating_hours" name="operating_hours"
+                                       value="{{ service.operating_hours if service else '' }}"
+                                       placeholder="24/7, 8-18 L-V, etc.">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="annual_cost" class="form-label">Costo Anual</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="annual_cost" name="annual_cost"
+                                       value="{{ service.annual_cost if service else '' }}"
+                                       step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Responsables</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="service_owner_id" class="form-label">Propietario del Servicio <span class="text-danger">*</span></label>
+                                <select class="form-select" id="service_owner_id" name="service_owner_id" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}"
+                                            {% if service and service.service_owner_id == user.id %}selected{% endif %}>
+                                        {{ user.username }}{% if user.email %} ({{ user.email }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Responsable del servicio a nivel de negocio</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="technical_manager_id" class="form-label">Responsable Técnico</label>
+                                <select class="form-select" id="technical_manager_id" name="technical_manager_id">
+                                    <option value="">Sin asignar</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}"
+                                            {% if service and service.technical_manager_id == user.id %}selected{% endif %}>
+                                        {{ user.username }}{% if user.email %} ({{ user.email }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Responsable técnico del servicio</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Metrics -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Métricas y SLA</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="criticality" class="form-label">
+                                Criticidad
+                                <span class="badge bg-secondary" id="criticality-badge">{{ service.criticality if service else 5 }}</span>
+                            </label>
+                            <input type="range" class="form-range" id="criticality" name="criticality"
+                                   min="1" max="10" step="1"
+                                   value="{{ service.criticality if service else 5 }}"
+                                   oninput="updateCriticalityBadge(this.value)">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Baja (1)</small>
+                                <small class="text-muted">Crítica (10)</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label for="required_availability" class="form-label">Disponibilidad Requerida (%)</label>
+                            <input type="number" class="form-control" id="required_availability" name="required_availability"
+                                   value="{{ service.required_availability if service else '' }}"
+                                   step="0.01" min="0" max="100" placeholder="99.9">
+                            <small class="text-muted">Ejemplo: 99.9 = 99.9% uptime</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rto" class="form-label">RTO - Recovery Time Objective (minutos)</label>
+                            <input type="number" class="form-control" id="rto" name="rto"
+                                   value="{{ service.rto if service else '' }}"
+                                   min="0" placeholder="30">
+                            <small class="text-muted">Tiempo máximo de recuperación</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rpo" class="form-label">RPO - Recovery Point Objective (minutos)</label>
+                            <input type="number" class="form-control" id="rpo" name="rpo"
+                                   value="{{ service.rpo if service else '' }}"
+                                   min="0" placeholder="15">
+                            <small class="text-muted">Pérdida máxima de datos aceptable</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Ayuda</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Tipos de Servicio:</strong></p>
+                        <ul class="small">
+                            <li><strong>Negocio:</strong> Servicios orientados al cliente</li>
+                            <li><strong>Técnico:</strong> Servicios de soporte técnico</li>
+                            <li><strong>Infraestructura:</strong> Red, servidores, etc.</li>
+                            <li><strong>Aplicación:</strong> Software y aplicaciones</li>
+                            <li><strong>Soporte:</strong> Servicios de respaldo</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-2"><strong>Criticidad:</strong></p>
+                        <ul class="small mb-0">
+                            <li>1-3: Baja (puede fallar sin gran impacto)</li>
+                            <li>4-6: Media (impacto moderado)</li>
+                            <li>7-8: Alta (impacto significativo)</li>
+                            <li>9-10: Crítica (impacto severo en el negocio)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mt-4 mb-4">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% if service %}{{ url_for('services.detail', service_id=service.id) }}{% else %}{{ url_for('services.index') }}{% endif %}"
+                       class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        {% if action == 'create' %}Crear Servicio{% else %}Guardar Cambios{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Update criticality badge in real-time
+    function updateCriticalityBadge(value) {
+        const badge = document.getElementById('criticality-badge');
+        badge.textContent = value;
+
+        // Update badge color based on value
+        badge.className = 'badge';
+        if (value >= 9) {
+            badge.classList.add('bg-danger');
+        } else if (value >= 7) {
+            badge.classList.add('bg-warning', 'text-dark');
+        } else if (value >= 4) {
+            badge.classList.add('bg-info');
+        } else {
+            badge.classList.add('bg-secondary');
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const criticalityInput = document.getElementById('criticality');
+        if (criticalityInput) {
+            updateCriticalityBadge(criticalityInput.value);
+        }
+    });
+</script>
+{% endblock %}

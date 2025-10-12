@@ -50,6 +50,7 @@ def create_app(config_name=None):
     from app.blueprints.training import training_bp
     from app.blueprints.admin import admin_bp
     from app.blueprints.assets import assets_bp
+    from app.blueprints.services import services_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/')
@@ -63,6 +64,7 @@ def create_app(config_name=None):
     app.register_blueprint(training_bp, url_prefix='/formacion')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(assets_bp, url_prefix='/activos')
+    app.register_blueprint(services_bp, url_prefix='/servicios')
 
     # Root route
     @app.route('/')

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Servicios{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-server me-2"></i>Gestión de Servicios</h2>
+            <p class="text-muted">Control 5.9 - Inventario de activos | Control 8.1 - Responsabilidad sobre los activos</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if current_user.role.name in ['admin', 'ciso'] %}
+            <a href="{{ url_for('services.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nuevo Servicio
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Servicios</h6>
+                    <h2 class="card-title mb-0">{{ total_services }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Servicios Activos</h6>
+                    <h2 class="card-title mb-0 text-success">{{ active_services }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Servicios Críticos</h6>
+                    <h2 class="card-title mb-0 text-danger">{{ critical_services }}</h2>
+                    <small class="text-muted">(Criticidad ≥ 8)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('services.index') }}" id="filter-form">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Búsqueda</label>
+                        <input type="text" class="form-control" name="search"
+                               value="{{ filters.search or '' }}"
+                               placeholder="Código, nombre o descripción...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" name="type">
+                            <option value="">Todos</option>
+                            {% for type in service_types %}
+                            <option value="{{ type.name }}"
+                                    {% if filters.type == type.name %}selected{% endif %}>
+                                {{ type.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" name="status">
+                            <option value="">Todos</option>
+                            {% for status in service_statuses %}
+                            <option value="{{ status.name }}"
+                                    {% if filters.status == status.name %}selected{% endif %}>
+                                {{ status.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Departamento</label>
+                        <select class="form-select" name="department">
+                            <option value="">Todos</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept }}"
+                                    {% if filters.department == dept %}selected{% endif %}>
+                                {{ dept }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Criticidad Mín.</label>
+                        <select class="form-select" name="criticality_min">
+                            <option value="">Todas</option>
+                            <option value="8" {% if filters.criticality_min == 8 %}selected{% endif %}>≥ 8 (Alta/Crítica)</option>
+                            <option value="6" {% if filters.criticality_min == 6 %}selected{% endif %}>≥ 6 (Media)</option>
+                            <option value="4" {% if filters.criticality_min == 4 %}selected{% endif %}>≥ 4 (Baja)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% if filters.search or filters.type or filters.status or filters.department or filters.criticality_min %}
+            <div class="mt-2">
+                <a href="{{ url_for('services.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Limpiar Filtros
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Services Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Servicios ({{ services|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if services %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Departamento</th>
+                            <th class="text-center">Criticidad</th>
+                            <th class="text-center">Disponibilidad</th>
+                            <th class="text-center">RTO</th>
+                            <th class="text-center">Activos</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for service in services %}
+                        <tr>
+                            <td>
+                                <code class="text-primary">{{ service.service_code }}</code>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('services.detail', service_id=service.id) }}"
+                                   class="text-decoration-none">
+                                    <strong>{{ service.name }}</strong>
+                                </a>
+                                {% if service.description %}
+                                <br><small class="text-muted">{{ service.description[:60] }}{% if service.description|length > 60 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if service.service_type.name == 'BUSINESS' %}
+                                    <span class="badge bg-primary">{{ service.service_type.value }}</span>
+                                {% elif service.service_type.name == 'TECHNICAL' %}
+                                    <span class="badge bg-info">{{ service.service_type.value }}</span>
+                                {% elif service.service_type.name == 'INFRASTRUCTURE' %}
+                                    <span class="badge bg-secondary">{{ service.service_type.value }}</span>
+                                {% elif service.service_type.name == 'APPLICATION' %}
+                                    <span class="badge bg-success">{{ service.service_type.value }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">{{ service.service_type.value }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if service.status.name == 'ACTIVE' %}
+                                    <span class="badge bg-success">{{ service.status.value }}</span>
+                                {% elif service.status.name == 'PLANNED' %}
+                                    <span class="badge bg-info">{{ service.status.value }}</span>
+                                {% elif service.status.name == 'INACTIVE' %}
+                                    <span class="badge bg-warning">{{ service.status.value }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ service.status.value }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ service.department or '-' }}</td>
+                            <td class="text-center">
+                                {% if service.criticality >= 9 %}
+                                    <span class="badge bg-danger">{{ service.criticality }}/10</span>
+                                {% elif service.criticality >= 7 %}
+                                    <span class="badge bg-warning text-dark">{{ service.criticality }}/10</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ service.criticality }}/10</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if service.required_availability %}
+                                    {{ "%.2f"|format(service.required_availability) }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if service.rto %}
+                                    {{ service.rto }} min
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ service.assets|length }}</span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('services.detail', service_id=service.id) }}"
+                                       class="btn btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if current_user.role.name in ['admin', 'ciso'] %}
+                                    <a href="{{ url_for('services.edit', service_id=service.id) }}"
+                                       class="btn btn-outline-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No se encontraron servicios con los filtros aplicados</p>
+                {% if current_user.role.name in ['admin', 'ciso'] %}
+                <a href="{{ url_for('services.create') }}" class="btn btn-primary mt-2">
+                    <i class="fas fa-plus me-2"></i>Crear Primer Servicio
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title">Leyenda</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>RTO:</strong> Recovery Time Objective (Tiempo máximo de recuperación)</p>
+                    <p class="mb-1"><strong>RPO:</strong> Recovery Point Objective (Pérdida máxima de datos aceptable)</p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Criticidad:</strong> 1-3 Baja, 4-6 Media, 7-8 Alta, 9-10 Crítica</p>
+                    <p class="mb-1"><strong>Activos:</strong> Número de activos asociados al servicio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

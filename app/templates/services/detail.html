@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }} - Detalles{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('services.index') }}">Servicios</a></li>
+                    <li class="breadcrumb-item active">{{ service.service_code }}</li>
+                </ol>
+            </nav>
+            <h2>
+                <code class="text-primary">{{ service.service_code }}</code> - {{ service.name }}
+            </h2>
+            <p class="text-muted">{{ service.service_type.value }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if current_user.role.name in ['admin', 'ciso'] %}
+            <a href="{{ url_for('services.edit', service_id=service.id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-2"></i>Editar
+            </a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash me-2"></i>Eliminar
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="mb-3">
+        {% if service.status.name == 'ACTIVE' %}
+            <span class="badge bg-success fs-6">{{ service.status.value }}</span>
+        {% elif service.status.name == 'PLANNED' %}
+            <span class="badge bg-info fs-6">{{ service.status.value }}</span>
+        {% elif service.status.name == 'INACTIVE' %}
+            <span class="badge bg-warning fs-6">{{ service.status.value }}</span>
+        {% else %}
+            <span class="badge bg-secondary fs-6">{{ service.status.value }}</span>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Main Information -->
+        <div class="col-md-8">
+            <!-- Description -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h5>
+                </div>
+                <div class="card-body">
+                    {% if service.description %}
+                    <p>{{ service.description }}</p>
+                    {% else %}
+                    <p class="text-muted">Sin descripción</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Tipo de Servicio:</strong><br>{{ service.service_type.value }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Departamento:</strong><br>{{ service.department or 'No especificado' }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Horario de Operación:</strong><br>{{ service.operating_hours or 'No especificado' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Costo Anual:</strong><br>
+                                {% if service.annual_cost %}
+                                    ${{ "{:,.2f}".format(service.annual_cost) }}
+                                {% else %}
+                                    No especificado
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Owners and Managers -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Responsables</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Propietario del Servicio:</strong><br>
+                                {{ service.service_owner.username }}
+                                {% if service.service_owner.email %}
+                                <br><small class="text-muted">{{ service.service_owner.email }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Responsable Técnico:</strong><br>
+                                {% if service.technical_manager %}
+                                    {{ service.technical_manager.username }}
+                                    {% if service.technical_manager.email %}
+                                    <br><small class="text-muted">{{ service.technical_manager.email }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No asignado</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Associated Assets -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Activos Asociados ({{ assets|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if assets %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Criticidad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asset in assets %}
+                                <tr>
+                                    <td><code>{{ asset.asset_code }}</code></td>
+                                    <td>{{ asset.name }}</td>
+                                    <td>{{ asset.asset_type.value if asset.asset_type else '-' }}</td>
+                                    <td>
+                                        {% if asset.criticality >= 8 %}
+                                            <span class="badge bg-danger">{{ asset.criticality }}</span>
+                                        {% elif asset.criticality >= 5 %}
+                                            <span class="badge bg-warning text-dark">{{ asset.criticality }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ asset.criticality }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ asset.status.value if asset.status else '-' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('assets.view', id=asset.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay activos asociados a este servicio</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dependencies -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Dependencias</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Servicios de los que depende:</h6>
+                    {% if dependencies %}
+                    <ul class="list-group mb-3">
+                        {% for dep in dependencies %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <code class="text-primary">{{ dep.depends_on.service_code }}</code>
+                                    <strong>{{ dep.depends_on.name }}</strong>
+                                    <br><small class="text-muted">{{ dep.dependency_type }} - {{ dep.description }}</small>
+                                </div>
+                                <a href="{{ url_for('services.detail', service_id=dep.depends_on.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">No depende de otros servicios</p>
+                    {% endif %}
+
+                    <h6 class="mt-4">Servicios que dependen de este:</h6>
+                    {% if dependents %}
+                    <ul class="list-group">
+                        {% for dep in dependents %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <code class="text-primary">{{ dep.service.service_code }}</code>
+                                    <strong>{{ dep.service.name }}</strong>
+                                    <br><small class="text-muted">{{ dep.dependency_type }} - {{ dep.description }}</small>
+                                </div>
+                                <a href="{{ url_for('services.detail', service_id=dep.service.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">Ningún servicio depende de este</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Metrics and Metadata -->
+        <div class="col-md-4">
+            <!-- Criticality and Availability -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Métricas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Criticidad:</strong></label>
+                        <div class="progress" style="height: 25px;">
+                            {% if service.criticality >= 9 %}
+                                <div class="progress-bar bg-danger" style="width: {{ service.criticality * 10 }}%">
+                                    {{ service.criticality }}/10 - Crítico
+                                </div>
+                            {% elif service.criticality >= 7 %}
+                                <div class="progress-bar bg-warning" style="width: {{ service.criticality * 10 }}%">
+                                    {{ service.criticality }}/10 - Alto
+                                </div>
+                            {% else %}
+                                <div class="progress-bar bg-info" style="width: {{ service.criticality * 10 }}%">
+                                    {{ service.criticality }}/10 - Medio/Bajo
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if service.required_availability %}
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Disponibilidad Requerida:</strong></label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" style="width: {{ service.required_availability }}%">
+                                {{ "%.2f"|format(service.required_availability) }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">RTO:</dt>
+                        <dd class="col-sm-8">
+                            {% if service.rto %}
+                                <strong>{{ service.rto }} minutos</strong>
+                            {% else %}
+                                <span class="text-muted">No definido</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">RPO:</dt>
+                        <dd class="col-sm-8">
+                            {% if service.rpo %}
+                                <strong>{{ service.rpo }} minutos</strong>
+                            {% else %}
+                                <span class="text-muted">No definido</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Metadatos</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Creado:</strong><br>
+                        {{ service.created_at.strftime('%d/%m/%Y %H:%M') if service.created_at else 'N/A' }}
+                        {% if service.created_by %}
+                        <br><small class="text-muted">por {{ service.created_by.username }}</small>
+                        {% endif %}
+                    </p>
+                    {% if service.updated_at %}
+                    <p class="mb-0"><strong>Última actualización:</strong><br>
+                        {{ service.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                        {% if service.updated_by %}
+                        <br><small class="text-muted">por {{ service.updated_by.username }}</small>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea marcar el servicio <strong>{{ service.service_code }}</strong> como obsoleto?</p>
+                {% if dependents %}
+                <div class="alert alert-warning">
+                    <strong>Atención:</strong> Existen {{ dependents|length }} servicio(s) que dependen de este.
+                    No podrá eliminarlo hasta que se eliminen o actualicen esas dependencias.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('services.delete', service_id=service.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Eliminar Servicio</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

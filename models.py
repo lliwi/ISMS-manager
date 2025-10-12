@@ -1948,3 +1948,135 @@ class NCAttachment(db.Model):
 
     def __repr__(self):
         return f'<NCAttachment {self.file_name}>'
+
+
+# ============================================================================
+# SERVICIOS - Gestión de servicios de negocio y técnicos
+# ============================================================================
+
+class ServiceType(enum.Enum):
+    """Tipos de servicios"""
+    BUSINESS = "Servicio de Negocio"
+    TECHNICAL = "Servicio Técnico"
+    INFRASTRUCTURE = "Infraestructura"
+    APPLICATION = "Aplicación"
+    SUPPORT = "Soporte"
+
+
+class ServiceStatus(enum.Enum):
+    """Estados del servicio"""
+    ACTIVE = "Activo"
+    INACTIVE = "Inactivo"
+    DEPRECATED = "Obsoleto"
+    PLANNED = "Planificado"
+
+
+# Tabla de asociación para la relación muchos-a-muchos entre Service y Asset
+service_asset_association = db.Table('service_asset_association',
+    db.Column('service_id', db.Integer, db.ForeignKey('services.id'), primary_key=True),
+    db.Column('asset_id', db.Integer, db.ForeignKey('assets.id'), primary_key=True),
+    db.Column('role', db.String(50)),  # "critical", "support", "backup", etc.
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
+
+class Service(db.Model):
+    """
+    Modelo de Servicios
+    Permite agrupar activos por servicio de negocio o técnico
+    Control 5.9 - Inventario de información y otros activos asociados
+    Control 8.1 - Gestión de activos a nivel de servicio
+    """
+    __tablename__ = 'services'
+
+    id = db.Column(db.Integer, primary_key=True)
+    service_code = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+
+    # Clasificación
+    service_type = db.Column(Enum(ServiceType), nullable=False)
+    status = db.Column(Enum(ServiceStatus), default=ServiceStatus.ACTIVE)
+
+    # Responsables
+    service_owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    service_owner = db.relationship('User', foreign_keys=[service_owner_id], backref='owned_services')
+
+    technical_manager_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    technical_manager = db.relationship('User', foreign_keys=[technical_manager_id], backref='managed_services')
+
+    # Criticidad y disponibilidad
+    criticality = db.Column(db.Integer, default=5)  # 1-10
+    required_availability = db.Column(db.Float)  # % (ej: 99.9)
+    rto = db.Column(db.Integer)  # Recovery Time Objective (minutos)
+    rpo = db.Column(db.Integer)  # Recovery Point Objective (minutos)
+
+    # Información operativa
+    operating_hours = db.Column(db.String(100))  # "24/7", "8-18 L-V", etc.
+    max_users = db.Column(db.Integer)
+    department = db.Column(db.String(100))
+
+    # Costos
+    annual_cost = db.Column(db.Float)
+
+    # Auditoría
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
+
+    notes = db.Column(db.Text)
+
+    # Relaciones
+    assets = db.relationship('Asset',
+                            secondary=service_asset_association,
+                            backref=db.backref('services', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Service {self.service_code}: {self.name}>'
+
+    def get_total_assets(self):
+        """Obtiene el número total de activos asociados"""
+        return len(self.assets)
+
+    def get_critical_assets(self):
+        """Obtiene activos críticos del servicio"""
+        return [asset for asset in self.assets if asset.criticality >= 8]
+
+    def calculate_service_risk(self):
+        """Calcula el riesgo del servicio basado en sus activos"""
+        if not self.assets:
+            return 0
+        total_risk = sum(asset.calculate_risk_score() for asset in self.assets)
+        return total_risk / len(self.assets)
+
+
+class ServiceDependency(db.Model):
+    """
+    Dependencias entre servicios
+    Permite mapear dependencias y realizar análisis de impacto
+    """
+    __tablename__ = 'service_dependencies'
+
+    id = db.Column(db.Integer, primary_key=True)
+    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False)
+    depends_on_service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False)
+    dependency_type = db.Column(db.String(50))  # "required", "optional", "enhances"
+    description = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    service = db.relationship('Service', foreign_keys=[service_id], backref='dependencies')
+    depends_on = db.relationship('Service', foreign_keys=[depends_on_service_id], backref='dependents')
+
+    __table_args__ = (
+        db.CheckConstraint('service_id != depends_on_service_id', name='no_self_dependency'),
+        db.UniqueConstraint('service_id', 'depends_on_service_id', name='unique_dependency'),
+    )
+
+    def __repr__(self):
+        return f'<ServiceDependency {self.service_id} depends on {self.depends_on_service_id}>'
