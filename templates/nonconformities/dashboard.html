@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard No Conformidades - SGSI{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-chart-bar text-info"></i>
+                        Dashboard de No Conformidades
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <small>Métricas, KPIs e indicadores de rendimiento</small>
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('nonconformities.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver al listado
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs principales -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card border-primary text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total NC</h6>
+                    <h2 class="text-primary mb-0">{{ total_nc }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-warning text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Abiertas</h6>
+                    <h2 class="text-warning mb-0">{{ open_nc }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-success text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Cerradas</h6>
+                    <h2 class="text-success mb-0">{{ closed_nc }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-danger text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Críticas</h6>
+                    <h2 class="text-danger mb-0">{{ critical_nc }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-info text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Recurrentes</h6>
+                    <h2 class="text-info mb-0">{{ recurrent_nc }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-secondary text-center">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Tiempo Prom.</h6>
+                    <h2 class="text-secondary mb-0">{{ "%.1f"|format(avg_resolution_time) }}</h2>
+                    <small class="text-muted">días</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos - Primera fila -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Distribución por Estado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Distribución por Severidad
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="severityChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos - Segunda fila -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i> Tendencia últimos 6 meses
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> NC por Origen
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="originChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Controles Afectados -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> Top 5 Controles ISO más afectados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if top_controls %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Control</th>
+                                    <th>NC Asociadas</th>
+                                    <th>Gráfico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for control, count in top_controls %}
+                                <tr>
+                                    <td><strong>{{ control }}</strong></td>
+                                    <td>{{ count }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-info"
+                                                 style="width: {{ (count / top_controls[0][1] * 100)|int }}%">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay datos disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- NC Vencidas -->
+        <div class="col-lg-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        No Conformidades Vencidas ({{ overdue_nc|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if overdue_nc %}
+                    <div class="list-group">
+                        {% for nc in overdue_nc[:5] %}
+                        <a href="{{ url_for('nonconformities.view', id=nc.id) }}"
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ nc.nc_number }}</h6>
+                                <small class="text-danger">
+                                    <i class="fas fa-clock"></i>
+                                    {{ nc.calculate_days_open() }} días
+                                </small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ nc.title }}</p>
+                            <small>
+                                <span class="badge bg-{{ 'danger' if nc.severity.name == 'CRITICAL' else 'warning' }}">
+                                    {{ nc.severity.value }}
+                                </span>
+                                {{ nc.responsible.name }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                        {% if overdue_nc|length > 5 %}
+                        <div class="list-group-item text-center">
+                            <a href="{{ url_for('nonconformities.index') }}" class="text-decoration-none">
+                                Ver todas ({{ overdue_nc|length }})
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle"></i>
+                        No hay NC vencidas
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Configuración común
+    Chart.defaults.font.family = 'Arial, sans-serif';
+    Chart.defaults.color = '#666';
+
+    // Gráfico de Estado
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for status, count in nc_by_status %}'{{ status.value }}',{% endfor %}],
+            datasets: [{
+                data: [{% for status, count in nc_by_status %}{{ count }},{% endfor %}],
+                backgroundColor: [
+                    '#6c757d', // NEW - gris
+                    '#ffc107', // ANALYZING - amarillo
+                    '#17a2b8', // ACTION_PLAN - cyan
+                    '#fd7e14', // IMPLEMENTING - naranja
+                    '#007bff', // VERIFYING - azul
+                    '#28a745', // CLOSED - verde
+                    '#dc3545'  // REOPENED - rojo
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Gráfico de Severidad
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    new Chart(severityCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Menor', 'Mayor', 'Crítica'],
+            datasets: [{
+                data: [{{ minor_nc }}, {{ major_nc }}, {{ critical_nc }}],
+                backgroundColor: ['#17a2b8', '#ffc107', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Gráfico de Tendencia
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for year, month, count in nc_trend %}'{{ "%d-%02d"|format(year|int, month|int) }}',{% endfor %}],
+            datasets: [{
+                label: 'NC Reportadas',
+                data: [{% for year, month, count in nc_trend %}{{ count }},{% endfor %}],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Origen
+    const originCtx = document.getElementById('originChart').getContext('2d');
+    new Chart(originCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for origin, count in nc_by_origin %}'{{ origin.value[:15] }}...',{% endfor %}],
+            datasets: [{
+                label: 'NC',
+                data: [{% for origin, count in nc_by_origin %}{{ count }},{% endfor %}],
+                backgroundColor: '#17a2b8'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .list-group-item {
+        border-left: 3px solid #ffc107;
+    }
+</style>
+{% endblock %}

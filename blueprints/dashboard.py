@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 from models import Risk, Incident, NonConformity, Task, SOAControl, Audit
-from models import IncidentStatus
+from models import IncidentStatus, NCStatus
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
@@ -33,10 +33,12 @@ def index():
     kpis['incidents_this_month'] = total_incidents_month
 
     # Non-conformities metrics
-    open_nonconformities = NonConformity.query.filter_by(status='open').count()
+    open_nonconformities = NonConformity.query.filter(
+        ~NonConformity.status.in_([NCStatus.CLOSED])
+    ).count()
     overdue_nonconformities = NonConformity.query.filter(
-        NonConformity.target_date < datetime.utcnow().date(),
-        NonConformity.status != 'closed'
+        NonConformity.target_closure_date < datetime.utcnow().date(),
+        NonConformity.status != NCStatus.CLOSED
     ).count()
     kpis['open_nonconformities'] = open_nonconformities
     kpis['overdue_nonconformities'] = overdue_nonconformities

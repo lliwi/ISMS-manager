@@ -50,6 +50,7 @@ services:
       - ./config.py:/app/config.py
       - ./blueprints:/app/blueprints
       - ./models.py:/app/models.py
+      - ./templates:/app/templates
     depends_on:
       db:
         condition: service_healthy

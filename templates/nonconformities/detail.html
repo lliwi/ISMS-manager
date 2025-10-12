@@ -1,0 +1,847 @@
+{% extends "base.html" %}
+
+{% block title %}{{ nc.nc_number }} - {{ nc.title }} - SGSI{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-file-alt text-primary"></i>
+                        {{ nc.nc_number }}
+                    </h1>
+                    <h4 class="mb-2">{{ nc.title }}</h4>
+                    <div class="d-flex gap-2">
+                        {% if nc.severity.name == 'CRITICAL' %}
+                        <span class="badge bg-danger">{{ nc.severity.value }}</span>
+                        {% elif nc.severity.name == 'MAJOR' %}
+                        <span class="badge bg-warning text-dark">{{ nc.severity.value }}</span>
+                        {% else %}
+                        <span class="badge bg-info">{{ nc.severity.value }}</span>
+                        {% endif %}
+
+                        {% if nc.status.name == 'CLOSED' %}
+                        <span class="badge bg-success">{{ nc.status.value }}</span>
+                        {% elif nc.status.name == 'NEW' %}
+                        <span class="badge bg-secondary">{{ nc.status.value }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ nc.status.value }}</span>
+                        {% endif %}
+
+                        {% if nc.is_recurrent %}
+                        <span class="badge bg-warning"><i class="fas fa-redo"></i> Recurrente</span>
+                        {% endif %}
+
+                        {% if is_overdue %}
+                        <span class="badge bg-danger"><i class="fas fa-clock"></i> Vencida</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('nonconformities.index') }}"
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <a href="{{ url_for('nonconformities.edit', id=nc.id) }}"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        {% if nc.status.name != 'CLOSED' %}
+                        <button type="button" class="btn btn-success"
+                                data-bs-toggle="modal" data-bs-target="#closeModal">
+                            <i class="fas fa-check-circle"></i> Cerrar NC
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-warning"
+                                data-bs-toggle="modal" data-bs-target="#reopenModal">
+                            <i class="fas fa-redo"></i> Reabrir
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress mb-3" style="height: 30px;">
+                <div class="progress-bar {% if progress == 100 %}bg-success{% elif progress > 50 %}bg-info{% else %}bg-warning{% endif %}"
+                     role="progressbar"
+                     style="width: {{ progress }}%"
+                     aria-valuenow="{{ progress }}"
+                     aria-valuemin="0"
+                     aria-valuemax="100">
+                    <strong>{{ progress }}% Completado</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Información Básica -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información Básica</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Origen:</strong><br>
+                            <span class="badge bg-secondary">{{ nc.origin.value }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha de Detección:</strong><br>
+                            {{ nc.detection_date.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Descripción:</strong>
+                            <p class="mt-2">{{ nc.description }}</p>
+                        </div>
+                    </div>
+
+                    {% if nc.immediate_action %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="alert alert-warning">
+                                <strong><i class="fas fa-bolt"></i> Acción Inmediata (ISO 10.2.a):</strong>
+                                <p class="mb-0 mt-2">{{ nc.immediate_action }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if nc.affected_controls %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Controles ISO 27001 Afectados:</strong><br>
+                            {% for control in nc.affected_controls %}
+                            <span class="badge bg-info me-1">{{ control }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Análisis de Causa Raíz (RCA) -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-search"></i> Análisis de Causa Raíz (ISO 10.2.b)
+                        </h5>
+                        {% if not nc.root_cause_analysis %}
+                        <button type="button" class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#rcaModal">
+                            <i class="fas fa-plus"></i> Añadir RCA
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if nc.root_cause_analysis %}
+                    <div class="mb-3">
+                        <strong>Método Utilizado:</strong>
+                        <span class="badge bg-info">{{ nc.rca_method.value }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Análisis:</strong>
+                        <p class="mt-2">{{ nc.root_cause_analysis }}</p>
+                    </div>
+
+                    {% if nc.root_causes %}
+                    <div class="mb-3">
+                        <strong>Causas Raíz Identificadas:</strong>
+                        <ul class="mt-2">
+                            {% for cause in nc.root_causes %}
+                            <li>{{ cause }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if nc.contributing_factors %}
+                    <div class="mb-3">
+                        <strong>Factores Contribuyentes:</strong>
+                        <ul class="mt-2">
+                            {% for factor in nc.contributing_factors %}
+                            <li>{{ factor }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if nc.similar_nc_analysis %}
+                    <div class="alert alert-info">
+                        <strong>Análisis de NC Similares (10.2.b.3):</strong>
+                        <p class="mb-0 mt-2">{{ nc.similar_nc_analysis }}</p>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        El análisis de causa raíz aún no ha sido realizado.
+                        Es requerido según ISO 27001:2023 - 10.2.b
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Correctivas -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks"></i> Acciones Correctivas/Preventivas (ISO 10.2.c)
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#actionModal">
+                            <i class="fas fa-plus"></i> Añadir Acción
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if nc.actions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Descripción</th>
+                                    <th>Responsable</th>
+                                    <th>Vencimiento</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for action in nc.actions %}
+                                <tr class="{% if action.is_overdue() %}table-warning{% endif %}">
+                                    <td>
+                                        <span class="badge
+                                            {% if action.action_type.name == 'CORRECTIVE' %}bg-warning
+                                            {% elif action.action_type.name == 'PREVENTIVE' %}bg-info
+                                            {% else %}bg-success{% endif %}">
+                                            {{ action.action_type.value }}
+                                        </span>
+                                    </td>
+                                    <td>{{ action.description[:50] }}...</td>
+                                    <td><small>{{ action.responsible.name }}</small></td>
+                                    <td>
+                                        <small>{{ action.due_date.strftime('%d/%m/%Y') }}</small>
+                                        {% if action.is_overdue() %}
+                                        <br><span class="badge bg-danger">Vencida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if action.status.name == 'COMPLETED' or action.status.name == 'VERIFIED' %}
+                                        <span class="badge bg-success">{{ action.status.value }}</span>
+                                        {% elif action.status.name == 'IN_PROGRESS' %}
+                                        <span class="badge bg-info">{{ action.status.value }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ action.status.value }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if action.status.name == 'PENDING' or action.status.name == 'IN_PROGRESS' %}
+                                        <form method="POST"
+                                              action="{{ url_for('nonconformities.complete_action', action_id=action.id) }}"
+                                              style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-sm btn-success"
+                                                    title="Marcar como completada">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        No se han definido acciones correctivas aún.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verificación de Eficacia -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-double"></i> Verificación de Eficacia (ISO 10.2.d)
+                        </h5>
+                        {% if not nc.effectiveness_verification and nc.actions %}
+                        <button type="button" class="btn btn-sm btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#verifyModal">
+                            <i class="fas fa-clipboard-check"></i> Verificar Eficacia
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if nc.effectiveness_verification %}
+                    <div class="alert {% if nc.is_effective %}alert-success{% else %}alert-danger{% endif %}">
+                        <h6>
+                            {% if nc.is_effective %}
+                            <i class="fas fa-check-circle"></i> Acciones Eficaces
+                            {% else %}
+                            <i class="fas fa-times-circle"></i> Acciones No Eficaces
+                            {% endif %}
+                        </h6>
+                        <p class="mb-0"><strong>Verificación:</strong> {{ nc.effectiveness_verification }}</p>
+                        {% if nc.verifier %}
+                        <small>Verificado por: {{ nc.verifier.name }} el {{ nc.verification_date.strftime('%d/%m/%Y') }}</small>
+                        {% endif %}
+                    </div>
+
+                    {% if nc.lessons_learned %}
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-lightbulb"></i> Lecciones Aprendidas (ISO 10.1):</strong>
+                        <p class="mb-0 mt-2">{{ nc.lessons_learned }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if nc.sgsi_changes_required %}
+                    <div class="alert alert-warning">
+                        <strong><i class="fas fa-exclamation-triangle"></i> Cambios al SGSI Requeridos (ISO 10.2.e):</strong>
+                        <p class="mb-0 mt-2">{{ nc.sgsi_changes_description }}</p>
+                        <p class="mb-0">
+                            <strong>Estado:</strong>
+                            {% if nc.sgsi_changes_implemented %}
+                            <span class="badge bg-success">Implementado</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pendiente</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        <i class="fas fa-hourglass-half"></i>
+                        La verificación de eficacia se realizará una vez completadas las acciones correctivas.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Línea Temporal</h5>
+                </div>
+                <div class="card-body">
+                    {% if nc.timeline_events %}
+                    <div class="timeline">
+                        {% for event in nc.timeline_events %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <p class="mb-1">
+                                    <strong>{{ event.event_type.value }}</strong>
+                                    <small class="text-muted float-end">
+                                        {{ event.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                    </small>
+                                </p>
+                                <p class="mb-1">{{ event.description }}</p>
+                                {% if event.user %}
+                                <small class="text-muted">Por: {{ event.user.name }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay eventos registrados</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Lateral -->
+        <div class="col-lg-4">
+            <!-- Información Clave -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-clipboard"></i> Resumen</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Código:</dt>
+                        <dd class="col-sm-7">{{ nc.nc_number }}</dd>
+
+                        <dt class="col-sm-5">Estado:</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-{{ 'success' if nc.status.name == 'CLOSED' else 'warning' }}">
+                                {{ nc.status.value }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-5">Días Abierta:</dt>
+                        <dd class="col-sm-7">{{ days_open }} días</dd>
+
+                        <dt class="col-sm-5">Responsable:</dt>
+                        <dd class="col-sm-7">{{ nc.responsible.name }}</dd>
+
+                        {% if nc.target_closure_date %}
+                        <dt class="col-sm-5">Fecha Objetivo:</dt>
+                        <dd class="col-sm-7">{{ nc.target_closure_date.strftime('%d/%m/%Y') }}</dd>
+                        {% endif %}
+
+                        {% if resolution_time %}
+                        <dt class="col-sm-5">Tiempo Resolución:</dt>
+                        <dd class="col-sm-7">{{ resolution_time }} días</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-5">Reportada por:</dt>
+                        <dd class="col-sm-7">{{ nc.reported_by.name }}</dd>
+
+                        <dt class="col-sm-5">Fecha Reporte:</dt>
+                        <dd class="col-sm-7">{{ nc.reported_date.strftime('%d/%m/%Y') }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Cambiar Estado -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Cambiar Estado</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('nonconformities.change_status', id=nc.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label for="new_status" class="form-label">Nuevo Estado:</label>
+                            <select class="form-select" id="new_status" name="new_status" required>
+                                {% for status in NCStatus %}
+                                <option value="{{ status.name }}"
+                                        {% if status.name == nc.status.name %}selected{% endif %}>
+                                    {{ status.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-save"></i> Actualizar Estado
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Archivos Adjuntos -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-paperclip"></i> Archivos Adjuntos</h5>
+                </div>
+                <div class="card-body">
+                    {% if nc.attachments %}
+                    <ul class="list-group list-group-flush">
+                        {% for att in nc.attachments %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-file"></i>
+                                {{ att.file_name }}
+                                <br>
+                                <small class="text-muted">
+                                    {{ att.uploaded_by.name }} - {{ att.uploaded_at.strftime('%d/%m/%Y') }}
+                                    {% if att.file_size %}
+                                    - {{ (att.file_size / 1024)|round(2) }} KB
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('nonconformities.download_attachment', attachment_id=att.id) }}"
+                                   class="btn btn-sm btn-primary" title="Descargar">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('nonconformities.delete_attachment', attachment_id=att.id) }}"
+                                      style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este archivo?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('nonconformities.upload_attachment', id=nc.id) }}"
+                          enctype="multipart/form-data" class="mt-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-2">
+                            <input type="file" class="form-control form-control-sm" name="file" required>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm"
+                                   name="description" placeholder="Descripción (opcional)">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                            <i class="fas fa-upload"></i> Subir Archivo
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Activos Afectados -->
+            {% if nc.affected_assets %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-server"></i> Activos Afectados</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for nc_asset in nc.affected_assets %}
+                        <li class="list-group-item">
+                            <strong>{{ nc_asset.asset.asset_code }}</strong><br>
+                            <small>{{ nc_asset.asset.name }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Añadir RCA -->
+<div class="modal fade" id="rcaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nonconformities.add_rca', id=nc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Análisis de Causa Raíz (ISO 10.2.b)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Método de Análisis:</label>
+                        <select class="form-select" name="rca_method" required>
+                            <option value="FIVE_WHYS">5 Porqués</option>
+                            <option value="ISHIKAWA">Diagrama de Ishikawa</option>
+                            <option value="PARETO">Análisis de Pareto</option>
+                            <option value="FTA">Árbol de Fallos (FTA)</option>
+                            <option value="BRAINSTORMING">Lluvia de ideas</option>
+                            <option value="OTHER">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Análisis Detallado:</label>
+                        <textarea class="form-control" name="root_cause_analysis"
+                                  rows="5" required
+                                  placeholder="Describa el proceso de análisis realizado y sus conclusiones"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Causas Raíz Identificadas (una por línea):</label>
+                        <textarea class="form-control" name="root_causes"
+                                  rows="4" required
+                                  placeholder="Causa raíz 1&#10;Causa raíz 2&#10;..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Factores Contribuyentes (una por línea):</label>
+                        <textarea class="form-control" name="contributing_factors"
+                                  rows="3"
+                                  placeholder="Factor 1&#10;Factor 2&#10;..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Análisis de NC Similares (ISO 10.2.b.3):</label>
+                        <textarea class="form-control" name="similar_nc_analysis"
+                                  rows="3"
+                                  placeholder="¿Existen NC similares? ¿Cuáles? ¿Por qué se repiten?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar RCA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Añadir Acción -->
+<div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nonconformities.add_action', id=nc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Acción (ISO 10.2.c)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de Acción:</label>
+                            <select class="form-select" name="action_type" required>
+                                <option value="CORRECTIVE">Correctiva</option>
+                                <option value="PREVENTIVE">Preventiva</option>
+                                <option value="IMPROVEMENT">Mejora</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Prioridad:</label>
+                            <select class="form-select" name="priority">
+                                <option value="1">1 - Urgente</option>
+                                <option value="2">2 - Alta</option>
+                                <option value="3" selected>3 - Media</option>
+                                <option value="4">4 - Baja</option>
+                                <option value="5">5 - Muy baja</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea class="form-control" name="description"
+                                  rows="3" required
+                                  placeholder="¿Qué se va a hacer?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Plan de Implementación:</label>
+                        <textarea class="form-control" name="implementation_plan"
+                                  rows="3"
+                                  placeholder="¿Cómo se va a implementar?"></textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable:</label>
+                            <select class="form-select" name="responsible_id" required>
+                                <option value="{{ nc.responsible.id }}" selected>{{ nc.responsible.name }}</option>
+                                {% if users %}
+                                    {% for user in users %}
+                                        {% if user.id != nc.responsible.id %}
+                                        <option value="{{ user.id }}">{{ user.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha Límite:</label>
+                            <input type="date" class="form-control" name="due_date" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Método de Verificación (ISO 10.2.d):</label>
+                        <textarea class="form-control" name="verification_method"
+                                  rows="2"
+                                  placeholder="¿Cómo se verificará que la acción es eficaz?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Añadir Acción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Verificar Eficacia -->
+<div class="modal fade" id="verifyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nonconformities.verify_effectiveness', id=nc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Verificar Eficacia (ISO 10.2.d)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>ISO 27001:2023 - 10.2.d</strong><br>
+                        Revisar la eficacia de las acciones correctivas llevadas a cabo
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripción de la Verificación:</label>
+                        <textarea class="form-control" name="effectiveness_verification"
+                                  rows="4" required
+                                  placeholder="¿Cómo se verificó la eficacia? ¿Qué se comprobó?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Criterios de Éxito:</label>
+                        <textarea class="form-control" name="effectiveness_criteria"
+                                  rows="3"
+                                  placeholder="¿Qué criterios se utilizaron para determinar si la acción fue eficaz?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">¿Las acciones fueron eficaces?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="is_effective" id="effective_yes" value="yes" required>
+                            <label class="form-check-label" for="effective_yes">
+                                Sí - Las acciones resolvieron la no conformidad
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="is_effective" id="effective_no" value="no">
+                            <label class="form-check-label" for="effective_no">
+                                No - Se requieren acciones adicionales
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Lecciones Aprendidas (ISO 10.1 - Mejora continua):</label>
+                        <textarea class="form-control" name="lessons_learned"
+                                  rows="3"
+                                  placeholder="¿Qué se aprendió de esta NC? ¿Cómo se puede prevenir en el futuro?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">¿Se requieren cambios al SGSI? (ISO 10.2.e)</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="sgsi_changes_required" id="sgsi_yes"
+                                   value="yes" onchange="toggleSGSIChanges()">
+                            <label class="form-check-label" for="sgsi_yes">Sí</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="sgsi_changes_required" id="sgsi_no"
+                                   value="no" checked onchange="toggleSGSIChanges()">
+                            <label class="form-check-label" for="sgsi_no">No</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="sgsi_changes_section">
+                        <label class="form-label">Descripción de Cambios al SGSI:</label>
+                        <textarea class="form-control" name="sgsi_changes_description"
+                                  rows="3"
+                                  placeholder="¿Qué cambios se requieren en el SGSI?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar Verificación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cerrar NC -->
+<div class="modal fade" id="closeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nonconformities.close_nc', id=nc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Cerrar No Conformidad</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro que desea cerrar esta no conformidad?</p>
+                    <div class="alert alert-warning">
+                        <strong>Requisitos para el cierre:</strong>
+                        <ul class="mb-0">
+                            <li>Todas las acciones correctivas deben estar completadas</li>
+                            <li>La eficacia debe haber sido verificada positivamente</li>
+                            <li>Toda la documentación debe estar completa</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Cerrar NC</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reabrir NC -->
+<div class="modal fade" id="reopenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nonconformities.reopen_nc', id=nc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Reabrir No Conformidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Por qué desea reabrir esta no conformidad?</p>
+                    <textarea class="form-control" name="reason" rows="3"
+                              required placeholder="Razón para reabrir..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Reabrir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 20px;
+        border-left: 2px solid #dee2e6;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #007bff;
+    }
+
+    .timeline-content {
+        padding-left: 20px;
+    }
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    }
+</style>
+
+<script>
+    function toggleSGSIChanges() {
+        const yesRadio = document.getElementById('sgsi_yes');
+        const section = document.getElementById('sgsi_changes_section');
+
+        if (yesRadio.checked) {
+            section.classList.remove('d-none');
+        } else {
+            section.classList.add('d-none');
+        }
+    }
+</script>
+{% endblock %}

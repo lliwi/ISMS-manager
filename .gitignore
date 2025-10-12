@@ -240,9 +240,11 @@ sample_data/
 dev_scripts/
 fixtures/
 knowledge/
+reference_docs/
 
 # Temporary test files
 tests/*
 *.test
 test_*.py
 *_test.py
+

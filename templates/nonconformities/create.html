@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva No Conformidad - SGSI{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-plus-circle text-primary"></i>
+                        Registrar Nueva No Conformidad
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <small>ISO 27001:2023 - Capítulo 10.2 | No conformidad y acciones correctivas</small>
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('nonconformities.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Form -->
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('nonconformities.create') }}" id="ncForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <!-- Paso 1: Información Básica -->
+                <div class="wizard-step" id="step1">
+                    <h4 class="mb-4">
+                        <span class="badge bg-primary">1</span>
+                        Información Básica
+                    </h4>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="title" class="form-label required">Título *</label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   required maxlength="255"
+                                   placeholder="Ej: Falta de control de acceso en servidor de producción">
+                            <div class="form-text">Descripción breve y clara de la no conformidad</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="description" class="form-label required">Descripción Detallada *</label>
+                            <textarea class="form-control" id="description" name="description"
+                                      rows="5" required
+                                      placeholder="Describa la no conformidad en detalle: ¿Qué sucedió? ¿Dónde? ¿Cuándo? ¿Quién lo detectó?"></textarea>
+                            <div class="form-text">Proporcione todos los detalles relevantes (10.2.f - naturaleza de la no conformidad)</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="origin" class="form-label required">Origen *</label>
+                            <select class="form-select" id="origin" name="origin" required>
+                                <option value="">Seleccione...</option>
+                                {% for origin in NCOrigin %}
+                                <option value="{{ origin.name }}">{{ origin.value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="severity" class="form-label required">Severidad *</label>
+                            <select class="form-select" id="severity" name="severity" required>
+                                <option value="">Seleccione...</option>
+                                {% for severity in NCSeverity %}
+                                <option value="{{ severity.name }}">{{ severity.value }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                <small>
+                                    <strong>Menor:</strong> Bajo impacto<br>
+                                    <strong>Mayor:</strong> Impacto significativo<br>
+                                    <strong>Crítica:</strong> Impacto grave en el SGSI
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="detection_date" class="form-label required">Fecha de Detección *</label>
+                            <input type="datetime-local" class="form-control" id="detection_date"
+                                   name="detection_date" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="responsible_id" class="form-label required">Responsable *</label>
+                            <select class="form-select" id="responsible_id" name="responsible_id" required>
+                                <option value="">Seleccione...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.name }} - {{ user.position or '' }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Persona responsable de gestionar esta NC</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="target_closure_date" class="form-label">Fecha Objetivo de Cierre</label>
+                            <input type="date" class="form-control" id="target_closure_date"
+                                   name="target_closure_date">
+                            <div class="form-text">Fecha prevista para resolver la NC</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="immediate_action" class="form-label">Acción Inmediata Tomada</label>
+                            <textarea class="form-control" id="immediate_action" name="immediate_action"
+                                      rows="3"
+                                      placeholder="Describa cualquier acción inmediata que se haya tomado para controlar la situación (ISO 10.2.a)"></textarea>
+                            <div class="form-text">10.2.a - Acciones para controlar y corregir</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" disabled>
+                            <i class="fas fa-arrow-left"></i> Anterior
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+                            Siguiente <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Contexto y Relaciones -->
+                <div class="wizard-step d-none" id="step2">
+                    <h4 class="mb-4">
+                        <span class="badge bg-primary">2</span>
+                        Contexto y Relaciones
+                    </h4>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Controles ISO 27001 Afectados</label>
+                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="row">
+                                    {% for control in iso_controls %}
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="affected_controls" value="{{ control }}"
+                                                   id="control_{{ control }}">
+                                            <label class="form-check-label" for="control_{{ control }}">
+                                                {{ control }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="form-text">Seleccione los controles del Anexo A que están afectados</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="audit_id" class="form-label">Auditoría Relacionada</label>
+                            <select class="form-select" id="audit_id" name="audit_id">
+                                <option value="">Ninguna</option>
+                                {% for audit in audits %}
+                                <option value="{{ audit.id }}">{{ audit.title }} - {{ audit.audit_type }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Si la NC proviene de una auditoría</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Activos Afectados</label>
+                            <select class="form-select" id="asset_ids" name="asset_ids" multiple size="5">
+                                {% for asset in assets %}
+                                <option value="{{ asset.id }}">{{ asset.asset_code }} - {{ asset.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Mantenga Ctrl/Cmd para selección múltiple</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_recurrent"
+                                       name="is_recurrent" onchange="toggleRecurrent()">
+                                <label class="form-check-label" for="is_recurrent">
+                                    <strong>Es una NC recurrente</strong>
+                                    <small class="text-muted">(10.2.b.3 - NC similares)</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4 d-none" id="recurrent_section">
+                        <div class="col-md-12">
+                            <label for="related_nc_id" class="form-label">NC Anterior Relacionada</label>
+                            <input type="text" class="form-control" id="related_nc_id" name="related_nc_id"
+                                   placeholder="Ingrese el código de la NC anterior">
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <label for="notes" class="form-label">Notas Adicionales</label>
+                            <textarea class="form-control" id="notes" name="notes"
+                                      rows="3" placeholder="Cualquier información adicional relevante"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep(1)">
+                            <i class="fas fa-arrow-left"></i> Anterior
+                        </button>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="prevStep(1)">
+                                Guardar como borrador
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check"></i> Registrar No Conformidad
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Ayuda contextual -->
+    <div class="card mt-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle"></i> Información importante
+            </h5>
+        </div>
+        <div class="card-body">
+            <h6>¿Qué es una No Conformidad?</h6>
+            <p>
+                Según ISO 27001:2023, una no conformidad es el <strong>incumplimiento de un requisito</strong>.
+                Esto puede incluir:
+            </p>
+            <ul class="mb-3">
+                <li>No cumplimiento de requisitos del SGSI</li>
+                <li>No cumplimiento de requisitos de ISO 27001</li>
+                <li>Desviaciones de políticas o procedimientos</li>
+                <li>Hallazgos de auditorías</li>
+                <li>Incidentes que revelan deficiencias en el sistema</li>
+            </ul>
+
+            <h6>Proceso según ISO 27001 (Capítulo 10.2):</h6>
+            <ol>
+                <li><strong>Reaccionar:</strong> Tomar acciones para controlar y corregir</li>
+                <li><strong>Evaluar:</strong> Determinar si existen NC similares</li>
+                <li><strong>Analizar:</strong> Realizar análisis de causa raíz</li>
+                <li><strong>Implementar:</strong> Ejecutar acciones correctivas</li>
+                <li><strong>Revisar:</strong> Verificar eficacia de las acciones</li>
+                <li><strong>Documentar:</strong> Mantener información documentada</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Wizard navigation
+    function nextStep(step) {
+        // Validar paso actual
+        if (step === 2) {
+            const form = document.getElementById('ncForm');
+            const requiredFields = form.querySelectorAll('#step1 [required]');
+            let valid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    valid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!valid) {
+                alert('Por favor complete todos los campos obligatorios marcados con *');
+                return;
+            }
+        }
+
+        // Ocultar todos los pasos
+        document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('d-none'));
+        // Mostrar paso seleccionado
+        document.getElementById('step' + step).classList.remove('d-none');
+    }
+
+    function prevStep(step) {
+        document.querySelectorAll('.wizard-step').forEach(s => s.classList.add('d-none'));
+        document.getElementById('step' + step).classList.remove('d-none');
+    }
+
+    function toggleRecurrent() {
+        const checkbox = document.getElementById('is_recurrent');
+        const section = document.getElementById('recurrent_section');
+
+        if (checkbox.checked) {
+            section.classList.remove('d-none');
+        } else {
+            section.classList.add('d-none');
+        }
+    }
+
+    // Set default detection date to now
+    document.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('detection_date').value = now.toISOString().slice(0, 16);
+    });
+
+    // Form validation
+    document.getElementById('ncForm').addEventListener('submit', function(e) {
+        const form = this;
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+</script>
+
+<style>
+    .required::after {
+        content: " *";
+        color: red;
+    }
+
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .wizard-step {
+        min-height: 400px;
+    }
+
+    .is-invalid {
+        border-color: #dc3545;
+    }
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    }
+</style>
+{% endblock %}
