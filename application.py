@@ -9,7 +9,9 @@ from config import config
 
 def create_app(config_name=None):
     """Application factory pattern"""
-    app = Flask(__name__)
+    app = Flask(__name__,
+                template_folder='app/templates',
+                static_folder='app/static')
 
     # Configuration
     config_name = config_name or os.environ.get('FLASK_ENV', 'development')
@@ -36,18 +38,18 @@ def create_app(config_name=None):
         return User.query.get(int(user_id))
 
     # Import and register blueprints
-    from blueprints.auth import auth_bp
-    from blueprints.dashboard import dashboard_bp
-    from blueprints.soa import soa_bp
-    from blueprints.risks import risks_bp
-    from blueprints.documents import documents_bp
-    from blueprints.incidents import incidents_bp
-    from blueprints.audits import audits_bp
-    from blueprints.nonconformities import nonconformities_bp
-    from blueprints.tasks import tasks_bp
-    from blueprints.training import training_bp
-    from blueprints.admin import admin_bp
-    from blueprints.assets import assets_bp
+    from app.blueprints.auth import auth_bp
+    from app.blueprints.dashboard import dashboard_bp
+    from app.blueprints.soa import soa_bp
+    from app.blueprints.risks import risks_bp
+    from app.blueprints.documents import documents_bp
+    from app.blueprints.incidents import incidents_bp
+    from app.blueprints.audits import audits_bp
+    from app.blueprints.nonconformities import nonconformities_bp
+    from app.blueprints.tasks import tasks_bp
+    from app.blueprints.training import training_bp
+    from app.blueprints.admin import admin_bp
+    from app.blueprints.assets import assets_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/')

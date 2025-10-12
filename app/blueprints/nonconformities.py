@@ -6,4 +6,4 @@ Control 10.1 - Mejora continua
 Este módulo ha sido completamente implementado.
 Importa todas las rutas desde nonconformities_routes.py
 """
-from blueprints.nonconformities_routes import *
+from app.blueprints.nonconformities_routes import *

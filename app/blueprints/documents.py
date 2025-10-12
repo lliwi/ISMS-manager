@@ -8,7 +8,7 @@ import os
 import mimetypes
 import subprocess
 import tempfile
-from services.ai_verification import AIVerificationService
+from app.services.ai_verification import AIVerificationService
 
 documents_bp = Blueprint('documents', __name__)
 
