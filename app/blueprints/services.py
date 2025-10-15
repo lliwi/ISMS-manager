@@ -16,6 +16,33 @@ from utils.decorators import role_required
 services_bp = Blueprint('services', __name__, url_prefix='/servicios')
 
 
+def check_circular_dependency(service_id, depends_on_id, visited=None):
+    """
+    Verifica si agregar una dependencia crearía un ciclo
+    Retorna True si se detecta un ciclo, False si es seguro
+    """
+    if visited is None:
+        visited = set()
+
+    # Si volvemos al servicio original, hay un ciclo
+    if depends_on_id == service_id:
+        return True
+
+    # Si ya visitamos este nodo, no hay ciclo en esta rama
+    if depends_on_id in visited:
+        return False
+
+    visited.add(depends_on_id)
+
+    # Verificar las dependencias del servicio del que dependemos
+    dependencies = ServiceDependency.query.filter_by(service_id=depends_on_id).all()
+    for dep in dependencies:
+        if check_circular_dependency(service_id, dep.depends_on_service_id, visited.copy()):
+            return True
+
+    return False
+
+
 @services_bp.route('/')
 @login_required
 def index():
@@ -137,6 +164,44 @@ def create():
             )
 
             db.session.add(service)
+            db.session.flush()  # Para obtener el ID del servicio
+
+            # Manejar activos asociados
+            asset_ids = request.form.getlist('asset_ids')
+            if asset_ids:
+                assets = Asset.query.filter(Asset.id.in_(asset_ids)).all()
+                service.assets = assets
+
+            # Manejar dependencias de servicios
+            dependency_service_ids = request.form.getlist('dependency_service_ids')
+            if dependency_service_ids:
+                for dep_service_id in dependency_service_ids:
+                    dep_service_id_int = int(dep_service_id)
+
+                    # Validar que no sea el mismo servicio
+                    if dep_service_id_int == service.id:
+                        flash('Un servicio no puede depender de sí mismo', 'warning')
+                        continue
+
+                    # Verificar dependencias circulares
+                    if check_circular_dependency(service.id, dep_service_id_int):
+                        dep_service = Service.query.get(dep_service_id_int)
+                        flash(f'No se puede agregar dependencia con {dep_service.service_code}: crearía un ciclo de dependencias', 'warning')
+                        continue
+
+                    # Obtener el tipo de dependencia
+                    dep_type_key = f'dependency_types_{dep_service_id}'
+                    dep_type = request.form.get(dep_type_key, 'required')
+
+                    # Crear la dependencia
+                    dependency = ServiceDependency(
+                        service_id=service.id,
+                        depends_on_service_id=dep_service_id_int,
+                        dependency_type=dep_type,
+                        created_at=datetime.utcnow()
+                    )
+                    db.session.add(dependency)
+
             db.session.commit()
 
             flash(f'Servicio {service_code} creado exitosamente', 'success')
@@ -149,12 +214,18 @@ def create():
 
     # GET: Mostrar formulario
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    # Obtener todos los activos (el template maneja los que no tienen tipo)
+    assets = Asset.query.order_by(Asset.asset_code).all()
+    # Obtener todos los servicios para dependencias
+    all_services = Service.query.order_by(Service.service_code).all()
 
     return render_template('services/form.html',
                          service=None,
                          service_types=ServiceType,
                          service_statuses=ServiceStatus,
                          users=users,
+                         assets=assets,
+                         services=all_services,
                          action='create')
 
 
@@ -225,6 +296,48 @@ def edit(service_id):
                 flash(f'Ya existe otro servicio con el código {service.service_code}', 'error')
                 return redirect(url_for('services.edit', service_id=service_id))
 
+            # Manejar activos asociados
+            asset_ids = request.form.getlist('asset_ids')
+            if asset_ids:
+                assets = Asset.query.filter(Asset.id.in_(asset_ids)).all()
+                service.assets = assets
+            else:
+                service.assets = []
+
+            # Manejar dependencias de servicios
+            # Primero eliminar las dependencias existentes
+            ServiceDependency.query.filter_by(service_id=service_id).delete()
+
+            # Crear las nuevas dependencias
+            dependency_service_ids = request.form.getlist('dependency_service_ids')
+            if dependency_service_ids:
+                for dep_service_id in dependency_service_ids:
+                    dep_service_id_int = int(dep_service_id)
+
+                    # Validar que no sea el mismo servicio
+                    if dep_service_id_int == service_id:
+                        flash('Un servicio no puede depender de sí mismo', 'warning')
+                        continue
+
+                    # Verificar dependencias circulares
+                    if check_circular_dependency(service_id, dep_service_id_int):
+                        dep_service = Service.query.get(dep_service_id_int)
+                        flash(f'No se puede agregar dependencia con {dep_service.service_code}: crearía un ciclo de dependencias', 'warning')
+                        continue
+
+                    # Obtener el tipo de dependencia
+                    dep_type_key = f'dependency_types_{dep_service_id}'
+                    dep_type = request.form.get(dep_type_key, 'required')
+
+                    # Crear la dependencia
+                    dependency = ServiceDependency(
+                        service_id=service_id,
+                        depends_on_service_id=dep_service_id_int,
+                        dependency_type=dep_type,
+                        created_at=datetime.utcnow()
+                    )
+                    db.session.add(dependency)
+
             db.session.commit()
 
             flash(f'Servicio {service.service_code} actualizado exitosamente', 'success')
@@ -237,12 +350,18 @@ def edit(service_id):
 
     # GET: Mostrar formulario con datos actuales
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    # Obtener todos los activos (el template maneja los que no tienen tipo)
+    assets = Asset.query.order_by(Asset.asset_code).all()
+    # Obtener todos los servicios para dependencias (excluyendo el actual)
+    all_services = Service.query.order_by(Service.service_code).all()
 
     return render_template('services/form.html',
                          service=service,
                          service_types=ServiceType,
                          service_statuses=ServiceStatus,
                          users=users,
+                         assets=assets,
+                         services=all_services,
                          action='edit')
 
 

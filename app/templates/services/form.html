@@ -1,6 +1,65 @@
 {% extends "base.html" %}
 {% block title %}{% if action == 'create' %}Nuevo Servicio{% else %}Editar Servicio{% endif %}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .asset-item, .service-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .asset-item:hover, .service-item:hover {
+        background-color: #f8f9fa;
+        border-color: #adb5bd;
+    }
+
+    .asset-item input[type="checkbox"]:checked + label,
+    .service-item input[type="checkbox"]:checked + label {
+        font-weight: 500;
+    }
+
+    .asset-item input[type="checkbox"]:checked,
+    .service-item input[type="checkbox"]:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .asset-selection-container, .service-selection-container {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 0.5rem;
+    }
+
+    .asset-selection-container:empty::before {
+        content: 'No hay activos disponibles';
+        color: #6c757d;
+        font-style: italic;
+        display: block;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .service-selection-container:empty::before {
+        content: 'No hay servicios disponibles';
+        color: #6c757d;
+        font-style: italic;
+        display: block;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .dependency-type-container {
+        background-color: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-4">
     <!-- Header -->
@@ -26,6 +85,7 @@
 
     <!-- Form -->
     <form method="POST" action="{% if action == 'create' %}{{ url_for('services.create') }}{% else %}{{ url_for('services.edit', service_id=service.id) }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="row">
             <!-- Left Column: Main Information -->
             <div class="col-md-8">
@@ -153,6 +213,157 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Assets Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-box me-2"></i>Activos que Soportan el Servicio</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Selecciona los activos (hardware, software, información, etc.) que son necesarios para la operación de este servicio.
+                        </p>
+
+                        <!-- Buscador de activos -->
+                        <div class="mb-3">
+                            <label for="asset_search" class="form-label">Buscar Activos</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="asset_search"
+                                       placeholder="Ej: HW-00001, switch, servidor...">
+                            </div>
+                            <small class="text-muted">Busca por código completo (HW-00001) o por nombre</small>
+                        </div>
+
+                        <!-- Lista de activos seleccionables -->
+                        <div class="asset-selection-container" style="max-height: 400px; overflow-y: auto;">
+                            {% for asset in assets %}
+                            <div class="form-check asset-item" data-asset-name="{{ asset.asset_code|lower }} {{ asset.name|lower }}">
+                                <input class="form-check-input" type="checkbox" name="asset_ids"
+                                       value="{{ asset.id }}" id="asset_{{ asset.id }}"
+                                       {% if service and asset in service.assets %}checked{% endif %}>
+                                <label class="form-check-label w-100" for="asset_{{ asset.id }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code class="text-primary">{{ asset.asset_code }}</code> - {{ asset.name }}
+                                            <br>
+                                            <small class="text-muted">
+                                                {% if asset.asset_type %}
+                                                <i class="{{ asset.asset_type.icon }} me-1"></i>
+                                                {{ asset.asset_type.name }}
+                                                {% else %}
+                                                <i class="fas fa-question-circle me-1"></i>
+                                                <span class="text-warning">Sin tipo asignado</span>
+                                                {% endif %}
+                                                {% if asset.criticality and asset.criticality >= 8 %}
+                                                <span class="badge bg-danger ms-2">Crítico</span>
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% if asset.criticality %}
+                                        <span class="badge bg-secondary">{{ asset.criticality }}/10</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong id="selected-count">
+                                    {% if service %}{{ service.assets|length }}{% else %}0{% endif %}
+                                </strong> activo(s) seleccionado(s)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dependencies Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Dependencias de Servicios</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            Selecciona los servicios de los cuales <strong>depende</strong> este servicio para funcionar correctamente.
+                        </p>
+
+                        <!-- Buscador de servicios -->
+                        <div class="mb-3">
+                            <label for="service_search" class="form-label">Buscar Servicios</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="service_search"
+                                       placeholder="Ej: SRV-001, Portal Web...">
+                            </div>
+                            <small class="text-muted">Busca por código o nombre de servicio</small>
+                        </div>
+
+                        <!-- Lista de servicios dependencias -->
+                        <div class="service-selection-container" style="max-height: 300px; overflow-y: auto;">
+                            {% for svc in services %}
+                            {% if not service or svc.id != service.id %}
+                            <div class="form-check service-item mb-2" data-service-name="{{ svc.service_code|lower }} {{ svc.name|lower }}">
+                                <div class="d-flex align-items-start">
+                                    <input class="form-check-input mt-1" type="checkbox" name="dependency_service_ids"
+                                           value="{{ svc.id }}" id="dep_service_{{ svc.id }}"
+                                           {% if service %}
+                                               {% for dep in service.dependencies %}
+                                                   {% if dep.depends_on_service_id == svc.id %}checked{% endif %}
+                                               {% endfor %}
+                                           {% endif %}>
+                                    <div class="flex-grow-1 ms-2">
+                                        <label class="form-check-label" for="dep_service_{{ svc.id }}">
+                                            <code class="text-primary">{{ svc.service_code }}</code> - {{ svc.name }}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>{{ svc.service_type.value }}
+                                                {% if svc.criticality >= 8 %}
+                                                <span class="badge bg-danger ms-2">Crítico</span>
+                                                {% endif %}
+                                            </small>
+                                        </label>
+                                        <!-- Tipo de dependencia -->
+                                        <div class="mt-2 dependency-type-container" style="display: none;" id="dep_type_container_{{ svc.id }}">
+                                            <label class="form-label small mb-1">Tipo de dependencia:</label>
+                                            <select class="form-select form-select-sm" name="dependency_types_{{ svc.id }}" id="dep_type_{{ svc.id }}">
+                                                {% set dep_type = '' %}
+                                                {% if service %}
+                                                    {% for dep in service.dependencies %}
+                                                        {% if dep.depends_on_service_id == svc.id %}
+                                                            {% set dep_type = dep.dependency_type %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                                <option value="required" {% if dep_type == 'required' %}selected{% endif %}>Requerida - Sin este servicio, no funciona</option>
+                                                <option value="optional" {% if dep_type == 'optional' %}selected{% endif %}>Opcional - Funcionalidad reducida sin este</option>
+                                                <option value="enhances" {% if dep_type == 'enhances' %}selected{% endif %}>Mejora - Añade funcionalidades extras</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong id="selected-dependencies-count">
+                                    {% if service %}{{ service.dependencies|length }}{% else %}0{% endif %}
+                                </strong> dependencia(s) seleccionada(s)
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>
+                                <strong>Nota:</strong> Las dependencias ayudan a identificar el impacto cuando un servicio falla.
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column: Metrics -->
@@ -268,12 +479,113 @@
         }
     }
 
+    // Update selected assets count
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('input[name="asset_ids"]:checked');
+        const countElement = document.getElementById('selected-count');
+        if (countElement) {
+            countElement.textContent = checkboxes.length;
+        }
+    }
+
+    // Filter assets by search term
+    function filterAssetsBySearch(searchTerm) {
+        const assetItems = document.querySelectorAll('.asset-item');
+        const lowerSearchTerm = searchTerm.toLowerCase();
+
+        assetItems.forEach(item => {
+            const assetName = item.getAttribute('data-asset-name');
+            if (assetName.includes(lowerSearchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Filter services by search term
+    function filterServicesBySearch(searchTerm) {
+        const serviceItems = document.querySelectorAll('.service-item');
+        const lowerSearchTerm = searchTerm.toLowerCase();
+
+        serviceItems.forEach(item => {
+            const serviceName = item.getAttribute('data-service-name');
+            if (serviceName.includes(lowerSearchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Update selected dependencies count
+    function updateSelectedDependenciesCount() {
+        const checkboxes = document.querySelectorAll('input[name="dependency_service_ids"]:checked');
+        const countElement = document.getElementById('selected-dependencies-count');
+        if (countElement) {
+            countElement.textContent = checkboxes.length;
+        }
+    }
+
+    // Toggle dependency type selector visibility
+    function toggleDependencyTypeSelector(checkbox) {
+        const serviceId = checkbox.value;
+        const typeContainer = document.getElementById('dep_type_container_' + serviceId);
+        if (typeContainer) {
+            if (checkbox.checked) {
+                typeContainer.style.display = 'block';
+            } else {
+                typeContainer.style.display = 'none';
+            }
+        }
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize criticality badge
         const criticalityInput = document.getElementById('criticality');
         if (criticalityInput) {
             updateCriticalityBadge(criticalityInput.value);
         }
+
+        // Asset search functionality
+        const assetSearch = document.getElementById('asset_search');
+        if (assetSearch) {
+            assetSearch.addEventListener('input', function(e) {
+                filterAssetsBySearch(e.target.value);
+            });
+        }
+
+        // Asset checkbox change event
+        const assetCheckboxes = document.querySelectorAll('input[name="asset_ids"]');
+        assetCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedCount);
+        });
+
+        // Service search functionality
+        const serviceSearch = document.getElementById('service_search');
+        if (serviceSearch) {
+            serviceSearch.addEventListener('input', function(e) {
+                filterServicesBySearch(e.target.value);
+            });
+        }
+
+        // Dependency checkbox change event
+        const dependencyCheckboxes = document.querySelectorAll('input[name="dependency_service_ids"]');
+        dependencyCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectedDependenciesCount();
+                toggleDependencyTypeSelector(this);
+            });
+            // Initialize visibility of type selectors for checked items
+            if (checkbox.checked) {
+                toggleDependencyTypeSelector(checkbox);
+            }
+        });
+
+        // Initialize selected counts
+        updateSelectedCount();
+        updateSelectedDependenciesCount();
     });
 </script>
 {% endblock %}
