@@ -3,7 +3,7 @@ Modelos para la gestión de no conformidades según ISO 27001:2023
 Control 10.2 - No conformidad y acciones correctivas
 Control 10.1 - Mejora continua
 """
-from app import db
+from models import db
 from datetime import datetime
 from sqlalchemy import Enum
 import enum

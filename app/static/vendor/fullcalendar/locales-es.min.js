@@ -1,0 +1,1 @@
+Couldn't find the requested file /locales/es.global.min.js in fullcalendar.

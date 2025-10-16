@@ -1,0 +1,774 @@
+{% extends "base.html" %}
+{% block title %}{{ change.change_code }} - {{ change.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('changes.index') }}">Cambios</a></li>
+                    <li class="breadcrumb-item active">{{ change.change_code }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2>
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        {{ change.change_code }}
+                    </h2>
+                    <h4 class="text-muted">{{ change.title }}</h4>
+                </div>
+                <div>
+                    {% if change.status.name == 'DRAFT' %}
+                    <span class="badge bg-secondary fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'SUBMITTED' %}
+                    <span class="badge bg-info fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'UNDER_REVIEW' %}
+                    <span class="badge bg-primary fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'APPROVED' %}
+                    <span class="badge bg-success fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'SCHEDULED' %}
+                    <span class="badge bg-warning fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name in ['IN_PROGRESS', 'IMPLEMENTING'] %}
+                    <span class="badge bg-primary fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'IMPLEMENTED' %}
+                    <span class="badge bg-info fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'SUCCESSFUL' %}
+                    <span class="badge bg-success fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name in ['FAILED', 'ROLLED_BACK'] %}
+                    <span class="badge bg-danger fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'CANCELLED' %}
+                    <span class="badge bg-dark fs-6">{{ change.status.value }}</span>
+                    {% elif change.status.name == 'CLOSED' %}
+                    <span class="badge bg-secondary fs-6">{{ change.status.value }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6">{{ change.status.value }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Main Information -->
+        <div class="col-md-8">
+            <!-- Action Buttons -->
+            {% if can_edit or can_approve or can_schedule or can_implement %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if can_edit %}
+                        <a href="{{ url_for('changes.edit', change_id=change.id) }}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Editar
+                        </a>
+                        {% endif %}
+
+                        {% if change.status.name == 'DRAFT' and can_edit %}
+                        <form method="POST" action="{{ url_for('changes.submit', change_id=change.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar para Revisión
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if change.status.name in ['SUBMITTED', 'UNDER_REVIEW'] and can_approve %}
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
+                            <i class="fas fa-check me-2"></i>Aprobar
+                        </button>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="fas fa-times me-2"></i>Rechazar
+                        </button>
+                        {% endif %}
+
+                        {% if change.status.name == 'APPROVED' and can_schedule %}
+                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+                            <i class="fas fa-calendar me-2"></i>Programar
+                        </button>
+                        {% endif %}
+
+                        {% if change.status.name == 'SCHEDULED' and can_implement %}
+                        <form method="POST" action="{{ url_for('changes.start', change_id=change.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Iniciar Implementación
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if change.status.name in ['IN_PROGRESS', 'IMPLEMENTING'] and can_implement %}
+                        <form method="POST" action="{{ url_for('changes.complete', change_id=change.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-circle me-2"></i>Completar Implementación
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rollbackModal">
+                            <i class="fas fa-undo me-2"></i>Retroceder
+                        </button>
+                        {% endif %}
+
+                        {% if change.status.name == 'IMPLEMENTED' and can_verify %}
+                        <form method="POST" action="{{ url_for('changes.verify', change_id=change.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-double me-2"></i>Verificar Éxito
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('changes.mark_failed', change_id=change.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Marcar como Fallido
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if change.status.name in ['SUCCESSFUL', 'FAILED', 'ROLLED_BACK'] and can_close %}
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#closeModal">
+                            <i class="fas fa-lock me-2"></i>Cerrar Cambio
+                        </button>
+                        {% endif %}
+
+                        {% if change.status.name in ['DRAFT', 'SUBMITTED'] and can_edit %}
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            <i class="fas fa-ban me-2"></i>Cancelar
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Información Básica</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Tipo:</strong><br>
+                            <span class="badge bg-info">{{ change.change_type.value }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Categoría:</strong><br>
+                            {% if change.category.name == 'MINOR' %}
+                            <span class="badge bg-success">{{ change.category.value }}</span>
+                            {% elif change.category.name == 'STANDARD' %}
+                            <span class="badge bg-primary">{{ change.category.value }}</span>
+                            {% elif change.category.name == 'MAJOR' %}
+                            <span class="badge bg-warning">{{ change.category.value }}</span>
+                            {% elif change.category.name == 'EMERGENCY' %}
+                            <span class="badge bg-danger">{{ change.category.value }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Prioridad:</strong><br>
+                            {% if change.priority.name == 'LOW' %}
+                            <span class="badge bg-secondary">{{ change.priority.value }}</span>
+                            {% elif change.priority.name == 'MEDIUM' %}
+                            <span class="badge bg-primary">{{ change.priority.value }}</span>
+                            {% elif change.priority.name == 'HIGH' %}
+                            <span class="badge bg-warning">{{ change.priority.value }}</span>
+                            {% elif change.priority.name == 'CRITICAL' %}
+                            <span class="badge bg-danger">{{ change.priority.value }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Descripción:</strong>
+                        <p class="mt-2">{{ change.description }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Justificación de Negocio:</strong>
+                        <p class="mt-2">{{ change.business_justification }}</p>
+                    </div>
+
+                    {% if change.expected_benefits %}
+                    <div class="mb-3">
+                        <strong>Beneficios Esperados:</strong>
+                        <p class="mt-2">{{ change.expected_benefits }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if change.impact_analysis %}
+                    <div class="mb-3">
+                        <strong>Análisis de Impacto:</strong>
+                        <p class="mt-2">{{ change.impact_analysis }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Implementation Plans -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Planes de Implementación</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Plan de Implementación:</strong>
+                        <p class="mt-2" style="white-space: pre-wrap;">{{ change.implementation_plan }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Plan de Retroceso:</strong>
+                        <p class="mt-2" style="white-space: pre-wrap;">{{ change.rollback_plan }}</p>
+                    </div>
+
+                    {% if change.test_plan %}
+                    <div class="mb-3">
+                        <strong>Plan de Pruebas:</strong>
+                        <p class="mt-2" style="white-space: pre-wrap;">{{ change.test_plan }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if change.communication_plan %}
+                    <div class="mb-3">
+                        <strong>Plan de Comunicación:</strong>
+                        <p class="mt-2" style="white-space: pre-wrap;">{{ change.communication_plan }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Risk Assessment -->
+            {% if change.risk_assessments %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Evaluación de Riesgos</h5>
+                </div>
+                <div class="card-body">
+                    {% for risk in change.risk_assessments %}
+                    <div class="border-start border-4 {% if risk.risk_level.name == 'LOW' %}border-success{% elif risk.risk_level.name == 'MEDIUM' %}border-warning{% elif risk.risk_level.name == 'HIGH' %}border-danger{% else %}border-dark{% endif %} ps-3 mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Probabilidad:</strong> {{ risk.probability }}/5<br>
+                                <strong>Impacto:</strong> {{ risk.impact }}/5
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Nivel de Riesgo:</strong>
+                                {% if risk.risk_level.name == 'LOW' %}
+                                <span class="badge bg-success">{{ risk.risk_level.value }}</span>
+                                {% elif risk.risk_level.name == 'MEDIUM' %}
+                                <span class="badge bg-warning">{{ risk.risk_level.value }}</span>
+                                {% elif risk.risk_level.name == 'HIGH' %}
+                                <span class="badge bg-danger">{{ risk.risk_level.value }}</span>
+                                {% else %}
+                                <span class="badge bg-dark">{{ risk.risk_level.value }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if risk.risk_description %}
+                        <p class="mt-2 mb-1">{{ risk.risk_description }}</p>
+                        {% endif %}
+                        {% if risk.mitigation_plan %}
+                        <p class="mb-0"><strong>Mitigación:</strong> {{ risk.mitigation_plan }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tasks -->
+            {% if change.tasks %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Tareas de Implementación</h5>
+                    {% if can_implement %}
+                    <a href="{{ url_for('changes.add_task', change_id=change.id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Nueva Tarea
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tarea</th>
+                                    <th>Responsable</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in change.tasks %}
+                                <tr>
+                                    <td>{{ task.description }}</td>
+                                    <td>{{ task.assigned_to.name if task.assigned_to else '-' }}</td>
+                                    <td>
+                                        {% if task.is_critical %}
+                                        <span class="badge bg-danger">Crítica</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.completed %}
+                                        <span class="badge bg-success">Completada</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.completed_at %}
+                                        {{ task.completed_at.strftime('%d/%m/%Y %H:%M') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Approvals -->
+            {% if change.approvals %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Aprobaciones</h5>
+                </div>
+                <div class="card-body">
+                    {% for approval in change.approvals %}
+                    <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
+                        <div class="flex-shrink-0 me-3">
+                            {% if approval.approved %}
+                            <i class="fas fa-check-circle text-success fa-2x"></i>
+                            {% elif approval.approved == False %}
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                            {% else %}
+                            <i class="fas fa-clock text-warning fa-2x"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>{{ approval.approval_level.value }}</strong>
+                            <span class="text-muted">- {{ approval.approver.name }}</span><br>
+                            {% if approval.approved %}
+                            <span class="badge bg-success">Aprobado</span>
+                            {% elif approval.approved == False %}
+                            <span class="badge bg-danger">Rechazado</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pendiente</span>
+                            {% endif %}
+                            {% if approval.decision_date %}
+                            <small class="text-muted">- {{ approval.decision_date.strftime('%d/%m/%Y %H:%M') }}</small>
+                            {% endif %}
+                            {% if approval.comments %}
+                            <p class="mt-2 mb-0">{{ approval.comments }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Post-Implementation Review -->
+            {% if change.review %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Revisión Post-Implementación (PIR)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Objetivos Alcanzados:</strong>
+                            {% if change.review.objectives_met %}
+                            <span class="badge bg-success">Sí</span>
+                            {% else %}
+                            <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha de Revisión:</strong>
+                            {{ change.review.review_date.strftime('%d/%m/%Y') }}
+                        </div>
+                    </div>
+
+                    {% if change.review.review_summary %}
+                    <div class="mb-3">
+                        <strong>Resumen:</strong>
+                        <p class="mt-2">{{ change.review.review_summary }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if change.review.lessons_learned %}
+                    <div class="mb-3">
+                        <strong>Lecciones Aprendidas:</strong>
+                        <p class="mt-2">{{ change.review.lessons_learned }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if change.review.issues_encountered %}
+                    <div class="mb-3">
+                        <strong>Problemas Encontrados:</strong>
+                        <p class="mt-2">{{ change.review.issues_encountered }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if change.review.recommendations %}
+                    <div class="mb-3">
+                        <strong>Recomendaciones:</strong>
+                        <p class="mt-2">{{ change.review.recommendations }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- History -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Historial de Cambios</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for history in change.history_entries %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ history.action }}</strong>
+                                    <small class="text-muted">{{ history.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                <p class="mb-0 text-muted">{{ history.user.name }}</p>
+                                {% if history.comments %}
+                                <p class="mt-1 mb-0">{{ history.comments }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Metadata -->
+        <div class="col-md-4">
+            <!-- Schedule -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Programación</h5>
+                </div>
+                <div class="card-body">
+                    {% if change.scheduled_start_date %}
+                    <p><strong>Inicio:</strong><br>{{ change.scheduled_start_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+                    {% if change.scheduled_end_date %}
+                    <p><strong>Fin:</strong><br>{{ change.scheduled_end_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+                    {% if change.actual_start_date %}
+                    <p><strong>Inicio Real:</strong><br>{{ change.actual_start_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+                    {% if change.actual_end_date %}
+                    <p><strong>Fin Real:</strong><br>{{ change.actual_end_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    {% endif %}
+                    {% if change.estimated_duration %}
+                    <p><strong>Duración Estimada:</strong><br>{{ change.estimated_duration }} horas</p>
+                    {% endif %}
+                    {% if change.estimated_cost %}
+                    <p><strong>Costo Estimado:</strong><br>€{{ "%.2f"|format(change.estimated_cost) }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Owner and Requester -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Responsables</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Solicitante:</strong><br>{{ change.requester.name }}</p>
+                    {% if change.owner %}
+                    <p><strong>Responsable:</strong><br>{{ change.owner.name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Affected Environments -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Entornos Afectados</h5>
+                </div>
+                <div class="card-body">
+                    {% if change.affects_development %}
+                    <span class="badge bg-info mb-2">Desarrollo</span><br>
+                    {% endif %}
+                    {% if change.affects_testing %}
+                    <span class="badge bg-warning mb-2">Pruebas</span><br>
+                    {% endif %}
+                    {% if change.affects_production %}
+                    <span class="badge bg-danger mb-2">Producción</span><br>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Downtime -->
+            {% if change.downtime_required %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Tiempo de Inactividad</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Requiere inactividad:</strong> Sí</p>
+                    {% if change.estimated_downtime_minutes %}
+                    <p><strong>Tiempo estimado:</strong><br>{{ change.estimated_downtime_minutes }} minutos</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Items -->
+            {% if change.related_incident or change.related_nonconformity or change.related_assets %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Relaciones</h5>
+                </div>
+                <div class="card-body">
+                    {% if change.related_incident %}
+                    <p><strong>Incidente:</strong><br>
+                        <a href="{{ url_for('incidents.detail', incident_id=change.related_incident.id) }}">
+                            {{ change.related_incident.incident_code }}
+                        </a>
+                    </p>
+                    {% endif %}
+                    {% if change.related_nonconformity %}
+                    <p><strong>No Conformidad:</strong><br>
+                        <a href="{{ url_for('nonconformities.detail', nc_id=change.related_nonconformity.id) }}">
+                            {{ change.related_nonconformity.nc_code }}
+                        </a>
+                    </p>
+                    {% endif %}
+                    {% if change.related_assets %}
+                    <p><strong>Activos Afectados:</strong></p>
+                    <ul class="list-unstyled">
+                        {% for asset in change.related_assets %}
+                        <li><a href="{{ url_for('assets.detail', asset_id=asset.id) }}">{{ asset.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Metadata -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Información del Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Código:</strong><br>{{ change.change_code }}</p>
+                    <p><strong>Creado:</strong><br>{{ change.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                    <p><strong>Modificado:</strong><br>{{ change.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.approve', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Aprobar Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="approve_comments" class="form-label">Comentarios</label>
+                        <textarea class="form-control" id="approve_comments" name="comments" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Aprobar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.reject', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Rechazar Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reject_reason" class="form-label">Razón del Rechazo <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reject_reason" name="reason" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Rechazar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.schedule', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Programar Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="scheduled_start_date" class="form-label">Fecha/Hora de Inicio <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="scheduled_start_date" name="scheduled_start_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="estimated_duration" class="form-label">Duración Estimada (horas) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="estimated_duration" name="estimated_duration"
+                               value="{{ change.estimated_duration if change.estimated_duration else '' }}"
+                               min="0.5" step="0.5" required>
+                        <small class="form-text text-muted">
+                            La fecha de fin se calculará automáticamente sumando esta duración a la fecha de inicio
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Programar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Rollback Modal -->
+<div class="modal fade" id="rollbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.rollback', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Retroceder Cambio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Esta acción ejecutará el plan de retroceso. Asegúrate de que es necesario.
+                    </div>
+                    <div class="mb-3">
+                        <label for="rollback_reason" class="form-label">Razón del Retroceso <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rollback_reason" name="reason" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Retroceso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Close Modal -->
+<div class="modal fade" id="closeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.close', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Cerrar Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="close_comments" class="form-label">Comentarios de Cierre</label>
+                        <textarea class="form-control" id="close_comments" name="comments" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('changes.cancel', change_id=change.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header">
+                    <h5 class="modal-title">Cancelar Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label">Razón de la Cancelación <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cancel_reason" name="reason" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Volver</button>
+                    <button type="submit" class="btn btn-danger">Cancelar Cambio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 20px;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #0d6efd;
+    }
+    .timeline-content {
+        border-left: 2px solid #dee2e6;
+        padding-left: 15px;
+        padding-bottom: 10px;
+    }
+    .timeline-item:last-child .timeline-content {
+        border-left: none;
+    }
+</style>
+{% endblock %}

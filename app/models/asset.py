@@ -2,7 +2,7 @@
 Modelos para la gestión de activos/inventario según ISO 27001:2023
 Control 5.9 - Inventario de información y otros activos asociados
 """
-from app import db
+from models import db
 from datetime import datetime
 from sqlalchemy import Enum
 import enum

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Calendario de Cambios{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('changes.index') }}">Cambios</a></li>
+                    <li class="breadcrumb-item active">Calendario</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Calendario de Cambios
+                </h2>
+                <a href="{{ url_for('changes.new') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Nuevo Cambio
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="category" class="form-label">Categoría</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="">Todas</option>
+                                {% for cat in ChangeCategory %}
+                                <option value="{{ cat.name }}" {% if request.args.get('category') == cat.name %}selected{% endif %}>
+                                    {{ cat.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="priority" class="form-label">Prioridad</label>
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="">Todas</option>
+                                {% for prio in ChangePriority %}
+                                <option value="{{ prio.name }}" {% if request.args.get('priority') == prio.name %}selected{% endif %}>
+                                    {{ prio.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="environment" class="form-label">Entorno</label>
+                            <select class="form-select" id="environment" name="environment">
+                                <option value="">Todos</option>
+                                <option value="production" {% if request.args.get('environment') == 'production' %}selected{% endif %}>Producción</option>
+                                <option value="testing" {% if request.args.get('environment') == 'testing' %}selected{% endif %}>Pruebas</option>
+                                <option value="development" {% if request.args.get('environment') == 'development' %}selected{% endif %}>Desarrollo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <strong>Leyenda de Estados:</strong>
+                    <span class="badge bg-success ms-3">Implementado</span>
+                    <span class="ms-4"><strong>Categorías:</strong></span>
+                    <span class="badge ms-2" style="background-color: #17a2b8;">Menor</span>
+                    <span class="badge bg-primary ms-2">Estándar</span>
+                    <span class="badge bg-warning text-dark ms-2">Mayor</span>
+                    <span class="badge bg-danger ms-2">Emergencia</span>
+                    <span class="ms-4">
+                        <i class="fas fa-server text-danger me-1"></i> Producción
+                        <i class="fas fa-exclamation-triangle text-warning ms-3 me-1"></i> Requiere inactividad
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Changes List -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Próximos Cambios Programados</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_changes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Título</th>
+                                    <th>Categoría</th>
+                                    <th>Fecha Programada</th>
+                                    <th>Duración</th>
+                                    <th>Entorno</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for change in upcoming_changes %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('changes.detail', change_id=change.id) }}">
+                                            {{ change.change_code }}
+                                        </a>
+                                    </td>
+                                    <td>{{ change.title }}</td>
+                                    <td>
+                                        {% if change.category.name == 'MINOR' %}
+                                        <span class="badge bg-success">{{ change.category.value }}</span>
+                                        {% elif change.category.name == 'STANDARD' %}
+                                        <span class="badge bg-primary">{{ change.category.value }}</span>
+                                        {% elif change.category.name == 'MAJOR' %}
+                                        <span class="badge bg-warning">{{ change.category.value }}</span>
+                                        {% elif change.category.name == 'EMERGENCY' %}
+                                        <span class="badge bg-danger">{{ change.category.value }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ change.scheduled_start_date.strftime('%d/%m/%Y %H:%M') }}
+                                        {% if change.downtime_required %}
+                                        <i class="fas fa-exclamation-triangle text-warning" title="Requiere inactividad"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if change.estimated_duration %}
+                                        {{ change.estimated_duration }}h
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if change.affects_production %}
+                                        <i class="fas fa-server text-danger" title="Producción"></i>
+                                        {% endif %}
+                                        {% if change.affects_testing %}
+                                        <i class="fas fa-flask text-warning" title="Pruebas"></i>
+                                        {% endif %}
+                                        {% if change.affects_development %}
+                                        <i class="fas fa-code text-info" title="Desarrollo"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('changes.detail', change_id=change.id) }}" class="btn btn-sm btn-primary">
+                                            Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay cambios programados próximamente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link href="{{ url_for('static', filename='vendor/fullcalendar/fullcalendar.min.css') }}" rel="stylesheet">
+<style>
+    .fc-event {
+        cursor: pointer;
+    }
+    .fc-event-title {
+        font-weight: 500;
+    }
+    #calendar {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='vendor/fullcalendar/fullcalendar.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/fullcalendar/locales-es.min.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+            },
+            buttonText: {
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Día',
+                list: 'Lista'
+            },
+            buttonIcons: false, // Desactivar iconos para evitar problemas de CSP
+            height: 'auto',
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            },
+            events: [
+                {% for change in scheduled_changes %}
+                {
+                    id: '{{ change.id }}',
+                    title: '{{ change.change_code }} - {{ change.title|replace("'", "\\'") }}',
+                    start: '{{ change.scheduled_start_date.isoformat() }}',
+                    {% if change.scheduled_end_date %}
+                    end: '{{ change.scheduled_end_date.isoformat() }}',
+                    {% endif %}
+                    url: '{{ url_for("changes.detail", change_id=change.id) }}',
+                    {% if change.status.name == 'IMPLEMENTED' %}
+                    backgroundColor: '#198754',
+                    borderColor: '#198754'
+                    {% elif change.category.name == 'MINOR' %}
+                    backgroundColor: '#17a2b8',
+                    borderColor: '#17a2b8'
+                    {% elif change.category.name == 'STANDARD' %}
+                    backgroundColor: '#0d6efd',
+                    borderColor: '#0d6efd'
+                    {% elif change.category.name == 'MAJOR' %}
+                    backgroundColor: '#ffc107',
+                    borderColor: '#ffc107'
+                    {% elif change.category.name == 'EMERGENCY' %}
+                    backgroundColor: '#dc3545',
+                    borderColor: '#dc3545'
+                    {% endif %},
+                    extendedProps: {
+                        changeCode: '{{ change.change_code }}',
+                        category: '{{ change.category.value }}',
+                        priority: '{{ change.priority.value }}',
+                        downtimeRequired: {{ 'true' if change.downtime_required else 'false' }},
+                        affectsProduction: {{ 'true' if change.affects_production else 'false' }}
+                    }
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                }
+            },
+            eventDidMount: function(info) {
+                // Add icons to events
+                var icons = '';
+                if (info.event.extendedProps.affectsProduction) {
+                    icons += '<i class="fas fa-server ms-1" title="Afecta Producción"></i>';
+                }
+                if (info.event.extendedProps.downtimeRequired) {
+                    icons += '<i class="fas fa-exclamation-triangle ms-1" title="Requiere Inactividad"></i>';
+                }
+
+                if (icons) {
+                    var titleEl = info.el.querySelector('.fc-event-title');
+                    if (titleEl) {
+                        titleEl.innerHTML += ' ' + icons;
+                    }
+                }
+
+                // Add tooltip
+                var tooltip = `
+                    <strong>${info.event.extendedProps.changeCode}</strong><br>
+                    Categoría: ${info.event.extendedProps.category}<br>
+                    Prioridad: ${info.event.extendedProps.priority}
+                `;
+                info.el.setAttribute('title', tooltip);
+                info.el.setAttribute('data-bs-toggle', 'tooltip');
+                info.el.setAttribute('data-bs-html', 'true');
+            }
+        });
+
+        calendar.render();
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

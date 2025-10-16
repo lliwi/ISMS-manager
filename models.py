@@ -2080,3 +2080,11 @@ class ServiceDependency(db.Model):
 
     def __repr__(self):
         return f'<ServiceDependency {self.service_id} depends on {self.depends_on_service_id}>'
+
+# Import change management models
+from app.models.change import (
+    ChangeType, ChangeCategory, ChangePriority, ChangeStatus,
+    RiskLevel, ApprovalLevel, ApprovalStatus,
+    Change, ChangeApproval, ChangeTask, ChangeDocument,
+    ChangeHistory, ChangeReview, ChangeRiskAssessment, ChangeAsset
+)

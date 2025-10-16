@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}{% if change %}Editar Cambio{% else %}Nuevo Cambio{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('changes.index') }}">Cambios</a></li>
+                    {% if change %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('changes.detail', change_id=change.id) }}">{{ change.change_code }}</a></li>
+                    <li class="breadcrumb-item active">Editar</li>
+                    {% else %}
+                    <li class="breadcrumb-item active">Nuevo Cambio</li>
+                    {% endif %}
+                </ol>
+            </nav>
+            <h2>
+                <i class="fas fa-exchange-alt me-2"></i>
+                {% if change %}Editar Cambio{% else %}Nuevo Cambio{% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="row">
+            <!-- Left Column: Main Information -->
+            <div class="col-md-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Información Básica</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Título del Cambio <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   value="{{ change.title if change else '' }}"
+                                   placeholder="Actualización del servidor de base de datos" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descripción <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="4"
+                                      placeholder="Describe detalladamente el cambio a realizar..." required>{{ change.description if change else '' }}</textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="change_type" class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="change_type" name="change_type" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for type in ChangeType %}
+                                    <option value="{{ type.name }}"
+                                            {% if change and change.change_type == type %}selected{% endif %}>
+                                        {{ type.value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="category" class="form-label">Categoría <span class="text-danger">*</span></label>
+                                <select class="form-select" id="category" name="category" required>
+                                    {% for category in ChangeCategory %}
+                                    <option value="{{ category.name }}"
+                                            {% if change and change.category == category %}selected{% elif not change and category.name == 'STANDARD' %}selected{% endif %}>
+                                        {{ category.value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="priority" class="form-label">Prioridad <span class="text-danger">*</span></label>
+                                <select class="form-select" id="priority" name="priority" required>
+                                    {% for priority in ChangePriority %}
+                                    <option value="{{ priority.name }}"
+                                            {% if change and change.priority == priority %}selected{% elif not change and priority.name == 'MEDIUM' %}selected{% endif %}>
+                                        {{ priority.value }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="business_justification" class="form-label">Justificación de Negocio <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="business_justification" name="business_justification" rows="3"
+                                      placeholder="Explica por qué es necesario este cambio..." required>{{ change.business_justification if change else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expected_benefits" class="form-label">Beneficios Esperados</label>
+                            <textarea class="form-control" id="expected_benefits" name="expected_benefits" rows="2"
+                                      placeholder="Beneficios que se obtendrán con este cambio...">{{ change.expected_benefits if change else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="impact_analysis" class="form-label">Análisis de Impacto</label>
+                            <textarea class="form-control" id="impact_analysis" name="impact_analysis" rows="3"
+                                      placeholder="Analiza el impacto del cambio en sistemas, usuarios y procesos...">{{ change.impact_analysis if change else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plans -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Planes de Implementación</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="implementation_plan" class="form-label">Plan de Implementación <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="implementation_plan" name="implementation_plan" rows="5"
+                                      placeholder="Describe paso a paso cómo se implementará el cambio..." required>{{ change.implementation_plan if change else '' }}</textarea>
+                            <small class="text-muted">Incluye pasos detallados, recursos necesarios y tiempos estimados</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rollback_plan" class="form-label">Plan de Retroceso <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="rollback_plan" name="rollback_plan" rows="4"
+                                      placeholder="Describe cómo revertir el cambio si algo sale mal..." required>{{ change.rollback_plan if change else '' }}</textarea>
+                            <small class="text-muted">Procedimiento para volver al estado anterior</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="test_plan" class="form-label">Plan de Pruebas</label>
+                            <textarea class="form-control" id="test_plan" name="test_plan" rows="3"
+                                      placeholder="Describe cómo se validará que el cambio funciona correctamente...">{{ change.test_plan if change else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="communication_plan" class="form-label">Plan de Comunicación</label>
+                            <textarea class="form-control" id="communication_plan" name="communication_plan" rows="2"
+                                      placeholder="Cómo y cuándo se comunicará el cambio a los usuarios...">{{ change.communication_plan if change else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estimaciones -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Estimaciones</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="estimated_duration" class="form-label">Duración Estimada (horas)</label>
+                                <input type="number" class="form-control" id="estimated_duration" name="estimated_duration"
+                                       value="{{ change.estimated_duration if change else '' }}"
+                                       min="0" step="0.5" placeholder="2.5">
+                                <small class="form-text text-muted">Tiempo estimado para completar el cambio</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="estimated_cost" class="form-label">Costo Estimado</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" class="form-control" id="estimated_cost" name="estimated_cost"
+                                           value="{{ change.estimated_cost if change else '' }}"
+                                           step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <small class="form-text text-muted">Costo aproximado incluyendo recursos</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> La programación de fechas se realizará después de la aprobación del cambio.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Additional Info -->
+            <div class="col-md-4">
+                <!-- Owner -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Responsable</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="owner_id" class="form-label">Responsable del Cambio</label>
+                            <select class="form-select" id="owner_id" name="owner_id">
+                                {% for user in users %}
+                                <option value="{{ user.id }}"
+                                        {% if change and change.owner_id == user.id %}selected{% elif not change and user.id == current_user.id %}selected{% endif %}>
+                                    {{ user.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Environment -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Entornos Afectados</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="affects_development" name="affects_development"
+                                   {% if change and change.affects_development %}checked{% endif %}>
+                            <label class="form-check-label" for="affects_development">
+                                Desarrollo
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="affects_testing" name="affects_testing"
+                                   {% if change and change.affects_testing %}checked{% endif %}>
+                            <label class="form-check-label" for="affects_testing">
+                                Pruebas / QA
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="affects_production" name="affects_production"
+                                   {% if change and change.affects_production %}checked{% elif not change %}checked{% endif %}>
+                            <label class="form-check-label" for="affects_production">
+                                Producción
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Downtime -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Tiempo de Inactividad</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="downtime_required" name="downtime_required"
+                                   {% if change and change.downtime_required %}checked{% endif %}>
+                            <label class="form-check-label" for="downtime_required">
+                                Requiere tiempo de inactividad
+                            </label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="estimated_downtime_minutes" class="form-label">Tiempo estimado (minutos)</label>
+                            <input type="number" class="form-control" id="estimated_downtime_minutes" name="estimated_downtime_minutes"
+                                   value="{{ change.estimated_downtime_minutes if change else '' }}"
+                                   min="0" placeholder="30">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Ayuda</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Categorías:</strong></p>
+                        <ul class="small">
+                            <li><strong>Menor:</strong> Bajo riesgo, bajo impacto</li>
+                            <li><strong>Estándar:</strong> Pre-autorizado, procedimiento conocido</li>
+                            <li><strong>Mayor:</strong> Alto impacto, requiere aprobación CAB</li>
+                            <li><strong>Emergencia:</strong> Urgente, proceso acelerado</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-2"><strong>Campos Obligatorios (*):</strong></p>
+                        <ul class="small mb-0">
+                            <li>Título</li>
+                            <li>Descripción</li>
+                            <li>Tipo, Categoría y Prioridad</li>
+                            <li>Justificación de negocio</li>
+                            <li>Plan de implementación</li>
+                            <li>Plan de retroceso</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mt-4 mb-4">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% if change %}{{ url_for('changes.detail', change_id=change.id) }}{% else %}{{ url_for('changes.index') }}{% endif %}"
+                       class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        {% if change %}Guardar Cambios{% else %}Crear Cambio{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Toggle downtime fields visibility
+    document.getElementById('downtime_required').addEventListener('change', function() {
+        const downtimeField = document.getElementById('estimated_downtime_minutes');
+        if (this.checked) {
+            downtimeField.removeAttribute('disabled');
+        } else {
+            downtimeField.setAttribute('disabled', 'disabled');
+            downtimeField.value = '';
+        }
+    });
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const downtimeCheckbox = document.getElementById('downtime_required');
+        if (!downtimeCheckbox.checked) {
+            document.getElementById('estimated_downtime_minutes').setAttribute('disabled', 'disabled');
+        }
+    });
+</script>
+{% endblock %}

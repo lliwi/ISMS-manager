@@ -2,7 +2,7 @@
 Modelos para la gestión de incidentes de seguridad según ISO 27001:2023
 Controles 5.24, 5.25, 5.26, 5.27, 5.28 y 6.8
 """
-from app import db
+from models import db
 from datetime import datetime
 from sqlalchemy import Enum
 import enum
