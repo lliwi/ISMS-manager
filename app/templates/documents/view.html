@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <!-- PDF.js para visualizar PDFs -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/pdfjs/pdf.min.js') }}"></script>
 <style>
 .document-viewer {
     width: 100%;
@@ -521,7 +521,7 @@
 {% if document.is_pdf and document.has_file %}
 <script>
 // Configuración de PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '{{ url_for("static", filename="vendor/pdfjs/pdf.worker.min.js") }}';
 
 const url = '{{ url_for("documents.download", id=document.id) }}';
 let pdfDoc = null;
@@ -612,7 +612,7 @@ pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
 // Configurar PDF.js para documentos Office convertidos
 const urlOffice = '{{ url_for("documents.view_as_pdf", id=document.id) }}';
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '{{ url_for("static", filename="vendor/pdfjs/pdf.worker.min.js") }}';
 
 let pdfDocOffice = null,
     pageNumOffice = 1,
