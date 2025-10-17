@@ -331,17 +331,23 @@ def reject(change_id):
 @changes_bp.route('/<int:change_id>/schedule', methods=['POST'])
 @login_required
 def schedule(change_id):
-    """Programar implementación del cambio"""
+    """Programar o reprogramar implementación del cambio"""
     try:
-        scheduled_start = request.form.get('scheduled_start_date')
+        # Verificar si es una reprogramación
+        change = Change.query.get_or_404(change_id)
+        is_reschedule = change.scheduled_start_date is not None
+
+        scheduled_date = request.form.get('scheduled_date')
+        scheduled_time = request.form.get('scheduled_time')
         estimated_duration = request.form.get('estimated_duration')
 
-        if not scheduled_start or not estimated_duration:
-            flash('Debe proporcionar fecha de inicio y duración estimada', 'error')
+        if not scheduled_date or not scheduled_time or not estimated_duration:
+            flash('Debe proporcionar fecha, hora y duración estimada', 'error')
             return redirect(url_for('changes.detail', change_id=change_id))
 
-        # Convertir de formato datetime-local (YYYY-MM-DDTHH:MM) a datetime
-        start_date = datetime.fromisoformat(scheduled_start)
+        # Combinar fecha y hora en un datetime
+        datetime_str = f"{scheduled_date} {scheduled_time}"
+        start_date = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
 
         # Calcular fecha de fin automáticamente sumando la duración en horas
         duration_hours = float(estimated_duration)
@@ -349,7 +355,8 @@ def schedule(change_id):
 
         change = ChangeService.schedule(change_id, start_date, end_date, current_user.id)
 
-        flash(f'Cambio programado desde {start_date.strftime("%d/%m/%Y %H:%M")} hasta {end_date.strftime("%d/%m/%Y %H:%M")}', 'success')
+        action = 'reprogramado' if is_reschedule else 'programado'
+        flash(f'Cambio {action} desde {start_date.strftime("%d/%m/%Y %H:%M")} hasta {end_date.strftime("%d/%m/%Y %H:%M")}', 'success')
     except ValueError as e:
         flash(str(e), 'error')
     except Exception as e:
@@ -445,6 +452,32 @@ def cancel(change_id):
         flash(f'Error al cancelar el cambio: {str(e)}', 'error')
 
     return redirect(url_for('changes.detail', change_id=change_id))
+
+
+@changes_bp.route('/<int:change_id>/delete', methods=['POST'])
+@login_required
+def delete(change_id):
+    """Eliminar un cambio (solo administradores)"""
+    try:
+        # Verificar que el usuario sea administrador
+        if current_user.role.name != 'admin':
+            flash('No tiene permisos para eliminar cambios', 'error')
+            return redirect(url_for('changes.index'))
+
+        change = Change.query.get_or_404(change_id)
+        change_code = change.change_code
+
+        # Eliminar todas las relaciones asociadas
+        # Las relaciones con cascade='all, delete-orphan' se eliminarán automáticamente
+        db.session.delete(change)
+        db.session.commit()
+
+        flash(f'Cambio {change_code} eliminado exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el cambio: {str(e)}', 'error')
+
+    return redirect(url_for('changes.index'))
 
 
 # ============================================================================

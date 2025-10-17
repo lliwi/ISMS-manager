@@ -90,6 +90,9 @@
                         {% endif %}
 
                         {% if change.status.name == 'SCHEDULED' and can_implement %}
+                        <button type="button" class="btn btn-outline-warning me-2" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+                            <i class="fas fa-calendar-alt me-2"></i>Reprogramar
+                        </button>
                         <form method="POST" action="{{ url_for('changes.start', change_id=change.id) }}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn btn-primary">
@@ -638,9 +641,41 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="scheduled_start_date" class="form-label">Fecha/Hora de Inicio <span class="text-danger">*</span></label>
-                        <input type="datetime-local" class="form-control" id="scheduled_start_date" name="scheduled_start_date" required>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="scheduled_date" class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="scheduled_time" class="form-label">Hora de Inicio <span class="text-danger">*</span></label>
+                            <select class="form-select" id="scheduled_time" name="scheduled_time" required>
+                                <option value="">Seleccionar hora...</option>
+                                <option value="00:00">00:00 - Medianoche</option>
+                                <option value="01:00">01:00</option>
+                                <option value="02:00">02:00</option>
+                                <option value="03:00">03:00</option>
+                                <option value="04:00">04:00</option>
+                                <option value="05:00">05:00</option>
+                                <option value="06:00">06:00</option>
+                                <option value="07:00">07:00</option>
+                                <option value="08:00">08:00</option>
+                                <option value="09:00" selected>09:00 - Inicio jornada</option>
+                                <option value="10:00">10:00</option>
+                                <option value="11:00">11:00</option>
+                                <option value="12:00">12:00 - Mediodía</option>
+                                <option value="13:00">13:00</option>
+                                <option value="14:00">14:00</option>
+                                <option value="15:00">15:00</option>
+                                <option value="16:00">16:00</option>
+                                <option value="17:00">17:00</option>
+                                <option value="18:00">18:00</option>
+                                <option value="19:00">19:00</option>
+                                <option value="20:00">20:00</option>
+                                <option value="21:00">21:00</option>
+                                <option value="22:00">22:00</option>
+                                <option value="23:00">23:00</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="estimated_duration" class="form-label">Duración Estimada (horas) <span class="text-danger">*</span></label>
@@ -771,4 +806,78 @@
         border-left: none;
     }
 </style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Establecer fecha mínima como hoy en el selector de fecha
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('scheduled_date');
+        const timeSelect = document.getElementById('scheduled_time');
+        const scheduleModal = document.getElementById('scheduleModal');
+
+        if (dateInput) {
+            // Establecer fecha mínima como hoy
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.setAttribute('min', today);
+
+            {% if change.scheduled_start_date %}
+            // Si el cambio ya está programado, usar esos valores
+            const scheduledDate = new Date('{{ change.scheduled_start_date.isoformat() }}');
+            dateInput.value = scheduledDate.toISOString().split('T')[0];
+
+            if (timeSelect) {
+                const hours = scheduledDate.getHours().toString().padStart(2, '0');
+                const minutes = scheduledDate.getMinutes().toString().padStart(2, '0');
+                const timeValue = `${hours}:${minutes}`;
+
+                // Buscar la opción más cercana
+                let closestOption = null;
+                let closestDiff = Infinity;
+
+                for (let option of timeSelect.options) {
+                    if (option.value) {
+                        const optionTime = option.value.split(':');
+                        const optionMinutes = parseInt(optionTime[0]) * 60 + parseInt(optionTime[1]);
+                        const actualMinutes = parseInt(hours) * 60 + parseInt(minutes);
+                        const diff = Math.abs(optionMinutes - actualMinutes);
+
+                        if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closestOption = option;
+                        }
+                    }
+                }
+
+                if (closestOption) {
+                    timeSelect.value = closestOption.value;
+                }
+            }
+
+            // Cambiar título del modal si es reprogramación
+            scheduleModal.addEventListener('show.bs.modal', function() {
+                const modalTitle = scheduleModal.querySelector('.modal-title');
+                const submitBtn = scheduleModal.querySelector('button[type="submit"]');
+
+                {% if change.status.name == 'SCHEDULED' %}
+                modalTitle.textContent = 'Reprogramar Cambio';
+                submitBtn.innerHTML = '<i class="fas fa-calendar-check me-2"></i>Reprogramar';
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-primary');
+                {% else %}
+                modalTitle.textContent = 'Programar Cambio';
+                submitBtn.innerHTML = '<i class="fas fa-calendar-check me-2"></i>Programar';
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-warning');
+                {% endif %}
+            });
+            {% else %}
+            // Si no está programado, establecer fecha por defecto como mañana
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            dateInput.value = tomorrow.toISOString().split('T')[0];
+            {% endif %}
+        }
+    });
+</script>
 {% endblock %}

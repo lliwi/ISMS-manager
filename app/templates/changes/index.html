@@ -293,6 +293,13 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     {% endif %}
+                                    {% if current_user.role.name == 'admin' %}
+                                    <button type="button" class="btn btn-outline-danger"
+                                            onclick="confirmDelete({{ change.id }}, '{{ change.change_code }}')"
+                                            title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -353,9 +360,38 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación de Eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                </div>
+                <p>¿Está seguro de que desea eliminar el cambio <strong id="deleteChangeCode"></strong>?</p>
+                <p class="text-muted mb-0">Se eliminarán todos los datos relacionados: aprobaciones, tareas, documentos, historial, etc.</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar Cambio
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script>
     // Auto-submit form on filter change
     document.querySelectorAll('#status, #category, #priority, #type').forEach(select => {
@@ -363,5 +399,13 @@
             this.form.submit();
         });
     });
+
+    // Función para confirmar eliminación
+    function confirmDelete(changeId, changeCode) {
+        document.getElementById('deleteChangeCode').textContent = changeCode;
+        document.getElementById('deleteForm').action = `/cambios/${changeId}/delete`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
 </script>
 {% endblock %}

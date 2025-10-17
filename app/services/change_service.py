@@ -342,7 +342,7 @@ class ChangeService:
     @staticmethod
     def schedule(change_id: int, start_date: datetime, end_date: datetime, current_user_id: int) -> Change:
         """
-        Programa la implementación del cambio
+        Programa o reprograma la implementación del cambio
 
         Args:
             change_id: ID del cambio
@@ -355,21 +355,27 @@ class ChangeService:
         """
         change = Change.query.get_or_404(change_id)
 
-        if change.status != ChangeStatus.APPROVED:
-            raise ValueError("Solo se pueden programar cambios aprobados")
+        # Permitir programar si está APPROVED o reprogramar si está SCHEDULED
+        if change.status not in [ChangeStatus.APPROVED, ChangeStatus.SCHEDULED]:
+            raise ValueError("Solo se pueden programar cambios aprobados o reprogramar cambios ya programados")
+
+        # Determinar si es reprogramación
+        is_reschedule = change.status == ChangeStatus.SCHEDULED
+        old_status = change.status.name
 
         change.scheduled_start_date = start_date
         change.scheduled_end_date = end_date
         change.status = ChangeStatus.SCHEDULED
         change.updated_at = datetime.utcnow()
 
+        action = 'reprogramado' if is_reschedule else 'programado'
         ChangeService._add_history(
             change.id,
-            'STATUS',
-            'APPROVED',
+            'SCHEDULE',
+            old_status,
             'SCHEDULED',
             current_user_id,
-            f'Cambio programado para {start_date.strftime("%Y-%m-%d %H:%M")}'
+            f'Cambio {action} para {start_date.strftime("%Y-%m-%d %H:%M")}'
         )
 
         db.session.commit()
