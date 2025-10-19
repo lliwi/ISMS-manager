@@ -179,6 +179,11 @@ class AuditProgram(db.Model):
         return f'<AuditProgram {self.year}: {self.title}>'
 
     @property
+    def audits_count(self):
+        """Retorna el número total de auditorías del programa"""
+        return self.audits.count()
+
+    @property
     def completion_rate(self):
         """Calcula el % de cumplimiento del programa"""
         total = self.audits.count()
@@ -295,10 +300,10 @@ class AuditRecord(db.Model):
 
     def update_findings_count(self):
         """Actualiza contadores de hallazgos"""
-        self.major_findings_count = self.findings.filter_by(finding_type=FindingType.MAJOR_NC).count()
-        self.minor_findings_count = self.findings.filter_by(finding_type=FindingType.MINOR_NC).count()
-        self.observations_count = self.findings.filter_by(finding_type=FindingType.OBSERVATION).count()
-        self.opportunities_count = self.findings.filter_by(finding_type=FindingType.OPPORTUNITY_IMPROVEMENT).count()
+        self.major_findings_count = len([f for f in self.findings if f.finding_type == FindingType.MAJOR_NC])
+        self.minor_findings_count = len([f for f in self.findings if f.finding_type == FindingType.MINOR_NC])
+        self.observations_count = len([f for f in self.findings if f.finding_type == FindingType.OBSERVATION])
+        self.opportunities_count = len([f for f in self.findings if f.finding_type == FindingType.OPPORTUNITY_IMPROVEMENT])
         self.total_findings = (self.major_findings_count + self.minor_findings_count +
                               self.observations_count + self.opportunities_count)
 
@@ -375,7 +380,7 @@ class AuditFinding(db.Model):
     created_by = db.relationship('User', foreign_keys=[created_by_id])
 
     # Relaciones
-    corrective_actions = db.relationship('CorrectiveAction', back_populates='finding', cascade='all, delete-orphan')
+    corrective_actions = db.relationship('AuditCorrectiveAction', back_populates='finding', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<AuditFinding {self.finding_code}>'
@@ -396,9 +401,9 @@ class AuditFinding(db.Model):
         return f"{audit_code.replace('AUD', 'HAL')}-{new_num:02d}"
 
 
-class CorrectiveAction(db.Model):
-    """Acciones correctivas de hallazgos"""
-    __tablename__ = 'corrective_actions'
+class AuditCorrectiveAction(db.Model):
+    """Acciones correctivas de hallazgos de auditoría"""
+    __tablename__ = 'audit_corrective_actions'
 
     id = db.Column(db.Integer, primary_key=True)
     action_code = db.Column(db.String(50), unique=True, nullable=False)
@@ -442,6 +447,12 @@ class CorrectiveAction(db.Model):
     progress_notes = db.Column(db.Text)
     blocking_issues = db.Column(db.Text)
 
+    # Planificación adicional
+    priority = db.Column(db.String(20))  # LOW, MEDIUM, HIGH, CRITICAL
+    expected_benefit = db.Column(db.Text)
+    success_criteria = db.Column(db.Text)
+    notes = db.Column(db.Text)
+
     # Auditoría
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -457,9 +468,9 @@ class CorrectiveAction(db.Model):
         now = datetime.utcnow()
         prefix = f"AC-{now.year}-"
 
-        last_action = CorrectiveAction.query.filter(
-            CorrectiveAction.action_code.like(f"{prefix}%")
-        ).order_by(CorrectiveAction.action_code.desc()).first()
+        last_action = AuditCorrectiveAction.query.filter(
+            AuditCorrectiveAction.action_code.like(f"{prefix}%")
+        ).order_by(AuditCorrectiveAction.action_code.desc()).first()
 
         if last_action:
             last_num = int(last_action.action_code.split('-')[-1])
@@ -642,6 +653,10 @@ class AuditSchedule(db.Model):
 
     def __repr__(self):
         return f'<AuditSchedule {self.area} - {self.frequency.value}>'
+
+
+# Alias para compatibilidad con servicios
+CorrectiveAction = AuditCorrectiveAction
 
 
 class AuditMetrics(db.Model):

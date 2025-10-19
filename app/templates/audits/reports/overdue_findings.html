@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Hallazgos Vencidos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-exclamation-triangle text-danger"></i> Hallazgos Vencidos</h2>
+            <p class="text-muted">Hallazgos que han superado su plazo de cierre</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Total: <span class="badge bg-danger">{{ findings|length }}</span></h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+        <div class="card-body">
+            {% if findings %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Auditoría</th>
+                            <th>Título</th>
+                            <th>Tipo</th>
+                            <th>Responsable</th>
+                            <th>Plazo</th>
+                            <th>Días Vencido</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for finding in findings %}
+                        <tr>
+                            <td><strong>{{ finding.finding_code }}</strong></td>
+                            <td>{{ finding.audit.audit_code }}</td>
+                            <td>{{ finding.title }}</td>
+                            <td>
+                                <span class="badge {% if finding.finding_type.name == 'MAJOR_NC' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ finding.finding_type.value }}
+                                </span>
+                            </td>
+                            <td>{{ finding.responsible.full_name if finding.responsible else 'N/A' }}</td>
+                            <td>{{ finding.closure_deadline.strftime('%d/%m/%Y') if finding.closure_deadline else 'N/A' }}</td>
+                            <td class="text-danger">
+                                <strong>{{ finding.days_overdue }}</strong>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('audits.finding_detail', id=finding.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted py-5">
+                <i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>
+                No hay hallazgos vencidos
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

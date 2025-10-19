@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+
+{% block title %}Hallazgo {{ finding.finding_code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabecera -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-search text-danger"></i>
+                {{ finding.finding_code }}
+            </h2>
+            <h5 class="text-muted">{{ finding.title }}</h5>
+        </div>
+        <div class="col-md-4 text-end">
+            <!-- Badges de estado y tipo -->
+            {% if finding.finding_type.name == 'MAJOR_NC' %}
+                <span class="badge bg-danger badge-lg me-2">NC Mayor</span>
+            {% elif finding.finding_type.name == 'MINOR_NC' %}
+                <span class="badge bg-warning badge-lg me-2">NC Menor</span>
+            {% elif finding.finding_type.name == 'OBSERVATION' %}
+                <span class="badge bg-info badge-lg me-2">Observación</span>
+            {% else %}
+                <span class="badge bg-success badge-lg me-2">Oportunidad</span>
+            {% endif %}
+
+            {% if finding.status.name == 'OPEN' %}
+                <span class="badge bg-secondary badge-lg">Abierto</span>
+            {% elif finding.status.name == 'IN_TREATMENT' %}
+                <span class="badge bg-primary badge-lg">En Tratamiento</span>
+            {% elif finding.status.name == 'RESOLVED' %}
+                <span class="badge bg-info badge-lg">Resuelto</span>
+            {% elif finding.status.name == 'CLOSED' %}
+                <span class="badge bg-success badge-lg">Cerrado</span>
+            {% endif %}
+
+            {% if finding.is_recurrent %}
+                <span class="badge bg-warning badge-lg ms-2">
+                    <i class="fas fa-redo"></i> Recurrente
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('audits.audit_detail', id=finding.audit.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Auditoría
+                </a>
+                {% if finding.status.name != 'CLOSED' %}
+                <a href="{{ url_for('audits.finding_edit', id=finding.id) }}" class="btn btn-outline-warning">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                {% endif %}
+            </div>
+
+            {% if finding.status.name != 'CLOSED' %}
+            <div class="btn-group me-2">
+                <a href="{{ url_for('audits.action_create', id=finding.id) }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nueva Acción Correctiva
+                </a>
+            </div>
+            {% endif %}
+
+            {% if finding.status.name == 'RESOLVED' %}
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#closeModal">
+                <i class="fas fa-check-circle"></i> Cerrar Hallazgo
+            </button>
+            {% endif %}
+
+            {% if finding.status.name == 'CLOSED' %}
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reopenModal">
+                <i class="fas fa-redo"></i> Reabrir Hallazgo
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alerta de Vencimiento -->
+    {% if finding.is_overdue and finding.status.name not in ['RESOLVED', 'CLOSED'] %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Hallazgo Vencido!</strong>
+        El plazo de cierre era {{ finding.closure_deadline.strftime('%d/%m/%Y') }}.
+        Se requiere acción inmediata.
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-md-8">
+            <!-- Información del Hallazgo -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información del Hallazgo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Código:</strong> {{ finding.finding_code }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Número:</strong> #{{ finding.finding_number }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Auditoría:</strong>
+                            <a href="{{ url_for('audits.audit_detail', id=finding.audit.id) }}">
+                                {{ finding.audit.audit_code }}
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha de Detección:</strong>
+                            {{ finding.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Descripción</h6>
+                    <p class="text-justify">{{ finding.description }}</p>
+
+                    <hr>
+
+                    <h6>Evidencia</h6>
+                    <p class="text-justify">{{ finding.evidence }}</p>
+
+                    {% if finding.root_cause %}
+                    <hr>
+                    <h6>Análisis de Causa Raíz</h6>
+                    <div class="alert alert-light">
+                        <p class="mb-0">{{ finding.root_cause }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.requirement %}
+                    <hr>
+                    <h6>Requisito No Cumplido</h6>
+                    <p>{{ finding.requirement }}</p>
+                    {% endif %}
+
+                    {% if finding.affected_control %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Control ISO 27001 Afectado:</strong>
+                            <span class="badge bg-primary">{{ finding.affected_control }}</span>
+                        </div>
+                        {% if finding.affected_area %}
+                        <div class="col-md-6">
+                            <strong>Área Afectada:</strong> {{ finding.affected_area }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Correctivas -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> Acciones Correctivas
+                        <span class="badge bg-primary">{{ finding.corrective_actions|length }}</span>
+                    </h5>
+                    {% if finding.status.name not in ['CLOSED'] %}
+                    <a href="{{ url_for('audits.action_create', id=finding.id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> Nueva Acción
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if finding.corrective_actions|length > 0 %}
+                    <div class="list-group">
+                        {% for action in finding.corrective_actions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <a href="{{ url_for('audits.action_detail', id=action.id) }}">
+                                            {{ action.action_code }}
+                                        </a>
+                                    </h6>
+                                    <p class="mb-2">{{ action.description }}</p>
+
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Responsable:</small><br>
+                                            {{ action.responsible.full_name if action.responsible else 'N/A' }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Plazo:</small><br>
+                                            {{ action.planned_completion_date.strftime('%d/%m/%Y') if action.planned_completion_date else 'N/A' }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Progreso:</small><br>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar
+                                                    {% if action.progress_percentage >= 100 %}bg-success
+                                                    {% elif action.progress_percentage >= 50 %}bg-info
+                                                    {% else %}bg-warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ action.progress_percentage }}%">
+                                                    {{ action.progress_percentage }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ms-3">
+                                    {% if action.status.name == 'PLANNED' %}
+                                        <span class="badge bg-secondary">Planificada</span>
+                                    {% elif action.status.name == 'IN_PROGRESS' %}
+                                        <span class="badge bg-primary">En Progreso</span>
+                                    {% elif action.status.name == 'COMPLETED' %}
+                                        <span class="badge bg-info">Completada</span>
+                                    {% elif action.status.name == 'VERIFIED' %}
+                                        {% if action.effectiveness_verified %}
+                                            <span class="badge bg-success">Verificada Efectiva</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Verificada Inefectiva</span>
+                                        {% endif %}
+                                    {% elif action.status.name == 'REJECTED' %}
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    {% elif action.status.name == 'CANCELLED' %}
+                                        <span class="badge bg-dark">Cancelada</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">
+                        No hay acciones correctivas definidas para este hallazgo.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historial -->
+            {% if finding.closure_notes or finding.reopening_reason %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Historial</h5>
+                </div>
+                <div class="card-body">
+                    {% if finding.closure_notes %}
+                    <div class="mb-3">
+                        <strong>Notas de Cierre:</strong>
+                        <p>{{ finding.closure_notes }}</p>
+                        <small class="text-muted">
+                            Cerrado por {{ finding.closed_by.full_name if finding.closed_by else 'N/A' }}
+                            el {{ finding.closure_date.strftime('%d/%m/%Y %H:%M') if finding.closure_date else 'N/A' }}
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.reopening_reason %}
+                    <div>
+                        <strong>Razón de Reapertura:</strong>
+                        <p>{{ finding.reopening_reason }}</p>
+                        <small class="text-muted">
+                            Reabierto por {{ finding.reopened_by.full_name if finding.reopened_by else 'N/A' }}
+                            el {{ finding.reopening_date.strftime('%d/%m/%Y %H:%M') if finding.reopening_date else 'N/A' }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Información Clave -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-user"></i> Responsabilidad</h6>
+                </div>
+                <div class="card-body">
+                    <strong>Responsable:</strong><br>
+                    {{ finding.responsible.full_name if finding.responsible else 'No asignado' }}
+
+                    {% if finding.responsible_contact %}
+                    <br><small class="text-muted">{{ finding.responsible_contact }}</small>
+                    {% endif %}
+
+                    <hr>
+
+                    <strong>Registrado por:</strong><br>
+                    {{ finding.created_by.full_name if finding.created_by else 'N/A' }}<br>
+                    <small class="text-muted">{{ finding.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                </div>
+            </div>
+
+            <!-- Plazos -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-calendar-alt"></i> Plazos</h6>
+                </div>
+                <div class="card-body">
+                    <strong>Plazo de Cierre:</strong><br>
+                    {% if finding.closure_deadline %}
+                        {{ finding.closure_deadline.strftime('%d/%m/%Y') }}
+                        {% if finding.is_overdue and finding.status.name not in ['RESOLVED', 'CLOSED'] %}
+                            <br><span class="badge bg-danger">Vencido</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">No establecido</span>
+                    {% endif %}
+
+                    <hr>
+
+                    {% if finding.closure_date %}
+                    <strong>Fecha de Cierre:</strong><br>
+                    {{ finding.closure_date.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Evaluación de Riesgo -->
+            {% if finding.impact or finding.likelihood %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Evaluación de Riesgo</h6>
+                </div>
+                <div class="card-body">
+                    {% if finding.impact %}
+                    <strong>Impacto:</strong>
+                    <span class="badge bg-{% if finding.impact in ['HIGH', 'VERY_HIGH'] %}danger{% elif finding.impact == 'MEDIUM' %}warning{% else %}info{% endif %}">
+                        {{ finding.impact }}
+                    </span>
+                    <br><br>
+                    {% endif %}
+
+                    {% if finding.likelihood %}
+                    <strong>Probabilidad:</strong>
+                    <span class="badge bg-{% if finding.likelihood in ['HIGH', 'VERY_HIGH'] %}danger{% elif finding.likelihood == 'MEDIUM' %}warning{% else %}info{% endif %}">
+                        {{ finding.likelihood }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Guía -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Próximos Pasos</h6>
+                </div>
+                <div class="card-body">
+                    {% if finding.status.name == 'OPEN' %}
+                    <ol class="small mb-0">
+                        <li>Definir acciones correctivas</li>
+                        <li>Asignar responsables</li>
+                        <li>Implementar acciones</li>
+                        <li>Verificar efectividad</li>
+                        <li>Cerrar hallazgo</li>
+                    </ol>
+                    {% elif finding.status.name == 'IN_TREATMENT' %}
+                    <p class="small mb-0">
+                        Seguimiento de implementación de acciones correctivas en curso.
+                    </p>
+                    {% elif finding.status.name == 'RESOLVED' %}
+                    <p class="small mb-0">
+                        Todas las acciones han sido completadas. Proceda a cerrar el hallazgo.
+                    </p>
+                    {% elif finding.status.name == 'CLOSED' %}
+                    <p class="small mb-0 text-success">
+                        <i class="fas fa-check-circle"></i> Hallazgo cerrado exitosamente.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cerrar Hallazgo -->
+<div class="modal fade" id="closeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle"></i> Cerrar Hallazgo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.finding_close', id=finding.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>¿Está seguro de cerrar el hallazgo <strong>{{ finding.finding_code }}</strong>?</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notas de Cierre</label>
+                        <textarea name="closure_notes" class="form-control" rows="3" required
+                                  placeholder="Describa el resultado del tratamiento y las acciones tomadas"></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Una vez cerrado, el hallazgo solo podrá reabrirse con justificación documentada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Cerrar Hallazgo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reabrir Hallazgo -->
+<div class="modal fade" id="reopenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-redo"></i> Reabrir Hallazgo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.finding_reopen', id=finding.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>¿Está seguro de reabrir el hallazgo <strong>{{ finding.finding_code }}</strong>?</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Razón de Reapertura</label>
+                        <textarea name="reason" class="form-control" rows="3" required
+                                  placeholder="Explique por qué es necesario reabrir este hallazgo"></textarea>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Reapertura de hallazgos indica que las acciones correctivas no fueron efectivas.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-redo"></i> Reabrir Hallazgo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-lg {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    .text-justify {
+        text-align: justify;
+    }
+</style>
+{% endblock %}

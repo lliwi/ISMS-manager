@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+
+{% block title %}Acción Correctiva {{ action.action_code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabecera -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-tasks text-primary"></i>
+                {{ action.action_code }}
+            </h2>
+            <p class="text-muted">{{ action.description[:100] }}...</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <!-- Estado -->
+            {% if action.status.name == 'PLANNED' %}
+                <span class="badge bg-secondary badge-lg">Planificada</span>
+            {% elif action.status.name == 'IN_PROGRESS' %}
+                <span class="badge bg-primary badge-lg">En Progreso</span>
+            {% elif action.status.name == 'COMPLETED' %}
+                <span class="badge bg-info badge-lg">Completada</span>
+            {% elif action.status.name == 'VERIFIED' %}
+                {% if action.effectiveness_verified %}
+                    <span class="badge bg-success badge-lg">
+                        <i class="fas fa-check-circle"></i> Verificada Efectiva
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger badge-lg">
+                        <i class="fas fa-times-circle"></i> Verificada Inefectiva
+                    </span>
+                {% endif %}
+            {% elif action.status.name == 'REJECTED' %}
+                <span class="badge bg-danger badge-lg">Rechazada</span>
+            {% elif action.status.name == 'CANCELLED' %}
+                <span class="badge bg-dark badge-lg">Cancelada</span>
+            {% endif %}
+
+            <!-- Prioridad -->
+            {% if action.priority %}
+            <span class="badge
+                {% if action.priority == 'CRITICAL' %}bg-danger
+                {% elif action.priority == 'HIGH' %}bg-warning
+                {% elif action.priority == 'MEDIUM' %}bg-info
+                {% else %}bg-secondary{% endif %} badge-lg ms-2">
+                {{ action.priority }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="btn-group me-2">
+                <a href="{{ url_for('audits.finding_detail', id=action.finding.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Hallazgo
+                </a>
+                {% if action.status.name not in ['COMPLETED', 'VERIFIED'] %}
+                <a href="{{ url_for('audits.action_edit', id=action.id) }}" class="btn btn-outline-warning">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                {% endif %}
+            </div>
+
+            {% if action.status.name in ['PLANNED', 'IN_PROGRESS'] %}
+            <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#progressModal">
+                <i class="fas fa-percentage"></i> Actualizar Progreso
+            </button>
+            {% endif %}
+
+            {% if action.status.name == 'IN_PROGRESS' and action.progress_percentage == 100 %}
+            <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#completeModal">
+                <i class="fas fa-check"></i> Completar Acción
+            </button>
+            {% endif %}
+
+            {% if action.status.name == 'COMPLETED' and action.can_verify_effectiveness %}
+            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                <i class="fas fa-clipboard-check"></i> Verificar Efectividad
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alerta si está vencida -->
+    {% if action.is_overdue and action.status.name not in ['COMPLETED', 'VERIFIED'] %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Acción Vencida!</strong>
+        El plazo de finalización era {{ action.planned_completion_date.strftime('%d/%m/%Y') }}.
+    </div>
+    {% endif %}
+
+    <!-- Alerta de verificación pendiente -->
+    {% if action.status.name == 'COMPLETED' and not action.can_verify_effectiveness %}
+    <div class="alert alert-info">
+        <i class="fas fa-clock"></i>
+        La verificación de efectividad estará disponible después del
+        {{ (action.actual_completion_date + timedelta(days=90)).strftime('%d/%m/%Y') if action.actual_completion_date else 'N/A' }}
+        (3 meses post-implementación)
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-md-8">
+            <!-- Información Principal -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información de la Acción</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Código:</strong> {{ action.action_code }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Tipo:</strong>
+                            <span class="badge bg-primary">{{ action.action_type.value if action.action_type else 'N/A' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Hallazgo Relacionado:</strong><br>
+                            <a href="{{ url_for('audits.finding_detail', id=action.finding.id) }}">
+                                {{ action.finding.finding_code }}
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Auditoría:</strong><br>
+                            <a href="{{ url_for('audits.audit_detail', id=action.finding.audit.id) }}">
+                                {{ action.finding.audit.audit_code }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Descripción</h6>
+                    <p>{{ action.description }}</p>
+
+                    {% if action.expected_benefit %}
+                    <hr>
+                    <h6>Beneficio Esperado</h6>
+                    <p>{{ action.expected_benefit }}</p>
+                    {% endif %}
+
+                    {% if action.success_criteria %}
+                    <hr>
+                    <h6>Criterios de Éxito</h6>
+                    <p>{{ action.success_criteria }}</p>
+                    {% endif %}
+
+                    {% if action.resources_required %}
+                    <hr>
+                    <h6>Recursos Necesarios</h6>
+                    <p>{{ action.resources_required }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progreso -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Progreso de Implementación</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progreso General</span>
+                            <strong>{{ action.progress_percentage }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar
+                                {% if action.progress_percentage >= 100 %}bg-success
+                                {% elif action.progress_percentage >= 75 %}bg-info
+                                {% elif action.progress_percentage >= 50 %}bg-primary
+                                {% elif action.progress_percentage >= 25 %}bg-warning
+                                {% else %}bg-danger{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ action.progress_percentage }}%">
+                                {{ action.progress_percentage }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if action.progress_notes %}
+                    <hr>
+                    <h6>Notas de Progreso</h6>
+                    <div class="alert alert-light">
+                        <pre class="mb-0" style="white-space: pre-wrap;">{{ action.progress_notes }}</pre>
+                    </div>
+                    {% endif %}
+
+                    {% if action.last_progress_update %}
+                    <small class="text-muted">
+                        Última actualización: {{ action.last_progress_update.strftime('%d/%m/%Y %H:%M') }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verificación de Efectividad -->
+            {% if action.status.name == 'VERIFIED' %}
+            <div class="card mb-4">
+                <div class="card-header {% if action.effectiveness_verified %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas {% if action.effectiveness_verified %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                        Verificación de Efectividad
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Resultado:</strong>
+                            {% if action.effectiveness_verified %}
+                                <span class="badge bg-success">Efectiva</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inefectiva</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha de Verificación:</strong>
+                            {{ action.verification_date.strftime('%d/%m/%Y') if action.verification_date else 'N/A' }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Verificado por:</strong>
+                            {{ action.verified_by.full_name if action.verified_by else 'N/A' }}
+                        </div>
+                    </div>
+
+                    {% if action.verification_notes %}
+                    <hr>
+                    <h6>Notas de Verificación</h6>
+                    <p>{{ action.verification_notes }}</p>
+                    {% endif %}
+
+                    {% if not action.effectiveness_verified %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Acción Inefectiva:</strong> Se requiere definir nuevas acciones correctivas.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notas -->
+            {% if action.notes %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Notas Adicionales</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ action.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Responsabilidad -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-users"></i> Responsabilidad</h6>
+                </div>
+                <div class="card-body">
+                    <strong>Responsable:</strong><br>
+                    {{ action.responsible.full_name if action.responsible else 'No asignado' }}
+                    <hr>
+                    <strong>Verificador:</strong><br>
+                    {{ action.verifier.full_name if action.verifier else 'No asignado' }}
+                    <hr>
+                    <strong>Creado por:</strong><br>
+                    {{ action.created_by.full_name if action.created_by else 'N/A' }}<br>
+                    <small class="text-muted">{{ action.created_at.strftime('%d/%m/%Y %H:%M') if action.created_at else 'N/A' }}</small>
+                </div>
+            </div>
+
+            <!-- Plazos -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-calendar-alt"></i> Plazos</h6>
+                </div>
+                <div class="card-body">
+                    <strong>Fecha Planificada:</strong><br>
+                    {{ action.planned_completion_date.strftime('%d/%m/%Y') if action.planned_completion_date else 'N/A' }}
+                    {% if action.is_overdue and action.status.name not in ['COMPLETED', 'VERIFIED'] %}
+                        <br><span class="badge bg-danger">Vencida</span>
+                    {% endif %}
+
+                    {% if action.actual_completion_date %}
+                    <hr>
+                    <strong>Fecha de Finalización:</strong><br>
+                    {{ action.actual_completion_date.strftime('%d/%m/%Y') }}
+
+                    {% if action.actual_completion_date > action.planned_completion_date %}
+                        <br><small class="text-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Completada con retraso
+                        </small>
+                    {% elif action.actual_completion_date <= action.planned_completion_date %}
+                        <br><small class="text-success">
+                            <i class="fas fa-check"></i>
+                            Completada en plazo
+                        </small>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Costos -->
+            {% if action.estimated_cost or action.actual_cost %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-euro-sign"></i> Costos</h6>
+                </div>
+                <div class="card-body">
+                    {% if action.estimated_cost %}
+                    <strong>Costo Estimado:</strong><br>
+                    {{ action.estimated_cost|round(2) }} €
+                    {% endif %}
+
+                    {% if action.actual_cost %}
+                    <hr>
+                    <strong>Costo Real:</strong><br>
+                    {{ action.actual_cost|round(2) }} €
+
+                    {% if action.estimated_cost %}
+                        {% set variance = ((action.actual_cost - action.estimated_cost) / action.estimated_cost * 100) %}
+                        <br><small class="{% if variance > 10 %}text-danger{% elif variance < -10 %}text-success{% else %}text-muted{% endif %}">
+                            {% if variance > 0 %}+{% endif %}{{ variance|round(1) }}% vs estimado
+                        </small>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Estado de Seguimiento -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-tasks"></i> Estado</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle {% if action.responsible_id %}text-success{% else %}text-muted{% endif %}"></i>
+                            Responsable asignado
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle {% if action.verifier_id %}text-success{% else %}text-muted{% endif %}"></i>
+                            Verificador asignado
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle {% if action.progress_percentage > 0 %}text-success{% else %}text-muted{% endif %}"></i>
+                            En implementación
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle {% if action.status.name in ['COMPLETED', 'VERIFIED'] %}text-success{% else %}text-muted{% endif %}"></i>
+                            Completada
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle {% if action.status.name == 'VERIFIED' %}text-success{% else %}text-muted{% endif %}"></i>
+                            Verificada
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Actualizar Progreso -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-percentage"></i> Actualizar Progreso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.action_update_progress', id=action.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Progreso (%)</label>
+                        <input type="range" class="form-range" name="progress" min="0" max="100" step="5"
+                               value="{{ action.progress_percentage }}" id="progressRange"
+                               oninput="document.getElementById('progressValue').textContent = this.value + '%'">
+                        <div class="text-center">
+                            <h3 id="progressValue">{{ action.progress_percentage }}%</h3>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notas de Progreso</label>
+                        <textarea name="notes" class="form-control" rows="3" required
+                                  placeholder="Describa el avance realizado y cualquier novedad"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Completar Acción -->
+<div class="modal fade" id="completeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check"></i> Completar Acción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.action_complete', id=action.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>Confirme la finalización de la acción correctiva <strong>{{ action.action_code }}</strong>.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notas de Finalización</label>
+                        <textarea name="completion_notes" class="form-control" rows="3" required
+                                  placeholder="Resumen de implementación y resultados obtenidos"></textarea>
+                    </div>
+
+                    {% if action.estimated_cost %}
+                    <div class="mb-3">
+                        <label class="form-label">Costo Real (€)</label>
+                        <input type="number" name="actual_cost" class="form-control" step="0.01" min="0"
+                               value="{{ action.estimated_cost }}" placeholder="0.00">
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        La efectividad se podrá verificar 3 meses después de la finalización.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Completar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Verificar Efectividad -->
+<div class="modal fade" id="verifyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-clipboard-check"></i> Verificar Efectividad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.action_verify', id=action.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <p>Verifique si la acción ha sido efectiva para resolver el hallazgo.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Resultado de la Verificación</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_effective" value="true" id="effective" required>
+                            <label class="form-check-label text-success" for="effective">
+                                <i class="fas fa-check-circle"></i> Efectiva - El hallazgo ha sido resuelto
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_effective" value="false" id="ineffective" required>
+                            <label class="form-check-label text-danger" for="ineffective">
+                                <i class="fas fa-times-circle"></i> Inefectiva - El hallazgo persiste
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notas de Verificación</label>
+                        <textarea name="verification_notes" class="form-control" rows="4" required
+                                  placeholder="Describa los resultados de la verificación y las evidencias consideradas"></textarea>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Importante:</strong> Si la acción es inefectiva, se deberán definir nuevas acciones correctivas.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-clipboard-check"></i> Verificar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar valor del slider de progreso
+    const progressRange = document.getElementById('progressRange');
+    const progressValue = document.getElementById('progressValue');
+
+    if (progressRange && progressValue) {
+        // Evento 'input' para actualización en tiempo real
+        progressRange.addEventListener('input', function() {
+            progressValue.textContent = this.value + '%';
+        });
+
+        // También 'change' por compatibilidad
+        progressRange.addEventListener('change', function() {
+            progressValue.textContent = this.value + '%';
+        });
+    }
+
+    // Asegurarse de que funciona cuando se abre el modal
+    const progressModal = document.getElementById('progressModal');
+    if (progressModal) {
+        progressModal.addEventListener('shown.bs.modal', function () {
+            const range = document.getElementById('progressRange');
+            const value = document.getElementById('progressValue');
+            if (range && value) {
+                // Actualizar valor inicial
+                value.textContent = range.value + '%';
+
+                // Re-añadir listeners por si acaso
+                range.addEventListener('input', function() {
+                    value.textContent = this.value + '%';
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-lg {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    pre {
+        font-family: inherit;
+        font-size: inherit;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}{% if action %}Editar{% else %}Nueva{% endif %} Acción Correctiva{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabecera -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>
+                <i class="fas {% if action %}fa-edit{% else %}fa-plus{% endif %} text-primary"></i>
+                {% if action %}Editar Acción Correctiva{% else %}Nueva Acción Correctiva{% endif %}
+            </h2>
+            <p class="text-muted">
+                Hallazgo: {{ finding.finding_code }} - {{ finding.title }}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-9">
+            <!-- Formulario -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Plan de Acción Correctiva</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="actionForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <!-- Tipo de Acción -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Tipo de Acción</label>
+                                <select name="action_type" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="IMMEDIATE"
+                                        {% if action and action.action_type.name == 'IMMEDIATE' %}selected{% endif %}>
+                                        Acción Inmediata
+                                    </option>
+                                    <option value="CORRECTIVE"
+                                        {% if action and action.action_type.name == 'CORRECTIVE' %}selected{% endif %}>
+                                        Acción Correctiva
+                                    </option>
+                                    <option value="PREVENTIVE"
+                                        {% if action and action.action_type.name == 'PREVENTIVE' %}selected{% endif %}>
+                                        Acción Preventiva
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label required">Prioridad</label>
+                                <select name="priority" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="LOW" {% if action and action.priority == 'LOW' %}selected{% endif %}>
+                                        Baja
+                                    </option>
+                                    <option value="MEDIUM" {% if action and action.priority == 'MEDIUM' %}selected{% endif %}>
+                                        Media
+                                    </option>
+                                    <option value="HIGH" {% if action and action.priority == 'HIGH' %}selected{% endif %}>
+                                        Alta
+                                    </option>
+                                    <option value="CRITICAL" {% if action and action.priority == 'CRITICAL' %}selected{% endif %}>
+                                        Crítica
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label class="form-label required">Descripción de la Acción</label>
+                            <textarea name="description" class="form-control" rows="4" required
+                                      placeholder="Describa claramente qué acciones se tomarán para resolver el hallazgo">{{ action.description if action else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                Sea específico: ¿Qué se hará? ¿Cómo? ¿Dónde?
+                            </small>
+                        </div>
+
+                        <!-- Responsable y Verificador -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Responsable de Implementación</label>
+                                <select name="responsible_id" class="form-select" required id="responsibleSelect">
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}"
+                                        {% if action and action.responsible_id == user.id %}selected{% endif %}>
+                                        {{ user.full_name or user.username }}
+                                        {% if user.department %} - {{ user.department }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    Persona que ejecutará la acción
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label required">Verificador de Efectividad</label>
+                                <select name="verifier_id" class="form-select" required id="verifierSelect">
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}"
+                                        {% if action and action.verifier_id == user.id %}selected{% endif %}>
+                                        {{ user.full_name or user.username }}
+                                        {% if user.department %} - {{ user.department }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    Debe ser diferente del responsable
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Plazos -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Fecha de Finalización Planificada</label>
+                                <input type="date" name="planned_completion_date" class="form-control" required
+                                       value="{{ action.planned_completion_date.strftime('%Y-%m-%d') if action and action.planned_completion_date else '' }}"
+                                       min="{{ min_date }}">
+                                <small class="form-text text-muted">
+                                    Fecha objetivo para completar la acción
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Recursos Necesarios</label>
+                                <input type="text" name="resources_required" class="form-control"
+                                       value="{{ action.resources_required if action else '' }}"
+                                       placeholder="Personal, presupuesto, herramientas...">
+                            </div>
+                        </div>
+
+                        <!-- Costos -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Costo Estimado (€)</label>
+                                <input type="number" name="estimated_cost" class="form-control" step="0.01" min="0"
+                                       value="{{ action.estimated_cost if action else '' }}"
+                                       placeholder="0.00">
+                                <small class="form-text text-muted">
+                                    Costo aproximado de implementación
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Beneficio Esperado</label>
+                                <textarea name="expected_benefit" class="form-control" rows="2"
+                                          placeholder="Beneficios tangibles e intangibles esperados">{{ action.expected_benefit if action else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores de Éxito -->
+                        <div class="mb-3">
+                            <label class="form-label">Indicadores de Éxito</label>
+                            <textarea name="success_criteria" class="form-control" rows="2"
+                                      placeholder="¿Cómo se medirá la efectividad de esta acción?">{{ action.success_criteria if action else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                Defina KPIs o criterios objetivos para validar el éxito
+                            </small>
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="mb-3">
+                            <label class="form-label">Notas Adicionales</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="Información adicional relevante">{{ action.notes if action else '' }}</textarea>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('audits.finding_detail', id=finding.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {% if action %}Actualizar{% else %}Crear{% endif %} Acción
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-3">
+            <!-- Información del Hallazgo -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0">
+                        <i class="fas fa-search"></i> Hallazgo Asociado
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>{{ finding.finding_code }}</strong>
+                    </p>
+                    <p class="small mb-2">{{ finding.title }}</p>
+                    <span class="badge
+                        {% if finding.finding_type.name == 'MAJOR_NC' %}bg-danger
+                        {% elif finding.finding_type.name == 'MINOR_NC' %}bg-warning
+                        {% else %}bg-info{% endif %}">
+                        {{ finding.finding_type.value }}
+                    </span>
+                    <hr>
+                    <small class="text-muted">
+                        <strong>Plazo hallazgo:</strong><br>
+                        {{ finding.closure_deadline.strftime('%d/%m/%Y') if finding.closure_deadline else 'N/A' }}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Guía -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb"></i> Guía de Tipos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="small">Acción Inmediata</h6>
+                    <p class="small text-muted">
+                        Acción rápida para mitigar el problema de forma temporal mientras se implementa una solución permanente.
+                    </p>
+
+                    <h6 class="small mt-2">Acción Correctiva</h6>
+                    <p class="small text-muted">
+                        Acción para eliminar la causa del hallazgo y evitar que vuelva a ocurrir.
+                    </p>
+
+                    <h6 class="small mt-2">Acción Preventiva</h6>
+                    <p class="small text-muted">
+                        Acción para prevenir la ocurrencia de problemas similares en otras áreas o procesos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- ISO 27001 -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-book"></i> ISO 27001
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Cláusula 10.1</strong></p>
+                    <p class="small mb-2">Acción Correctiva</p>
+                    <hr>
+                    <p class="small mb-0">
+                        Las acciones deben ser:
+                    </p>
+                    <ul class="small mb-0">
+                        <li>Apropiadas a los efectos</li>
+                        <li>Efectivas</li>
+                        <li>Verificadas</li>
+                        <li>Documentadas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const responsibleSelect = document.getElementById('responsibleSelect');
+    const verifierSelect = document.getElementById('verifierSelect');
+    const form = document.getElementById('actionForm');
+
+    // Validar que responsable y verificador sean diferentes
+    form.addEventListener('submit', function(e) {
+        const responsibleId = responsibleSelect.value;
+        const verifierId = verifierSelect.value;
+
+        if (responsibleId && verifierId && responsibleId === verifierId) {
+            e.preventDefault();
+            alert('El verificador debe ser diferente del responsable de implementación');
+            verifierSelect.focus();
+            return false;
+        }
+    });
+
+    // Advertencia si se selecciona el mismo usuario
+    function checkDuplicateUsers() {
+        const responsibleId = responsibleSelect.value;
+        const verifierId = verifierSelect.value;
+
+        if (responsibleId && verifierId && responsibleId === verifierId) {
+            verifierSelect.classList.add('is-invalid');
+        } else {
+            verifierSelect.classList.remove('is-invalid');
+        }
+    }
+
+    responsibleSelect.addEventListener('change', checkDuplicateUsers);
+    verifierSelect.addEventListener('change', checkDuplicateUsers);
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .required::after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}

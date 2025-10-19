@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Efectividad de Acciones{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-chart-line text-success"></i> Efectividad de Acciones Correctivas</h2>
+            <p class="text-muted">Análisis de efectividad de acciones verificadas</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="text-success">{{ effectiveness_rate }}%</h2>
+                    <p class="text-muted">Tasa de Efectividad</p>
+                    <small class="text-muted">Meta: ≥ 90%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="text-primary">{{ actions|selectattr('effectiveness_verified')|list|length }}</h2>
+                    <p class="text-muted">Acciones Efectivas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="text-danger">{{ actions|rejectattr('effectiveness_verified')|list|length }}</h2>
+                    <p class="text-muted">Acciones Inefectivas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Acciones Verificadas: <span class="badge bg-primary">{{ actions|length }}</span></h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+        <div class="card-body">
+            {% if actions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Hallazgo</th>
+                            <th>Descripción</th>
+                            <th>Resultado</th>
+                            <th>Verificador</th>
+                            <th>Fecha Verificación</th>
+                            <th>Ver</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for action in actions %}
+                        <tr>
+                            <td><strong>{{ action.action_code }}</strong></td>
+                            <td>{{ action.finding.finding_code }}</td>
+                            <td>{{ action.description[:50] }}...</td>
+                            <td>
+                                {% if action.effectiveness_verified %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Efectiva
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle"></i> Inefectiva
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ action.verified_by.full_name if action.verified_by else 'N/A' }}</td>
+                            <td>{{ action.verification_date.strftime('%d/%m/%Y') if action.verification_date else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for('audits.action_detail', id=action.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted py-5">
+                <i class="fas fa-info-circle fa-3x mb-3"></i><br>
+                No hay acciones verificadas todavía
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

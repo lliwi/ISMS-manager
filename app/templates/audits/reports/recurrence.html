@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Análisis de Recurrencia{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-redo text-warning"></i> Análisis de Recurrencia de Hallazgos</h2>
+            <p class="text-muted">Hallazgos que se repiten en diferentes auditorías</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">
+                Hallazgos Recurrentes: <span class="badge bg-warning">{{ analysis.recurrent_count }}</span>
+                <span class="text-muted">/ {{ analysis.total_findings }}</span>
+            </h5>
+            <div>
+                <span class="me-3">Tasa de Recurrencia: <strong>{{ analysis.recurrence_rate|round(1) }}%</strong></span>
+                <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if analysis.recurrent_findings %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Control ISO 27001</th>
+                            <th>Última Ocurrencia</th>
+                            <th>Veces Repetido</th>
+                            <th>Auditorías Afectadas</th>
+                            <th>Última Auditoría</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in analysis.recurrent_findings %}
+                        <tr class="table-warning">
+                            <td><strong>{{ item.affected_control }}</strong></td>
+                            <td>{{ item.latest_finding.finding_code }}</td>
+                            <td><span class="badge bg-danger">{{ item.occurrences }}</span></td>
+                            <td>
+                                {% for finding in item.findings %}
+                                    {{ finding.audit.audit_code }}<br>
+                                {% endfor %}
+                            </td>
+                            <td>{{ item.latest_finding.audit.audit_code }}</td>
+                            <td>
+                                {% if item.latest_finding.status.name == 'CLOSED' %}
+                                    <span class="badge bg-success">Cerrado</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Abierto</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('audits.finding_detail', id=item.latest_finding.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-warning mt-4">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Atención:</strong> Los hallazgos recurrentes indican que las acciones correctivas
+                implementadas no están siendo efectivas o que se están presentando problemas sistémicos.
+                Se recomienda realizar un análisis de causa raíz más profundo.
+            </div>
+            {% else %}
+            <p class="text-center text-muted py-5">
+                <i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>
+                No se han detectado hallazgos recurrentes
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+{% block title %}{{ audit.audit_code }} - Detalle de Auditoría{% endblock %}
+
+{% block extra_head %}
+<style>
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid #0d6efd;
+        font-weight: 600;
+    }
+    .status-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .status-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .status-item {
+        position: relative;
+        padding-bottom: 20px;
+    }
+    .status-item::before {
+        content: '';
+        position: absolute;
+        left: -23px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6c757d;
+        border: 2px solid #fff;
+    }
+    .status-item.active::before {
+        background: #0d6efd;
+    }
+    .status-item.completed::before {
+        background: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-clipboard-check me-2"></i>
+                {{ audit.audit_code }}
+            </h2>
+            <p class="text-muted mb-2">{{ audit.title }}</p>
+            <div>
+                {% if audit.status.name == 'PLANNED' %}
+                <span class="badge bg-secondary">Planificada</span>
+                {% elif audit.status.name == 'NOTIFIED' %}
+                <span class="badge bg-info">Notificada</span>
+                {% elif audit.status.name == 'PREPARATION' %}
+                <span class="badge bg-primary">En Preparación</span>
+                {% elif audit.status.name == 'IN_PROGRESS' %}
+                <span class="badge bg-warning">En Progreso</span>
+                {% elif audit.status.name == 'REPORTING' %}
+                <span class="badge bg-warning">Elaborando Informe</span>
+                {% elif audit.status.name == 'COMPLETED' %}
+                <span class="badge bg-success">Completada</span>
+                {% elif audit.status.name == 'CLOSED' %}
+                <span class="badge bg-dark">Cerrada</span>
+                {% elif audit.status.name == 'CANCELLED' %}
+                <span class="badge bg-danger">Cancelada</span>
+                {% endif %}
+
+                <span class="badge bg-light text-dark ms-2">{{ audit.audit_type.value }}</span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if audit.status.name not in ['CLOSED', 'CANCELLED'] %}
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-cog me-1"></i>Acciones
+                </button>
+                <ul class="dropdown-menu">
+                    {% if audit.status.name in ['PLANNED', 'NOTIFIED', 'PREPARATION'] %}
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('audits.audit_edit', id=audit.id) }}">
+                            <i class="fas fa-edit me-2"></i>Editar
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'PLANNED' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_notify', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-bell me-2"></i>Notificar Auditoría
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'NOTIFIED' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_prepare', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-clipboard-list me-2"></i>Iniciar Preparación
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'PREPARATION' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_start', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-play me-2"></i>Iniciar Auditoría
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'IN_PROGRESS' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_report', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-file-alt me-2"></i>Generar Informe
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'REPORTING' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_complete', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-check me-2"></i>Completar Auditoría
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% if audit.status.name == 'COMPLETED' %}
+                    <li>
+                        <form method="POST" action="{{ url_for('audits.audit_close', id=audit.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-lock me-2"></i>Cerrar Auditoría
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if current_user.has_role('admin') or (audit.status.name == 'PLANNED' and audit.findings|length == 0) %}
+            <button type="button" class="btn btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteAuditModal">
+                <i class="fas fa-trash me-1"></i>Eliminar
+            </button>
+            {% endif %}
+
+            <a href="{{ url_for('audits.audits_list') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs de Navegación -->
+    <ul class="nav nav-tabs mb-4" id="auditTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                <i class="fas fa-info-circle me-1"></i>Información General
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="team-tab" data-bs-toggle="tab" data-bs-target="#team" type="button">
+                <i class="fas fa-users me-1"></i>Equipo Auditor
+                <span class="badge bg-secondary ms-1">{{ audit.team_members|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="findings-tab" data-bs-toggle="tab" data-bs-target="#findings" type="button">
+                <i class="fas fa-exclamation-triangle me-1"></i>Hallazgos
+                <span class="badge bg-danger ms-1">{{ audit.total_findings }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button">
+                <i class="fas fa-file-alt me-1"></i>Documentos
+                <span class="badge bg-secondary ms-1">{{ audit.documents|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="report-tab" data-bs-toggle="tab" data-bs-target="#report" type="button">
+                <i class="fas fa-chart-bar me-1"></i>Informe
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de los Tabs -->
+    <div class="tab-content" id="auditTabsContent">
+
+        <!-- Tab: Información General -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row">
+                <!-- Información Principal -->
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Detalles de la Auditoría</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Código:</strong> {{ audit.audit_code }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Tipo:</strong> {{ audit.audit_type.value }}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Auditor Líder:</strong>
+                                    {{ audit.lead_auditor.full_name if audit.lead_auditor else 'N/A' }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Programa:</strong>
+                                    {% if audit.audit_program %}
+                                    <a href="{{ url_for('audits.program_detail', id=audit.audit_program.id) }}">
+                                        {{ audit.audit_program.title }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">Auditoría extraordinaria</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-3">
+                                <strong>Alcance:</strong>
+                                <p class="mt-2">{{ audit.scope }}</p>
+                            </div>
+
+                            {% if audit.objectives %}
+                            <div class="mb-3">
+                                <strong>Objetivos:</strong>
+                                <p class="mt-2">{{ audit.objectives }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if audit.audit_criteria %}
+                            <div class="mb-3">
+                                <strong>Criterios de Auditoría:</strong>
+                                <p class="mt-2">{{ audit.audit_criteria }}</p>
+                            </div>
+                            {% endif %}
+
+                            <hr>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Fecha Planificada:</strong><br>
+                                    {{ audit.planned_date.strftime('%d/%m/%Y') if audit.planned_date else 'N/A' }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Fecha Inicio:</strong><br>
+                                    {{ audit.start_date.strftime('%d/%m/%Y') if audit.start_date else 'N/A' }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Fecha Fin:</strong><br>
+                                    {{ audit.end_date.strftime('%d/%m/%Y') if audit.end_date else 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métricas de Hallazgos -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Resumen de Hallazgos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="p-3 border rounded">
+                                        <h3 class="text-danger mb-0">{{ findings_stats.major_nc }}</h3>
+                                        <small class="text-muted">NC Mayores</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="p-3 border rounded">
+                                        <h3 class="text-warning mb-0">{{ findings_stats.minor_nc }}</h3>
+                                        <small class="text-muted">NC Menores</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="p-3 border rounded">
+                                        <h3 class="text-info mb-0">{{ findings_stats.observations }}</h3>
+                                        <small class="text-muted">Observaciones</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="p-3 border rounded">
+                                        <h3 class="text-success mb-0">{{ findings_stats.opportunities }}</h3>
+                                        <small class="text-muted">Oportunidades</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if conformity_rate is not none %}
+                            <hr>
+                            <div class="text-center">
+                                <strong>Tasa de Conformidad:</strong>
+                                <div class="progress mt-2" style="height: 30px;">
+                                    <div class="progress-bar
+                                        {% if conformity_rate >= 90 %}bg-success
+                                        {% elif conformity_rate >= 70 %}bg-warning
+                                        {% else %}bg-danger
+                                        {% endif %}"
+                                        role="progressbar"
+                                        style="width: {{ conformity_rate }}%;">
+                                        <strong>{{ conformity_rate }}%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel Lateral -->
+                <div class="col-md-4">
+                    <!-- Timeline de Estado -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-history me-2"></i>Estado Actual</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="status-timeline">
+                                <div class="status-item {% if audit.status.name == 'PLANNED' %}active{% else %}completed{% endif %}">
+                                    <strong>Planificada</strong><br>
+                                    <small class="text-muted">{{ audit.created_at.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                {% if audit.notification_date %}
+                                <div class="status-item {% if audit.status.name == 'NOTIFIED' %}active{% elif audit.status.name in ['PREPARATION', 'IN_PROGRESS', 'REPORTING', 'COMPLETED', 'CLOSED'] %}completed{% endif %}">
+                                    <strong>Notificada</strong><br>
+                                    <small class="text-muted">{{ audit.notification_date.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                {% endif %}
+                                {% if audit.start_date %}
+                                <div class="status-item {% if audit.status.name == 'IN_PROGRESS' %}active{% elif audit.status.name in ['REPORTING', 'COMPLETED', 'CLOSED'] %}completed{% endif %}">
+                                    <strong>En Progreso</strong><br>
+                                    <small class="text-muted">{{ audit.start_date.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                {% endif %}
+                                {% if audit.end_date %}
+                                <div class="status-item {% if audit.status.name == 'COMPLETED' %}active{% elif audit.status.name == 'CLOSED' %}completed{% endif %}">
+                                    <strong>Completada</strong><br>
+                                    <small class="text-muted">{{ audit.end_date.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                {% endif %}
+                                {% if audit.closure_date %}
+                                <div class="status-item completed">
+                                    <strong>Cerrada</strong><br>
+                                    <small class="text-muted">{{ audit.closure_date.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guía ISO 27001 -->
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-book me-2"></i>ISO 27001:2022</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small mb-2"><strong>Cláusula 9.2.1 - General</strong></p>
+                            <ul class="small mb-3">
+                                <li>Realizar auditorías a intervalos planificados</li>
+                                <li>Evaluar conformidad con requisitos</li>
+                                <li>Implementación eficaz del SGSI</li>
+                            </ul>
+                            <p class="small mb-0">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                Mantener evidencias documentadas
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Equipo Auditor -->
+        <div class="tab-pane fade" id="team" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Equipo Auditor</h5>
+                    {% if audit.status.name not in ['CLOSED', 'CANCELLED'] %}
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addTeamMemberModal">
+                        <i class="fas fa-user-plus me-1"></i>Agregar Miembro
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if audit.team_members|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Rol</th>
+                                    <th>Áreas Asignadas</th>
+                                    <th>Independiente</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in audit.team_members %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ member.user.full_name }}</strong><br>
+                                        <small class="text-muted">{{ member.user.email }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ member.role.value }}</span>
+                                    </td>
+                                    <td>{{ member.assigned_areas or 'Todas' }}</td>
+                                    <td>
+                                        {% if member.is_independent %}
+                                        <i class="fas fa-check-circle text-success"></i> Sí
+                                        {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if audit.status.name not in ['CLOSED', 'CANCELLED'] and member.user.id != audit.lead_auditor_id %}
+                                        <form method="POST" action="{{ url_for('audits.audit_remove_team_member', audit_id=audit.id, member_id=member.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar miembro del equipo?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No hay miembros en el equipo auditor</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Hallazgos -->
+        <div class="tab-pane fade" id="findings" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Hallazgos</h5>
+                    {% if audit.status.name in ['IN_PROGRESS', 'REPORTING'] %}
+                    <a href="{{ url_for('audits.finding_create', id=audit.id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Nuevo Hallazgo
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if audit.findings|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Tipo</th>
+                                    <th>Descripción</th>
+                                    <th>Control Afectado</th>
+                                    <th>Estado</th>
+                                    <th>Plazo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for finding in audit.findings %}
+                                <tr>
+                                    <td><strong>{{ finding.finding_code }}</strong></td>
+                                    <td>
+                                        {% if finding.finding_type.name == 'MAJOR_NC' %}
+                                        <span class="badge bg-danger">NC Mayor</span>
+                                        {% elif finding.finding_type.name == 'MINOR_NC' %}
+                                        <span class="badge bg-warning">NC Menor</span>
+                                        {% elif finding.finding_type.name == 'OBSERVATION' %}
+                                        <span class="badge bg-info">Observación</span>
+                                        {% elif finding.finding_type.name == 'OPPORTUNITY_IMPROVEMENT' %}
+                                        <span class="badge bg-success">Oportunidad</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ finding.description[:100] }}...</td>
+                                    <td>{{ finding.affected_control }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ finding.status.value }}</span>
+                                    </td>
+                                    <td>
+                                        {% if finding.deadline %}
+                                        {{ finding.deadline.strftime('%d/%m/%Y') }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('audits.finding_detail', id=finding.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No se han registrado hallazgos</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Documentos -->
+        <div class="tab-pane fade" id="documents" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Documentos de Auditoría</h5>
+                    {% if audit.status.name not in ['CLOSED', 'CANCELLED'] %}
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                        <i class="fas fa-upload me-1"></i>Subir Documento
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if audit.documents|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Título</th>
+                                    <th>Versión</th>
+                                    <th>Fecha de Subida</th>
+                                    <th>Subido por</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in audit.documents %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">{{ doc.document_type.value }}</span>
+                                        {% if doc.is_final %}
+                                        <span class="badge bg-success ms-1">Final</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ doc.title }}</strong>
+                                        {% if doc.description %}
+                                        <br><small class="text-muted">{{ doc.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ doc.version }}</td>
+                                    <td>{{ doc.upload_date.strftime('%d/%m/%Y %H:%M') if doc.upload_date else 'N/A' }}</td>
+                                    <td>{{ doc.uploaded_by.full_name if doc.uploaded_by else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('audits.audit_download_document', doc_id=doc.id) }}"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Descargar">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        {% if audit.status.name not in ['CLOSED', 'CANCELLED'] or current_user.has_role('admin') %}
+                                        <form method="POST"
+                                              action="{{ url_for('audits.audit_delete_document', doc_id=doc.id) }}"
+                                              class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Eliminar este documento?')"
+                                                    title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay documentos adjuntos</p>
+                        {% if audit.status.name not in ['CLOSED', 'CANCELLED'] %}
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                            <i class="fas fa-upload me-1"></i>Subir Primer Documento
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Informe -->
+        <div class="tab-pane fade" id="report" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Informe de Auditoría</h5>
+                </div>
+                <div class="card-body">
+                    {% if audit.status.name in ['COMPLETED', 'CLOSED'] %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <strong>Conclusión General:</strong>
+                            {% if audit.overall_conclusion %}
+                            <p class="mt-2">
+                                <span class="badge
+                                    {% if audit.overall_conclusion.name == 'CONFORMANT' %}bg-success
+                                    {% elif audit.overall_conclusion.name == 'MINOR_NC_FOUND' %}bg-warning
+                                    {% elif audit.overall_conclusion.name == 'MAJOR_NC_FOUND' %}bg-danger
+                                    {% else %}bg-secondary
+                                    {% endif %}">
+                                    {{ audit.overall_conclusion.value }}
+                                </span>
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha de Informe:</strong>
+                            <p class="mt-2">{{ audit.report_date.strftime('%d/%m/%Y') if audit.report_date else 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    {% if audit.audit_report_file %}
+                    <div class="text-center py-4">
+                        <a href="{{ audit.audit_report_file }}" class="btn btn-primary btn-lg" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i>Descargar Informe Final
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        El informe final aún no ha sido generado
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted text-center py-4">
+                        El informe estará disponible cuando la auditoría sea completada
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal: Agregar Miembro al Equipo -->
+<div class="modal fade" id="addTeamMemberModal" tabindex="-1" aria-labelledby="addTeamMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addTeamMemberModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Agregar Miembro al Equipo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.audit_add_team_member', id=audit.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">Usuario <span class="text-danger">*</span></label>
+                        <select class="form-select" id="user_id" name="user_id" required>
+                            <option value="">Seleccione un usuario...</option>
+                            {% for user in qualified_auditors|default([]) %}
+                                <option value="{{ user.id }}">{{ user.full_name }} ({{ user.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Rol <span class="text-danger">*</span></label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="">Seleccione un rol...</option>
+                            <option value="LEAD_AUDITOR">Auditor líder</option>
+                            <option value="AUDITOR">Auditor</option>
+                            <option value="TECHNICAL_EXPERT">Experto técnico</option>
+                            <option value="OBSERVER">Observador</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="assigned_areas" class="form-label">Áreas asignadas (opcional)</label>
+                        <textarea class="form-control" id="assigned_areas" name="assigned_areas" rows="3"
+                                  placeholder="Ej: Controles A.8, Gestión de activos"></textarea>
+                        <small class="form-text text-muted">Áreas o controles específicos que revisará este miembro</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Agregar Miembro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Eliminar Auditoría -->
+<div class="modal fade" id="deleteAuditModal" tabindex="-1" aria-labelledby="deleteAuditModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAuditModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Auditoría
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.audit_delete', id=audit.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>¡Advertencia!</strong> Esta acción no se puede deshacer.
+                    </div>
+
+                    <p>¿Está seguro de eliminar la auditoría <strong>{{ audit.audit_code }}</strong>?</p>
+
+                    {% if audit.findings|length > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Esta auditoría tiene <strong>{{ audit.findings|length }} hallazgos</strong> asociados.
+                        {% if current_user.has_role('admin') %}
+                            Se eliminarán también todos los hallazgos y sus acciones correctivas.
+                        {% else %}
+                            Los usuarios normales no pueden eliminar auditorías con hallazgos.
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if audit.team_members|length > 0 %}
+                    <p class="mb-0 text-muted small">
+                        Se eliminarán también:
+                    </p>
+                    <ul class="text-muted small">
+                        <li>{{ audit.team_members|length }} miembros del equipo auditor</li>
+                        {% if audit.findings|length > 0 %}
+                        <li>{{ audit.findings|length }} hallazgos y todas sus acciones correctivas</li>
+                        {% endif %}
+                        {% if audit.documents|length > 0 %}
+                        <li>{{ audit.documents|length }} documentos asociados</li>
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Eliminar Auditoría
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Subir Documento -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="uploadDocumentModalLabel">
+                    <i class="fas fa-upload me-2"></i>Subir Documento de Auditoría
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('audits.audit_upload_document', id=audit.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tipos de documento según ISO 27001:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Plan de auditoría:</strong> Programa y alcance de la auditoría</li>
+                            <li><strong>Informe de auditoría:</strong> Resultados y conclusiones finales</li>
+                            <li><strong>Lista de verificación:</strong> Checklist de controles auditados</li>
+                            <li><strong>Evidencia:</strong> Documentación que respalda hallazgos</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="document_type" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+                        <select class="form-select" id="document_type" name="document_type" required>
+                            <option value="">Seleccione tipo de documento...</option>
+                            <option value="AUDIT_PLAN">Plan de auditoría</option>
+                            <option value="AUDIT_REPORT">Informe de auditoría</option>
+                            <option value="OPENING_MEETING">Acta de reunión de apertura</option>
+                            <option value="CLOSING_MEETING">Acta de reunión de cierre</option>
+                            <option value="CHECKLIST">Lista de verificación</option>
+                            <option value="EVIDENCE">Evidencia</option>
+                            <option value="OTHER">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Archivo <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="file" name="file" required
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg">
+                        <small class="form-text text-muted">
+                            Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, TXT, PNG, JPG (máx. 16MB)
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título del Documento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required
+                               placeholder="Ej: Plan de Auditoría Interna 2025">
+                        <small class="form-text text-muted">
+                            Si no especifica, se usará el nombre del archivo
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción (opcional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Breve descripción del contenido del documento"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="version" class="form-label">Versión</label>
+                                <input type="text" class="form-control" id="version" name="version" value="1.0"
+                                       placeholder="Ej: 1.0, 2.1">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Estado del Documento</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_final" name="is_final" value="true">
+                                    <label class="form-check-label" for="is_final">
+                                        Marcar como versión final
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Subir Documento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Activar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+</script>
+{% endblock %}

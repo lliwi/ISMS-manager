@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Hallazgos - Auditoría {{ audit.audit_code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabecera -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-search text-danger"></i>
+                Hallazgos - {{ audit.audit_code }}
+            </h2>
+            <p class="text-muted">{{ audit.title }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('audits.audit_detail', id=audit.id) }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Volver a Auditoría
+            </a>
+            {% if audit.status.name not in ['CLOSED', 'COMPLETED'] %}
+            <a href="{{ url_for('audits.finding_create', id=audit.id) }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nuevo Hallazgo
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('audits.audit_findings', id=audit.id) }}" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Tipo de Hallazgo</label>
+                    <select name="type" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="MAJOR_NC" {% if request.args.get('type') == 'MAJOR_NC' %}selected{% endif %}>
+                            NC Mayor
+                        </option>
+                        <option value="MINOR_NC" {% if request.args.get('type') == 'MINOR_NC' %}selected{% endif %}>
+                            NC Menor
+                        </option>
+                        <option value="OBSERVATION" {% if request.args.get('type') == 'OBSERVATION' %}selected{% endif %}>
+                            Observación
+                        </option>
+                        <option value="OPPORTUNITY_IMPROVEMENT" {% if request.args.get('type') == 'OPPORTUNITY_IMPROVEMENT' %}selected{% endif %}>
+                            Oportunidad de Mejora
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="OPEN" {% if request.args.get('status') == 'OPEN' %}selected{% endif %}>
+                            Abierto
+                        </option>
+                        <option value="IN_TREATMENT" {% if request.args.get('status') == 'IN_TREATMENT' %}selected{% endif %}>
+                            En Tratamiento
+                        </option>
+                        <option value="RESOLVED" {% if request.args.get('status') == 'RESOLVED' %}selected{% endif %}>
+                            Resuelto
+                        </option>
+                        <option value="CLOSED" {% if request.args.get('status') == 'CLOSED' %}selected{% endif %}>
+                            Cerrado
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3 align-self-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                    <a href="{{ url_for('audits.audit_findings', id=audit.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen de Hallazgos -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h3 class="text-danger mb-0">{{ audit.major_nc_count }}</h3>
+                    <small class="text-muted">NC Mayores</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h3 class="text-warning mb-0">{{ audit.minor_nc_count }}</h3>
+                    <small class="text-muted">NC Menores</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h3 class="text-info mb-0">{{ audit.observations_count }}</h3>
+                    <small class="text-muted">Observaciones</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-0">{{ audit.total_findings_count }}</h3>
+                    <small class="text-muted">Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Hallazgos -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list"></i> Listado de Hallazgos
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if findings %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="100">Código</th>
+                            <th>Título</th>
+                            <th width="150">Tipo</th>
+                            <th width="120">Estado</th>
+                            <th width="120">Plazo</th>
+                            <th width="100">Acciones</th>
+                            <th width="100">Opciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for finding in findings %}
+                        <tr {% if finding.is_overdue %}class="table-warning"{% endif %}>
+                            <td><strong>{{ finding.finding_code }}</strong></td>
+                            <td>
+                                {{ finding.title }}
+                                {% if finding.is_recurrent %}
+                                    <span class="badge bg-warning" title="Hallazgo recurrente">
+                                        <i class="fas fa-redo"></i> Recurrente
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if finding.finding_type.name == 'MAJOR_NC' %}
+                                    <span class="badge bg-danger">NC Mayor</span>
+                                {% elif finding.finding_type.name == 'MINOR_NC' %}
+                                    <span class="badge bg-warning">NC Menor</span>
+                                {% elif finding.finding_type.name == 'OBSERVATION' %}
+                                    <span class="badge bg-info">Observación</span>
+                                {% else %}
+                                    <span class="badge bg-success">Oportunidad</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if finding.status.name == 'OPEN' %}
+                                    <span class="badge bg-secondary">Abierto</span>
+                                {% elif finding.status.name == 'IN_TREATMENT' %}
+                                    <span class="badge bg-primary">En Tratamiento</span>
+                                {% elif finding.status.name == 'RESOLVED' %}
+                                    <span class="badge bg-info">Resuelto</span>
+                                {% elif finding.status.name == 'CLOSED' %}
+                                    <span class="badge bg-success">Cerrado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if finding.closure_deadline %}
+                                    {{ finding.closure_deadline.strftime('%d/%m/%Y') }}
+                                    {% if finding.is_overdue %}
+                                        <br><small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> Vencido
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ finding.corrective_actions|length }}</span>
+                                {% if finding.corrective_actions|length > 0 %}
+                                    {% set completed = finding.corrective_actions|selectattr('status.name', 'equalto', 'COMPLETED')|list|length %}
+                                    <small class="text-muted">({{ completed }} ok)</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('audits.finding_detail', id=finding.id) }}"
+                                       class="btn btn-outline-primary" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if finding.status.name != 'CLOSED' %}
+                                    <a href="{{ url_for('audits.finding_edit', id=finding.id) }}"
+                                       class="btn btn-outline-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No se encontraron hallazgos para esta auditoría.</p>
+                {% if audit.status.name not in ['CLOSED', 'COMPLETED'] %}
+                <a href="{{ url_for('audits.finding_create', id=audit.id) }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Crear Primer Hallazgo
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-warning {
+        background-color: #fff3cd !important;
+    }
+</style>
+{% endblock %}

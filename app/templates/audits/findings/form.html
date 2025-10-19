@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}{% if finding %}Editar{% else %}Nuevo{% endif %} Hallazgo - {{ audit.audit_code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabecera -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>
+                <i class="fas {% if finding %}fa-edit{% else %}fa-plus{% endif %} text-danger"></i>
+                {% if finding %}Editar Hallazgo{% else %}Nuevo Hallazgo{% endif %}
+            </h2>
+            <p class="text-muted">Auditoría: {{ audit.audit_code }} - {{ audit.title }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-9">
+            <!-- Formulario -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Información del Hallazgo</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="findingForm">
+                        <!-- CSRF Token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <!-- Tipo de Hallazgo -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Tipo de Hallazgo</label>
+                                <select name="finding_type" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="MAJOR_NC"
+                                        {% if finding and finding.finding_type.name == 'MAJOR_NC' %}selected{% endif %}>
+                                        No Conformidad Mayor
+                                    </option>
+                                    <option value="MINOR_NC"
+                                        {% if finding and finding.finding_type.name == 'MINOR_NC' %}selected{% endif %}>
+                                        No Conformidad Menor
+                                    </option>
+                                    <option value="OBSERVATION"
+                                        {% if finding and finding.finding_type.name == 'OBSERVATION' %}selected{% endif %}>
+                                        Observación
+                                    </option>
+                                    <option value="OPPORTUNITY_IMPROVEMENT"
+                                        {% if finding and finding.finding_type.name == 'OPPORTUNITY_IMPROVEMENT' %}selected{% endif %}>
+                                        Oportunidad de Mejora
+                                    </option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    NC Mayor requiere acción inmediata. NC Menor requiere acción dentro de 60 días.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Controles ISO 27001 Afectados -->
+                        <div class="mb-3">
+                            <label class="form-label">Controles ISO 27001 Afectados</label>
+
+                            {% if controls %}
+                            <!-- Filtro de controles -->
+                            <div class="mb-2">
+                                <input type="text" class="form-control" id="control-filter"
+                                       placeholder="🔍 Buscar controles por ID, título o categoría...">
+                            </div>
+
+                            <!-- Contador de controles -->
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <span id="selected-count">0</span> controles seleccionados
+                                </small>
+                            </div>
+
+                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;" id="controls-container">
+                                <div class="row" id="controls-list">
+                                    {% for control in controls %}
+                                    <div class="col-md-12 mb-2 control-item" data-control-text="{{ control.control_id|lower }} {{ control.title|lower }} {{ control.category|lower }}">
+                                        <div class="form-check">
+                                            <input class="form-check-input control-checkbox" type="checkbox"
+                                                   name="affected_controls[]" value="{{ control.id }}"
+                                                   id="control_{{ control.id }}"
+                                                   {% if finding and finding.affected_control and control.control_id in finding.affected_control %}checked{% endif %}>
+                                            <label class="form-check-label" for="control_{{ control.id }}" style="cursor: pointer;">
+                                                <code class="text-primary">{{ control.control_id }}</code>
+                                                <strong>{{ control.title }}</strong>
+                                                <br><small class="text-muted">{{ control.category }}</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div id="no-results" class="alert alert-warning mt-2" style="display: none;">
+                                <i class="fas fa-search me-2"></i>No se encontraron controles que coincidan con la búsqueda.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                No hay controles SOA disponibles.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Título -->
+                        <div class="mb-3">
+                            <label class="form-label required">Título del Hallazgo</label>
+                            <input type="text" name="title" class="form-control" required
+                                   value="{{ finding.title if finding else '' }}"
+                                   placeholder="Breve descripción del hallazgo">
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label class="form-label required">Descripción Detallada</label>
+                            <textarea name="description" class="form-control" rows="4" required
+                                      placeholder="Describa el hallazgo de forma completa y objetiva">{{ finding.description if finding else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                Incluya todos los detalles relevantes del hallazgo
+                            </small>
+                        </div>
+
+                        <!-- Evidencia -->
+                        <div class="mb-3">
+                            <label class="form-label required">Evidencia</label>
+                            <textarea name="evidence" class="form-control" rows="3" required
+                                      placeholder="Describa las evidencias objetivas que soportan este hallazgo">{{ finding.evidence if finding else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                Documentos revisados, entrevistas, observaciones, etc.
+                            </small>
+                        </div>
+
+                        <!-- Análisis de Causa Raíz (solo para NCs) -->
+                        <div class="mb-3" id="rootCauseSection">
+                            <label class="form-label">
+                                <span class="text-danger" id="rootCauseRequired">*</span> Análisis de Causa Raíz
+                            </label>
+                            <textarea name="root_cause" class="form-control" rows="4" id="rootCauseField"
+                                      placeholder="¿Por qué ocurrió este hallazgo? Identifique la causa raíz usando metodología 5 Whys o Ishikawa.&#10;&#10;Ejemplo:&#10;- No existe procedimiento documentado&#10;- Falta capacitación del personal&#10;- No hay controles preventivos implementados">{{ finding.root_cause if finding else '' }}</textarea>
+                            <small class="form-text text-muted" id="rootCauseHelp">
+                                <i class="fas fa-info-circle text-primary"></i>
+                                <strong>Obligatorio para No Conformidades Mayor y Menor.</strong> Opcional para Observaciones y Oportunidades de Mejora.
+                            </small>
+                        </div>
+
+                        <!-- Impacto -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Impacto</label>
+                                <select name="impact" class="form-select">
+                                    <option value="">No especificado</option>
+                                    <option value="VERY_LOW" {% if finding and finding.impact == 'VERY_LOW' %}selected{% endif %}>Muy Bajo</option>
+                                    <option value="LOW" {% if finding and finding.impact == 'LOW' %}selected{% endif %}>Bajo</option>
+                                    <option value="MEDIUM" {% if finding and finding.impact == 'MEDIUM' %}selected{% endif %}>Medio</option>
+                                    <option value="HIGH" {% if finding and finding.impact == 'HIGH' %}selected{% endif %}>Alto</option>
+                                    <option value="VERY_HIGH" {% if finding and finding.impact == 'VERY_HIGH' %}selected{% endif %}>Muy Alto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Probabilidad</label>
+                                <select name="likelihood" class="form-select">
+                                    <option value="">No especificado</option>
+                                    <option value="VERY_LOW" {% if finding and finding.likelihood == 'VERY_LOW' %}selected{% endif %}>Muy Baja</option>
+                                    <option value="LOW" {% if finding and finding.likelihood == 'LOW' %}selected{% endif %}>Baja</option>
+                                    <option value="MEDIUM" {% if finding and finding.likelihood == 'MEDIUM' %}selected{% endif %}>Media</option>
+                                    <option value="HIGH" {% if finding and finding.likelihood == 'HIGH' %}selected{% endif %}>Alta</option>
+                                    <option value="VERY_HIGH" {% if finding and finding.likelihood == 'VERY_HIGH' %}selected{% endif %}>Muy Alta</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Responsable -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Responsable de Resolución</label>
+                                <select name="responsible_id" class="form-select" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}"
+                                        {% if finding and finding.responsible_id == user.id %}selected{% endif %}>
+                                        {{ user.full_name or user.username }}
+                                        {% if user.department %} - {{ user.department }}{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    Persona responsable de implementar las acciones correctivas
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Área Afectada</label>
+                                <input type="text" name="affected_area" class="form-control"
+                                       value="{{ finding.affected_area if finding else '' }}"
+                                       placeholder="Área u organización afectada">
+                            </div>
+                        </div>
+
+                        <!-- Requisito No Cumplido -->
+                        <div class="mb-3">
+                            <label class="form-label">Requisito No Cumplido</label>
+                            <input type="text" name="requirement" class="form-control"
+                                   value="{{ finding.requirement if finding else '' }}"
+                                   placeholder="Cláusula ISO 27001, política o procedimiento no cumplido">
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('audits.audit_detail', id=audit.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {% if finding %}Actualizar{% else %}Crear{% endif %} Hallazgo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-3">
+            <!-- Guía -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-question-circle"></i> Guía de Clasificación
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-danger">NC Mayor</h6>
+                    <ul class="small">
+                        <li>Incumplimiento grave de requisito</li>
+                        <li>Impacto significativo en SGSI</li>
+                        <li>Riesgo alto para la organización</li>
+                        <li>Plazo: 30 días</li>
+                    </ul>
+
+                    <h6 class="text-warning mt-3">NC Menor</h6>
+                    <ul class="small">
+                        <li>Incumplimiento parcial de requisito</li>
+                        <li>Impacto limitado</li>
+                        <li>Riesgo medio-bajo</li>
+                        <li>Plazo: 60 días</li>
+                    </ul>
+
+                    <h6 class="text-info mt-3">Observación</h6>
+                    <ul class="small">
+                        <li>Situación que podría derivar en NC</li>
+                        <li>Recomendaciones de mejora</li>
+                        <li>Plazo: 90 días</li>
+                    </ul>
+
+                    <h6 class="text-success mt-3">Oportunidad</h6>
+                    <ul class="small">
+                        <li>Mejora en procesos existentes</li>
+                        <li>Buenas prácticas identificadas</li>
+                        <li>Plazo: 120 días</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ISO 27001 -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-book"></i> ISO 27001
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Cláusula 10.1</strong></p>
+                    <p class="small">No conformidad y acción correctiva</p>
+                    <hr>
+                    <p class="small mb-0">
+                        Cuando ocurra una no conformidad, se debe:
+                    </p>
+                    <ol class="small">
+                        <li>Reaccionar ante la NC</li>
+                        <li>Evaluar acciones para eliminar causas</li>
+                        <li>Implementar acciones necesarias</li>
+                        <li>Revisar la eficacia</li>
+                        <li>Actualizar el SGSI si es necesario</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const findingTypeSelect = document.querySelector('select[name="finding_type"]');
+    const rootCauseSection = document.getElementById('rootCauseSection');
+    const rootCauseField = document.getElementById('rootCauseField');
+
+    // Mostrar/ocultar análisis de causa raíz según tipo
+    function toggleRootCause() {
+        const selectedType = findingTypeSelect.value;
+        const rootCauseRequired = document.getElementById('rootCauseRequired');
+        const rootCauseHelp = document.getElementById('rootCauseHelp');
+
+        if (selectedType === 'MAJOR_NC' || selectedType === 'MINOR_NC') {
+            // Obligatorio para NCs
+            rootCauseField.required = true;
+            rootCauseSection.style.borderLeft = '4px solid #dc3545';
+            rootCauseSection.style.paddingLeft = '10px';
+            rootCauseRequired.style.display = 'inline';
+        } else {
+            // Opcional para otros
+            rootCauseField.required = false;
+            rootCauseSection.style.borderLeft = 'none';
+            rootCauseSection.style.paddingLeft = '0';
+            rootCauseRequired.style.display = 'none';
+        }
+    }
+
+    findingTypeSelect.addEventListener('change', toggleRootCause);
+
+    // Inicializar al cargar
+    toggleRootCause();
+
+    // Validación del formulario
+    const form = document.getElementById('findingForm');
+    form.addEventListener('submit', function(e) {
+        const findingType = findingTypeSelect.value;
+
+        if ((findingType === 'MAJOR_NC' || findingType === 'MINOR_NC') && !rootCauseField.value.trim()) {
+            e.preventDefault();
+            alert('El análisis de causa raíz es obligatorio para No Conformidades');
+            rootCauseField.focus();
+            return false;
+        }
+    });
+
+    // ============================================
+    // Sistema de filtrado de controles
+    // ============================================
+    const filterInput = document.getElementById('control-filter');
+    const controlItems = document.querySelectorAll('.control-item');
+    const controlCheckboxes = document.querySelectorAll('.control-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const noResults = document.getElementById('no-results');
+
+    // Función para actualizar el contador de seleccionados
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.control-checkbox:checked').length;
+        if (selectedCount) {
+            selectedCount.textContent = checked;
+        }
+    }
+
+    // Filtro de controles
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            controlItems.forEach(item => {
+                const controlText = item.getAttribute('data-control-text');
+
+                if (controlText.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Mostrar/ocultar mensaje de "sin resultados"
+            if (noResults) {
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        });
+    }
+
+    // Actualizar contador cuando cambian los checkboxes
+    if (controlCheckboxes) {
+        controlCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedCount);
+        });
+    }
+
+    // Inicializar contador al cargar
+    updateSelectedCount();
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .required::after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}

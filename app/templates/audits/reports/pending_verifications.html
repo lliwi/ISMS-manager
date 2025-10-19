@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Verificaciones Pendientes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-clipboard-check text-info"></i> Verificaciones de Efectividad Pendientes</h2>
+            <p class="text-muted">Acciones completadas que requieren verificación (3+ meses)</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Total: <span class="badge bg-info">{{ actions|length }}</span></h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+        <div class="card-body">
+            {% if actions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Hallazgo</th>
+                            <th>Descripción</th>
+                            <th>Responsable</th>
+                            <th>Verificador</th>
+                            <th>Fecha Finalización</th>
+                            <th>Días desde Finalización</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for action in actions %}
+                        <tr>
+                            <td><strong>{{ action.action_code }}</strong></td>
+                            <td>{{ action.finding.finding_code }}</td>
+                            <td>{{ action.description[:50] }}...</td>
+                            <td>{{ action.responsible.full_name if action.responsible else 'N/A' }}</td>
+                            <td>{{ action.verifier.full_name if action.verifier else 'N/A' }}</td>
+                            <td>{{ action.actual_completion_date.strftime('%d/%m/%Y') if action.actual_completion_date else 'N/A' }}</td>
+                            <td>{{ action.days_since_completion }}</td>
+                            <td>
+                                <a href="{{ url_for('audits.action_detail', id=action.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-clipboard-check"></i> Verificar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted py-5">
+                <i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>
+                No hay verificaciones pendientes
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
