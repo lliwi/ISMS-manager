@@ -8,7 +8,7 @@ from models import db
 from app.models.task import (
     TaskTemplate, Task, TaskEvidence, TaskComment,
     TaskHistory, TaskNotificationLog,
-    TaskStatus, TaskPriority, TaskCategory, TaskFrequency
+    PeriodicTaskStatus, TaskPriority, TaskCategory, TaskFrequency
 )
 
 
@@ -158,7 +158,7 @@ class TaskService:
 
         Args:
             task_id: ID de la tarea
-            new_status: Nuevo estado (TaskStatus)
+            new_status: Nuevo estado (PeriodicTaskStatus)
             user_id: ID del usuario que actualiza
             observations: Observaciones opcionales
             result: Resultado opcional
@@ -177,7 +177,7 @@ class TaskService:
             task.result = result
 
         # Si se completa, registrar fecha
-        if new_status == TaskStatus.COMPLETADA:
+        if new_status == PeriodicTaskStatus.COMPLETADA:
             task.completion_date = datetime.utcnow()
             task.progress = 100
 
@@ -315,7 +315,7 @@ class TaskService:
             List[Task]: Lista de tareas pendientes
         """
         query = Task.query.filter(
-            Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO])
+            Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO])
         )
 
         if user_id:
@@ -344,7 +344,7 @@ class TaskService:
         """
         query = Task.query.filter(
             and_(
-                Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA]),
+                Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA]),
                 Task.due_date < datetime.utcnow()
             )
         )
@@ -370,7 +370,7 @@ class TaskService:
 
         query = Task.query.filter(
             and_(
-                Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO]),
+                Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO]),
                 Task.due_date.between(datetime.utcnow(), future_date)
             )
         )
@@ -405,12 +405,12 @@ class TaskService:
             query = query.filter(Task.created_at <= end_date)
 
         total = query.count()
-        completed = query.filter(Task.status == TaskStatus.COMPLETADA).count()
-        pending = query.filter(Task.status == TaskStatus.PENDIENTE).count()
-        in_progress = query.filter(Task.status == TaskStatus.EN_PROGRESO).count()
+        completed = query.filter(Task.status == PeriodicTaskStatus.COMPLETADA).count()
+        pending = query.filter(Task.status == PeriodicTaskStatus.PENDIENTE).count()
+        in_progress = query.filter(Task.status == PeriodicTaskStatus.EN_PROGRESO).count()
         overdue = query.filter(
             and_(
-                Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA]),
+                Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA]),
                 Task.due_date < datetime.utcnow()
             )
         ).count()
@@ -518,14 +518,14 @@ class TaskService:
         """
         overdue_tasks = Task.query.filter(
             and_(
-                Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO]),
+                Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO]),
                 Task.due_date < datetime.utcnow()
             )
         ).all()
 
         count = 0
         for task in overdue_tasks:
-            task.status = TaskStatus.VENCIDA
+            task.status = PeriodicTaskStatus.VENCIDA
             count += 1
 
         if count > 0:

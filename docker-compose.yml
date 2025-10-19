@@ -10,7 +10,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # init.sql is for upgrading existing installations only, not for new installs
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - isms_network
     restart: always
@@ -23,7 +24,7 @@ services:
   # Flask Application
   web:
     build: .
-    user: "1000:1000"
+    # user managed by entrypoint.sh
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://isms:isms_secure_password@db:5432/isms_db

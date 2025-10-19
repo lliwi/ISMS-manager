@@ -5,7 +5,7 @@ ISO 27001:2022 - Cláusula 10.2 (No conformidad y acciones correctivas)
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 from app.models.audit import (
-    AuditCorrectiveAction, AuditFinding, ActionType, ActionStatus
+    AuditCorrectiveAction, AuditFinding, ActionType, AuditActionStatus
 )
 from models import db, User
 
@@ -59,7 +59,7 @@ class CorrectiveActionService:
                 verifier_id=data.get('verifier_id'),
                 planned_start_date=data.get('planned_start_date'),
                 planned_completion_date=data['planned_completion_date'],
-                status=ActionStatus.PLANNED,
+                status=AuditActionStatus.PENDING,
                 estimated_cost=estimated_cost,
                 resources_needed=data.get('resources_required') or None,  # Convertir cadena vacía a None
                 priority=data.get('priority'),
@@ -152,7 +152,7 @@ class CorrectiveActionService:
             return None, ["Acción correctiva no encontrada"]
 
         # No permitir editar acciones completadas o verificadas
-        if action.status in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]:
+        if action.status in [AuditActionStatus.COMPLETED, AuditActionStatus.VERIFIED]:
             return None, ["No se pueden editar acciones completadas o verificadas"]
 
         try:
@@ -199,7 +199,7 @@ class CorrectiveActionService:
         if not action:
             return False, ["Acción correctiva no encontrada"]
 
-        if action.status not in [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS]:
+        if action.status not in [AuditActionStatus.PENDING, AuditActionStatus.IN_PROGRESS]:
             return False, ["Solo se puede actualizar progreso de acciones planificadas o en progreso"]
 
         if not 0 <= progress_percentage <= 100:
@@ -211,8 +211,8 @@ class CorrectiveActionService:
             action.updated_at = datetime.utcnow()
 
             # Si el progreso > 0 y estado es PLANNED, cambiar a IN_PROGRESS
-            if progress_percentage > 0 and action.status == ActionStatus.PLANNED:
-                action.status = ActionStatus.IN_PROGRESS
+            if progress_percentage > 0 and action.status == AuditActionStatus.PENDING:
+                action.status = AuditActionStatus.IN_PROGRESS
                 action.planned_start_date = datetime.now().date()
 
             db.session.commit()
@@ -237,7 +237,7 @@ class CorrectiveActionService:
             return False, errors
 
         try:
-            action.status = ActionStatus.COMPLETED
+            action.status = AuditActionStatus.COMPLETED
             action.progress_percentage = 100
             action.actual_completion_date = datetime.now().date()
             action.actual_cost = actual_cost
@@ -254,7 +254,7 @@ class CorrectiveActionService:
             if action.finding.status == FindingStatus.IN_TREATMENT:
                 # Verificar si todas las acciones están completadas
                 all_completed = all(
-                    a.status in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]
+                    a.status in [AuditActionStatus.COMPLETED, AuditActionStatus.VERIFIED]
                     for a in action.finding.corrective_actions
                 )
 
@@ -288,7 +288,7 @@ class CorrectiveActionService:
             errors.append("Debe documentar la implementación de la acción")
 
         # Debe estar en progreso
-        if action.status not in [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS]:
+        if action.status not in [AuditActionStatus.PENDING, AuditActionStatus.IN_PROGRESS]:
             errors.append("Solo se pueden completar acciones planificadas o en progreso")
 
         return errors
@@ -311,10 +311,10 @@ class CorrectiveActionService:
             action.verification_date = datetime.now().date()
 
             if is_effective:
-                action.status = ActionStatus.VERIFIED
+                action.status = AuditActionStatus.VERIFIED
             else:
                 # Si no es efectiva, reabrir
-                action.status = ActionStatus.IN_PROGRESS
+                action.status = AuditActionStatus.IN_PROGRESS
                 action.progress_percentage = 50  # Reducir progreso
                 action.blocking_issues = f"Verificación fallida: {verification_notes}"
 
@@ -329,7 +329,7 @@ class CorrectiveActionService:
 
                 # Verificar si todas las acciones están verificadas
                 all_verified = all(
-                    a.status == ActionStatus.VERIFIED
+                    a.status == AuditActionStatus.VERIFIED
                     for a in action.finding.corrective_actions
                 )
 
@@ -352,7 +352,7 @@ class CorrectiveActionService:
         errors = []
 
         # Acción debe estar completada
-        if action.status != ActionStatus.COMPLETED:
+        if action.status != AuditActionStatus.COMPLETED:
             errors.append("Solo se pueden verificar acciones completadas")
 
         # Verificar que sea el verificador asignado
@@ -394,8 +394,8 @@ class CorrectiveActionService:
                 # Acciones vencidas
                 query = query.filter(
                     AuditCorrectiveAction.status.in_([
-                        ActionStatus.PLANNED,
-                        ActionStatus.IN_PROGRESS
+                        AuditActionStatus.PENDING,
+                        AuditActionStatus.IN_PROGRESS
                     ]),
                     AuditCorrectiveAction.planned_completion_date < datetime.now().date()
                 )
@@ -403,7 +403,7 @@ class CorrectiveActionService:
             if filters.get('pending_verification'):
                 # Acciones completadas pendientes de verificación
                 query = query.filter(
-                    AuditCorrectiveAction.status == ActionStatus.COMPLETED,
+                    AuditCorrectiveAction.status == AuditActionStatus.COMPLETED,
                     AuditCorrectiveAction.actual_completion_date <=
                     datetime.now().date() - timedelta(days=90)
                 )
@@ -420,8 +420,8 @@ class CorrectiveActionService:
 
         actions = AuditCorrectiveAction.query.filter(
             AuditCorrectiveAction.status.in_([
-                ActionStatus.PLANNED,
-                ActionStatus.IN_PROGRESS
+                AuditActionStatus.PENDING,
+                AuditActionStatus.IN_PROGRESS
             ]),
             AuditCorrectiveAction.planned_completion_date < today
         ).all()
@@ -444,7 +444,7 @@ class CorrectiveActionService:
         three_months_ago = datetime.now().date() - timedelta(days=90)
 
         actions = AuditCorrectiveAction.query.filter(
-            AuditCorrectiveAction.status == ActionStatus.COMPLETED,
+            AuditCorrectiveAction.status == AuditActionStatus.COMPLETED,
             AuditCorrectiveAction.actual_completion_date <= three_months_ago,
             AuditCorrectiveAction.effectiveness_verified == False
         ).all()
@@ -463,13 +463,13 @@ class CorrectiveActionService:
 
         return {
             'total': len(actions),
-            'planned': len([a for a in actions if a.status == ActionStatus.PLANNED]),
-            'in_progress': len([a for a in actions if a.status == ActionStatus.IN_PROGRESS]),
-            'completed': len([a for a in actions if a.status == ActionStatus.COMPLETED]),
-            'verified': len([a for a in actions if a.status == ActionStatus.VERIFIED]),
-            'rejected': len([a for a in actions if a.status == ActionStatus.REJECTED]),
+            'planned': len([a for a in actions if a.status == AuditActionStatus.PENDING]),
+            'in_progress': len([a for a in actions if a.status == AuditActionStatus.IN_PROGRESS]),
+            'completed': len([a for a in actions if a.status == AuditActionStatus.COMPLETED]),
+            'verified': len([a for a in actions if a.status == AuditActionStatus.VERIFIED]),
+            'rejected': len([a for a in actions if a.status == AuditActionStatus.REJECTED]),
             'avg_progress': sum(a.progress_percentage for a in actions) / len(actions) if actions else 0,
-            'overdue': len([a for a in actions if a.status in [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS]
+            'overdue': len([a for a in actions if a.status in [AuditActionStatus.PENDING, AuditActionStatus.IN_PROGRESS]
                            and a.planned_completion_date < datetime.now().date()])
         }
 
@@ -477,7 +477,7 @@ class CorrectiveActionService:
     def calculate_effectiveness_rate():
         """Calcula tasa de eficacia de acciones correctivas"""
         verified_actions = AuditCorrectiveAction.query.filter_by(
-            status=ActionStatus.VERIFIED
+            status=AuditActionStatus.VERIFIED
         ).all()
 
         if not verified_actions:
@@ -494,14 +494,14 @@ class CorrectiveActionService:
         if not action:
             return False, ["Acción correctiva no encontrada"]
 
-        if action.status not in [ActionStatus.REJECTED, ActionStatus.COMPLETED]:
+        if action.status not in [AuditActionStatus.REJECTED, AuditActionStatus.COMPLETED]:
             return False, ["Solo se pueden reabrir acciones rechazadas o con verificación fallida"]
 
         if not reason:
             return False, ["Debe proporcionar una razón para reabrir la acción"]
 
         try:
-            action.status = ActionStatus.IN_PROGRESS
+            action.status = AuditActionStatus.IN_PROGRESS
             action.progress_percentage = 50
             action.blocking_issues = f"Reapertura: {reason}"
             action.updated_at = datetime.utcnow()
@@ -523,14 +523,14 @@ class CorrectiveActionService:
         if not action:
             return False, ["Acción correctiva no encontrada"]
 
-        if action.status in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]:
+        if action.status in [AuditActionStatus.COMPLETED, AuditActionStatus.VERIFIED]:
             return False, ["No se pueden cancelar acciones completadas o verificadas"]
 
         if not reason:
             return False, ["Debe proporcionar una razón para cancelar la acción"]
 
         try:
-            action.status = ActionStatus.CANCELLED
+            action.status = AuditActionStatus.CANCELLED
             action.blocking_issues = f"Cancelación: {reason}"
             action.updated_at = datetime.utcnow()
 
@@ -550,8 +550,8 @@ class CorrectiveActionService:
         if not include_completed:
             query = query.filter(
                 AuditCorrectiveAction.status.in_([
-                    ActionStatus.PLANNED,
-                    ActionStatus.IN_PROGRESS
+                    AuditActionStatus.PENDING,
+                    AuditActionStatus.IN_PROGRESS
                 ])
             )
 
@@ -566,7 +566,7 @@ class CorrectiveActionService:
 
         return AuditCorrectiveAction.query.filter(
             AuditCorrectiveAction.verifier_id == user_id,
-            AuditCorrectiveAction.status == ActionStatus.COMPLETED,
+            AuditCorrectiveAction.status == AuditActionStatus.COMPLETED,
             AuditCorrectiveAction.actual_completion_date <= three_months_ago
         ).order_by(
             AuditCorrectiveAction.actual_completion_date.asc()

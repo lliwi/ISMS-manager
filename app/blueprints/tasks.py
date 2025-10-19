@@ -12,7 +12,7 @@ import os
 from models import db, User, Role, SOAControl
 from app.models.task import (
     TaskTemplate, Task, TaskEvidence, TaskComment,
-    TaskStatus, TaskPriority, TaskCategory, TaskFrequency
+    PeriodicTaskStatus, TaskPriority, TaskCategory, TaskFrequency
 )
 from app.services.task_service import TaskService
 from app.services.notification_service import NotificationService
@@ -47,14 +47,14 @@ def index():
     # Mis tareas asignadas
     my_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA])
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA])
     ).order_by(Task.due_date.asc()).all()
 
     # Tareas prioritarias (críticas y altas)
     priority_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
         Task.priority.in_([TaskPriority.CRITICA, TaskPriority.ALTA]),
-        Task.status != TaskStatus.COMPLETADA
+        Task.status != PeriodicTaskStatus.COMPLETADA
     ).order_by(Task.due_date.asc()).limit(6).all()
 
     # Categorías para filtros
@@ -66,7 +66,7 @@ def index():
         count = Task.query.filter(
             Task.assigned_to_id == current_user.id,
             Task.category == category,
-            Task.status != TaskStatus.COMPLETADA
+            Task.status != PeriodicTaskStatus.COMPLETADA
         ).count()
         if count > 0:
             category_stats[category.value] = count
@@ -102,7 +102,7 @@ def list_tasks():
 
     # Aplicar filtros
     if filter_form.status.data:
-        query = query.filter(Task.status == TaskStatus(filter_form.status.data))
+        query = query.filter(Task.status == PeriodicTaskStatus(filter_form.status.data))
 
     if filter_form.category.data:
         query = query.filter(Task.category == TaskCategory(filter_form.category.data))
@@ -414,7 +414,7 @@ def update(id):
         try:
             # Actualizar estado
             if form.status.data:
-                new_status = TaskStatus(form.status.data)
+                new_status = PeriodicTaskStatus(form.status.data)
                 TaskService.update_task_status(
                     task.id,
                     new_status,
@@ -860,7 +860,7 @@ def calendar_view():
 
     monthly_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA]),
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA]),
         Task.due_date >= start_date,
         Task.due_date <= end_date
     ).order_by(Task.due_date.asc()).all()
@@ -877,7 +877,7 @@ def calendar_view():
     next_week = datetime.now() + timedelta(days=7)
     upcoming_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO]),
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO]),
         Task.due_date >= datetime.now(),
         Task.due_date <= next_week
     ).order_by(Task.due_date.asc()).all()
@@ -909,7 +909,7 @@ def calendar_year_view():
 
     yearly_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA]),
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA]),
         Task.due_date >= start_date,
         Task.due_date < end_date
     ).order_by(Task.due_date.asc()).all()
@@ -929,9 +929,9 @@ def calendar_year_view():
             'alta': len([t for t in month_tasks if t.priority == TaskPriority.ALTA]),
             'media': len([t for t in month_tasks if t.priority == TaskPriority.MEDIA]),
             'baja': len([t for t in month_tasks if t.priority == TaskPriority.BAJA]),
-            'pendiente': len([t for t in month_tasks if t.status == TaskStatus.PENDIENTE]),
-            'en_progreso': len([t for t in month_tasks if t.status == TaskStatus.EN_PROGRESO]),
-            'vencida': len([t for t in month_tasks if t.status == TaskStatus.VENCIDA])
+            'pendiente': len([t for t in month_tasks if t.status == PeriodicTaskStatus.PENDIENTE]),
+            'en_progreso': len([t for t in month_tasks if t.status == PeriodicTaskStatus.EN_PROGRESO]),
+            'vencida': len([t for t in month_tasks if t.status == PeriodicTaskStatus.VENCIDA])
         }
 
     # Nombres de meses en español
@@ -994,7 +994,7 @@ def api_upcoming():
 def utility_processor():
     """Funciones auxiliares para templates"""
     return {
-        'TaskStatus': TaskStatus,
+        'PeriodicTaskStatus': PeriodicTaskStatus,
         'TaskPriority': TaskPriority,
         'TaskCategory': TaskCategory,
         'TaskFrequency': TaskFrequency

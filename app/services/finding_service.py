@@ -237,9 +237,9 @@ class FindingService:
                 errors.append("Debe tener al menos un plan de acción")
 
         if new_status == FindingStatus.RESOLVED:
-            from app.models.audit import ActionStatus
+            from app.models.audit import AuditActionStatus
             completed_actions = finding.corrective_actions.filter_by(
-                status=ActionStatus.COMPLETED
+                status=AuditActionStatus.COMPLETED
             ).count()
             if completed_actions == 0:
                 errors.append("Debe tener al menos una acción completada")
@@ -510,8 +510,8 @@ class FindingService:
 
         # Todas las acciones deben estar completadas y verificadas
         for action in finding.corrective_actions:
-            from app.models.audit import ActionStatus
-            if action.status != ActionStatus.VERIFIED:
+            from app.models.audit import AuditActionStatus
+            if action.status != AuditActionStatus.VERIFIED:
                 errors.append(
                     f"Acción {action.action_code} no está verificada"
                 )

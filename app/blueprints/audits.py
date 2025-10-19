@@ -15,7 +15,7 @@ import os
 from app.models.audit import (
     AuditRecord, AuditFinding, AuditCorrectiveAction, AuditProgram,
     AuditSchedule, AuditTeamMember, AuditDocument, DocumentType, AuditType, AuditStatus,
-    FindingType, FindingStatus, ActionStatus, ProgramStatus
+    FindingType, FindingStatus, AuditActionStatus, ProgramStatus
 )
 from app.services.audit_service import AuditService
 from app.services.finding_service import FindingService
@@ -74,7 +74,7 @@ def index():
 
         # Acciones correctivas pendientes
         pending_actions = AuditCorrectiveAction.query.filter(
-            AuditCorrectiveAction.status.in_([ActionStatus.PLANNED, ActionStatus.IN_PROGRESS])
+            AuditCorrectiveAction.status.in_([AuditActionStatus.PENDING, AuditActionStatus.IN_PROGRESS])
         ).count()
 
         # Verificaciones pendientes
@@ -1213,7 +1213,7 @@ def action_edit(id):
     action = AuditCorrectiveAction.query.get_or_404(id)
 
     # No se puede editar acción completada o verificada
-    if action.status in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]:
+    if action.status in [AuditActionStatus.COMPLETED, AuditActionStatus.VERIFIED]:
         flash('No se puede editar una acción completada o verificada', 'warning')
         return redirect(url_for('audits.action_detail', id=id))
 
@@ -1412,7 +1412,7 @@ def report_effectiveness():
 
         # Obtener todas las acciones verificadas (con verificación de efectividad)
         verified_actions = AuditCorrectiveAction.query.filter(
-            AuditCorrectiveAction.status == ActionStatus.VERIFIED,
+            AuditCorrectiveAction.status == AuditActionStatus.VERIFIED,
             AuditCorrectiveAction.effectiveness_verification_date.isnot(None)
         ).order_by(AuditCorrectiveAction.effectiveness_verification_date.desc()).all()
 

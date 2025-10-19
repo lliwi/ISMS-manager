@@ -2,7 +2,7 @@ from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 from models import Risk, Incident, NonConformity, SOAControl, Audit
 from models import IncidentStatus, NCStatus
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, PeriodicTaskStatus
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
@@ -47,11 +47,11 @@ def index():
     # Tasks metrics
     overdue_tasks = Task.query.filter(
         Task.due_date < datetime.utcnow(),
-        Task.status == TaskStatus.VENCIDA
+        Task.status == PeriodicTaskStatus.VENCIDA
     ).count()
     pending_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO])
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO])
     ).count()
     kpis['overdue_tasks'] = overdue_tasks
     kpis['my_pending_tasks'] = pending_tasks
@@ -61,7 +61,7 @@ def index():
     recent_nonconformities = NonConformity.query.order_by(NonConformity.created_at.desc()).limit(5).all()
     my_tasks = Task.query.filter(
         Task.assigned_to_id == current_user.id,
-        Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO])
+        Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO])
     ).order_by(Task.due_date).limit(5).all()
 
     return render_template('dashboard/index.html',

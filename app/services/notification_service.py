@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import current_app, render_template, url_for
 from flask_mail import Mail, Message
 from models import db
-from app.models.task import Task, TaskNotificationLog, TaskStatus
+from app.models.task import Task, TaskNotificationLog, PeriodicTaskStatus
 
 
 # Inicializar Flask-Mail
@@ -334,7 +334,7 @@ ISO/IEC 27001:2023
 
         # Obtener todas las tareas activas
         active_tasks = Task.query.filter(
-            Task.status.in_([TaskStatus.PENDIENTE, TaskStatus.EN_PROGRESO, TaskStatus.VENCIDA])
+            Task.status.in_([PeriodicTaskStatus.PENDIENTE, PeriodicTaskStatus.EN_PROGRESO, PeriodicTaskStatus.VENCIDA])
         ).all()
 
         for task in active_tasks:

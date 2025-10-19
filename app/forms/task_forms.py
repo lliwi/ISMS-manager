@@ -11,7 +11,7 @@ from wtforms import (
 from wtforms.validators import DataRequired, Optional, Length, NumberRange, Email
 from datetime import datetime
 
-from app.models.task import TaskFrequency, TaskStatus, TaskPriority, TaskCategory
+from app.models.task import TaskFrequency, PeriodicTaskStatus, TaskPriority, TaskCategory
 
 
 class TaskTemplateForm(FlaskForm):
@@ -184,7 +184,7 @@ class TaskUpdateForm(FlaskForm):
     status = SelectField(
         'Estado',
         validators=[DataRequired()],
-        choices=[(status.value, status.value.replace('_', ' ').title()) for status in TaskStatus],
+        choices=[(status.value, status.value.replace('_', ' ').title()) for status in PeriodicTaskStatus],
         render_kw={'class': 'form-select'}
     )
 
@@ -284,7 +284,7 @@ class TaskFilterForm(FlaskForm):
 
     status = SelectField(
         'Estado',
-        choices=[('', 'Todos')] + [(status.value, status.value.replace('_', ' ').title()) for status in TaskStatus],
+        choices=[('', 'Todos')] + [(status.value, status.value.replace('_', ' ').title()) for status in PeriodicTaskStatus],
         render_kw={'class': 'form-select form-select-sm'}
     )
 

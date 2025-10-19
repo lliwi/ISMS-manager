@@ -71,9 +71,9 @@ class ActionType(enum.Enum):
     PREVENTIVE = "Acción preventiva"
 
 
-class ActionStatus(enum.Enum):
-    """Estados de acciones correctivas"""
-    PLANNED = "Planificada"
+class AuditActionStatus(enum.Enum):
+    """Estados de acciones correctivas de auditoría"""
+    PENDING = "Planificada"
     IN_PROGRESS = "En progreso"
     COMPLETED = "Completada"
     VERIFIED = "Verificada"
@@ -430,7 +430,7 @@ class AuditCorrectiveAction(db.Model):
     verification_date = db.Column(db.Date)
 
     # Estado
-    status = db.Column(Enum(ActionStatus), nullable=False, default=ActionStatus.PLANNED)
+    status = db.Column(Enum(AuditActionStatus), nullable=False, default=AuditActionStatus.PENDING)
 
     # Efectividad
     effectiveness_verified = db.Column(db.Boolean, default=False)

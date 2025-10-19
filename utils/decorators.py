@@ -14,6 +14,11 @@ def role_required(*roles):
     Uso:
         @role_required('admin')
         @role_required('admin', 'ciso')
+
+    Soporta tanto nombres completos como aliases:
+        'admin' -> 'Administrador del Sistema'
+        'ciso' -> 'Responsable de Seguridad (CISO)'
+        'auditor' -> 'Auditor Interno'
     """
     def decorator(f):
         @wraps(f)
@@ -26,7 +31,10 @@ def role_required(*roles):
                 flash('Tu cuenta está desactivada. Contacta al administrador.', 'danger')
                 return redirect(url_for('auth.login'))
 
-            if current_user.role.name not in roles:
+            # Verificar si el usuario tiene alguno de los roles permitidos
+            has_required_role = any(current_user.has_role(role) for role in roles)
+
+            if not has_required_role:
                 # Registrar intento de acceso no autorizado
                 AuditLog.log_action(
                     action='access_denied',

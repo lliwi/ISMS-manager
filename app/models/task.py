@@ -30,8 +30,8 @@ class TaskFrequency(enum.Enum):
     UNICA = 'unica'  # Tarea no recurrente
 
 
-class TaskStatus(enum.Enum):
-    """Estados de las tareas"""
+class PeriodicTaskStatus(enum.Enum):
+    """Estados de las tareas periódicas del SGSI"""
     PENDIENTE = 'pendiente'
     EN_PROGRESO = 'en_progreso'
     COMPLETADA = 'completada'
@@ -163,7 +163,7 @@ class Task(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(Enum(TaskCategory), nullable=False)
-    status = db.Column(Enum(TaskStatus), default=TaskStatus.PENDIENTE, nullable=False)
+    status = db.Column(Enum(PeriodicTaskStatus), default=PeriodicTaskStatus.PENDIENTE, nullable=False)
     priority = db.Column(Enum(TaskPriority), default=TaskPriority.MEDIA)
 
     # Fechas
@@ -229,20 +229,20 @@ class Task(db.Model):
     @property
     def is_overdue(self):
         """Verifica si la tarea está vencida"""
-        return (self.status not in [TaskStatus.COMPLETADA, TaskStatus.CANCELADA] and
+        return (self.status not in [PeriodicTaskStatus.COMPLETADA, PeriodicTaskStatus.CANCELADA] and
                 self.due_date < datetime.utcnow())
 
     @property
     def days_until_due(self):
         """Días hasta el vencimiento"""
-        if self.status in [TaskStatus.COMPLETADA, TaskStatus.CANCELADA]:
+        if self.status in [PeriodicTaskStatus.COMPLETADA, PeriodicTaskStatus.CANCELADA]:
             return None
         delta = self.due_date - datetime.utcnow()
         return delta.days
 
     def complete(self, user, observations=None, result=None):
         """Marca la tarea como completada"""
-        self.status = TaskStatus.COMPLETADA
+        self.status = PeriodicTaskStatus.COMPLETADA
         self.completion_date = datetime.utcnow()
         self.progress = 100
         if observations:
@@ -262,7 +262,7 @@ class Task(db.Model):
 
     def should_send_notification(self):
         """Determina si debe enviarse notificación"""
-        if self.status in [TaskStatus.COMPLETADA, TaskStatus.CANCELADA]:
+        if self.status in [PeriodicTaskStatus.COMPLETADA, PeriodicTaskStatus.CANCELADA]:
             return False
 
         days_until = self.days_until_due

@@ -118,11 +118,54 @@ class User(UserMixin, db.Model):
         return self.full_name
 
     def has_role(self, role_name):
-        """Verifica si el usuario tiene un rol específico"""
-        return self.role.name == role_name
+        """Verifica si el usuario tiene un rol específico
+
+        Args:
+            role_name: Nombre completo o alias del rol
+                      Aliases: 'admin' -> 'Administrador del Sistema'
+                               'ciso' -> 'Responsable de Seguridad (CISO)'
+                               'auditor' -> 'Auditor Interno'
+        """
+        if not self.role:
+            return False
+
+        # Mapeo de aliases a nombres completos
+        role_aliases = {
+            'admin': 'Administrador del Sistema',
+            'ciso': 'Responsable de Seguridad (CISO)',
+            'auditor': 'Auditor Interno',
+            'process_owner': 'Responsable de Proceso',
+            'user': 'Usuario General'
+        }
+
+        # Obtener el nombre completo si se pasó un alias
+        full_role_name = role_aliases.get(role_name.lower(), role_name)
+
+        # Comparar con el rol del usuario (case-insensitive)
+        return self.role.name.lower() == full_role_name.lower()
 
     def can_access(self, module):
-        """Verifica si el usuario puede acceder a un módulo"""
+        """Verifica si el usuario puede acceder a un módulo
+
+        Args:
+            module: Nombre del módulo a verificar acceso
+
+        Returns:
+            True si el usuario tiene acceso al módulo
+        """
+        if not self.role:
+            return False
+
+        # Mapeo de roles a nombres completos (inverso del mapeo en has_role)
+        role_to_alias = {
+            'Administrador del Sistema': 'admin',
+            'Responsable de Seguridad (CISO)': 'ciso',
+            'Auditor Interno': 'auditor',
+            'Responsable de Proceso': 'owner',
+            'Usuario General': 'user'
+        }
+
+        # Permisos por rol (usando aliases)
         permissions = {
             'admin': ['all'],
             'ciso': ['all'],
@@ -130,7 +173,13 @@ class User(UserMixin, db.Model):
             'owner': ['dashboard', 'documents', 'soa', 'risks', 'incidents', 'tasks'],
             'user': ['dashboard', 'incidents', 'documents']
         }
-        user_permissions = permissions.get(self.role.name, [])
+
+        # Obtener el alias del rol actual
+        role_alias = role_to_alias.get(self.role.name, 'user')
+
+        # Obtener permisos del rol
+        user_permissions = permissions.get(role_alias, [])
+
         return 'all' in user_permissions or module in user_permissions
 
     def __repr__(self):
@@ -2073,7 +2122,7 @@ from app.models.change import (
 
 # Import task management models
 from app.models.task import (
-    TaskFrequency, TaskStatus, TaskPriority, TaskCategory,
+    TaskFrequency, PeriodicTaskStatus, TaskPriority, TaskCategory,
     TaskTemplate, Task, TaskEvidence, TaskComment,
     TaskHistory, TaskNotificationLog
 )

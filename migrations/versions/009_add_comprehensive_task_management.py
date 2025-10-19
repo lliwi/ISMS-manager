@@ -17,24 +17,26 @@ depends_on = None
 
 
 def upgrade():
-    # Drop old simple tasks table if exists
+    # Drop old simple tasks table and enums if they exist
     op.execute('DROP TABLE IF EXISTS tasks CASCADE')
+    op.execute('DROP TYPE IF EXISTS taskstatus CASCADE')
+    op.execute('DROP TYPE IF EXISTS taskpriority CASCADE')
 
     # Create task_templates table
     op.create_table('task_templates',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('title', sa.String(length=200), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('category', sa.Enum('REVISION_CONTROLES', 'AUDITORIA_INTERNA', 'EVALUACION_RIESGOS',
-                                     'REVISION_POLITICAS', 'FORMACION_CONCIENCIACION', 'MANTENIMIENTO_SEGURIDAD',
-                                     'COPIAS_SEGURIDAD', 'REVISION_ACCESOS', 'ACTUALIZACION_INVENTARIOS',
-                                     'REVISION_PROVEEDORES', 'GESTION_VULNERABILIDADES', 'REVISION_INCIDENTES',
-                                     'CONTINUIDAD_NEGOCIO', 'REVISION_LEGAL', 'REVISION_DIRECCION',
-                                     'PRUEBAS_RECUPERACION', 'OTROS', name='taskcategory'), nullable=False),
-        sa.Column('frequency', sa.Enum('DIARIA', 'SEMANAL', 'QUINCENAL', 'MENSUAL', 'BIMESTRAL',
-                                      'TRIMESTRAL', 'CUATRIMESTRAL', 'SEMESTRAL', 'ANUAL', 'BIENAL',
-                                      'UNICA', name='taskfrequency'), nullable=False),
-        sa.Column('priority', sa.Enum('BAJA', 'MEDIA', 'ALTA', 'CRITICA', name='taskpriority'), nullable=True),
+        sa.Column('category', sa.Enum('revision_controles', 'auditoria_interna', 'evaluacion_riesgos',
+                                     'revision_politicas', 'formacion_concienciacion', 'mantenimiento_seguridad',
+                                     'copias_seguridad', 'revision_accesos', 'actualizacion_inventarios',
+                                     'revision_proveedores', 'gestion_vulnerabilidades', 'revision_incidentes',
+                                     'continuidad_negocio', 'revision_legal', 'revision_direccion',
+                                     'pruebas_recuperacion', 'otros', name='taskcategory'), nullable=False),
+        sa.Column('frequency', sa.Enum('diaria', 'semanal', 'quincenal', 'mensual', 'bimestral',
+                                      'trimestral', 'cuatrimestral', 'semestral', 'anual', 'bienal',
+                                      'unica', name='taskfrequency'), nullable=False),
+        sa.Column('priority', sa.Enum('baja', 'media', 'alta', 'critica', name='taskpriority'), nullable=True),
         sa.Column('estimated_hours', sa.Float(), nullable=True),
         sa.Column('iso_control', sa.String(length=10), nullable=True),
         sa.Column('default_role_id', sa.Integer(), nullable=True),
@@ -61,15 +63,15 @@ def upgrade():
         sa.Column('template_id', sa.Integer(), nullable=True),
         sa.Column('title', sa.String(length=200), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('category', sa.Enum('REVISION_CONTROLES', 'AUDITORIA_INTERNA', 'EVALUACION_RIESGOS',
-                                     'REVISION_POLITICAS', 'FORMACION_CONCIENCIACION', 'MANTENIMIENTO_SEGURIDAD',
-                                     'COPIAS_SEGURIDAD', 'REVISION_ACCESOS', 'ACTUALIZACION_INVENTARIOS',
-                                     'REVISION_PROVEEDORES', 'GESTION_VULNERABILIDADES', 'REVISION_INCIDENTES',
-                                     'CONTINUIDAD_NEGOCIO', 'REVISION_LEGAL', 'REVISION_DIRECCION',
-                                     'PRUEBAS_RECUPERACION', 'OTROS', name='taskcategory'), nullable=False),
-        sa.Column('status', sa.Enum('PENDIENTE', 'EN_PROGRESO', 'COMPLETADA', 'VENCIDA', 'CANCELADA',
-                                   'REPROGRAMADA', name='taskstatus'), nullable=False),
-        sa.Column('priority', sa.Enum('BAJA', 'MEDIA', 'ALTA', 'CRITICA', name='taskpriority'), nullable=True),
+        sa.Column('category', sa.Enum('revision_controles', 'auditoria_interna', 'evaluacion_riesgos',
+                                     'revision_politicas', 'formacion_concienciacion', 'mantenimiento_seguridad',
+                                     'copias_seguridad', 'revision_accesos', 'actualizacion_inventarios',
+                                     'revision_proveedores', 'gestion_vulnerabilidades', 'revision_incidentes',
+                                     'continuidad_negocio', 'revision_legal', 'revision_direccion',
+                                     'pruebas_recuperacion', 'otros', name='taskcategory'), nullable=False),
+        sa.Column('status', sa.Enum('pendiente', 'en_progreso', 'completada', 'vencida', 'cancelada',
+                                   'reprogramada', name='taskstatus'), nullable=False),
+        sa.Column('priority', sa.Enum('baja', 'media', 'alta', 'critica', name='taskpriority'), nullable=True),
         sa.Column('due_date', sa.DateTime(), nullable=False),
         sa.Column('start_date', sa.DateTime(), nullable=True),
         sa.Column('completion_date', sa.DateTime(), nullable=True),
