@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordatorio de Tarea</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: #ffc107;
+            color: #333;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .task-details {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .urgency-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .urgency-box.critical {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #ffc107;
+            color: #333;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⏰ Recordatorio de Tarea</h1>
+    </div>
+
+    <div class="content">
+        <p>Hola <strong>{{ user.first_name }}</strong>,</p>
+
+        <p>Este es un recordatorio sobre una tarea asignada que vence pronto.</p>
+
+        <div class="urgency-box {{ 'critical' if days_until_due <= 1 else '' }}">
+            <h2 style="margin: 0;">
+                {% if days_until_due == 0 %}
+                ⚠️ ¡La tarea vence HOY!
+                {% elif days_until_due == 1 %}
+                ⏳ La tarea vence MAÑANA
+                {% else %}
+                📅 La tarea vence en {{ days_until_due }} días
+                {% endif %}
+            </h2>
+        </div>
+
+        <div class="task-details">
+            <h3>{{ task.title }}</h3>
+            <p>{{ task.description }}</p>
+            <p><strong>Fecha de vencimiento:</strong> <span style="color: #dc3545;">{{ task.due_date.strftime('%d/%m/%Y %H:%M') }}</span></p>
+            <p><strong>Progreso actual:</strong> {{ task.progress }}%</p>
+            {% if task.iso_control %}
+            <p><strong>Control ISO 27001:</strong> {{ task.iso_control }}</p>
+            {% endif %}
+        </div>
+
+        <p style="text-align: center;">
+            <a href="{{ url }}" class="button">Actualizar Tarea</a>
+        </p>
+
+        <p><strong>Acciones recomendadas:</strong></p>
+        <ul>
+            <li>Revisa el progreso de la tarea</li>
+            <li>Completa los items pendientes de la lista de verificación</li>
+            <li>Adjunta las evidencias necesarias</li>
+            <li>Actualiza el estado si es necesario</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p>Este es un correo automático del ISMS Manager.</p>
+        <p>Por favor, no respondas a este correo.</p>
+        <p>&copy; 2025 ISMS Manager - ISO/IEC 27001:2023</p>
+    </div>
+</body>
+</html>

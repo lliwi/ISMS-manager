@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen Semanal de Tareas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: #17a2b8;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .summary-box {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+        .task-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            flex: 1;
+            margin: 0 5px;
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #17a2b8;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Resumen Semanal de Tareas</h1>
+        <p style="margin: 5px 0; font-size: 14px;">{{ user.first_name or user.username }}</p>
+    </div>
+
+    <div class="content">
+        <p>Hola <strong>{{ user.first_name or user.username }}</strong>,</p>
+        <p>Este es tu resumen semanal de tareas del Sistema de Gestión de Seguridad de la Información (SGSI).</p>
+
+        <!-- Estadísticas generales -->
+        <div class="stats">
+            <div class="stat-card" style="border-left: 4px solid #dc3545;">
+                <div class="stat-number" style="color: #dc3545;">{{ overdue_tasks|length }}</div>
+                <div class="stat-label">Vencidas</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #ffc107;">
+                <div class="stat-number" style="color: #ffc107;">{{ due_soon|length }}</div>
+                <div class="stat-label">Por vencer (7 días)</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #17a2b8;">
+                <div class="stat-number" style="color: #17a2b8;">{{ pending_tasks|length }}</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+        </div>
+
+        <!-- Tareas vencidas -->
+        {% if overdue_tasks %}
+        <div class="summary-box">
+            <h3 style="color: #dc3545;">🔴 Tareas Vencidas ({{ overdue_tasks|length }})</h3>
+            <div class="alert-danger">
+                <strong>⚠️ Atención Urgente Requerida</strong>
+            </div>
+            <ul class="task-list">
+                {% for task in overdue_tasks[:5] %}
+                <li class="task-item">
+                    <strong>{{ task.title }}</strong>
+                    <span class="badge badge-danger">{{ task.priority.value|upper }}</span>
+                    <br>
+                    <small style="color: #6c757d;">
+                        Venció: {{ task.due_date.strftime('%d/%m/%Y') }}
+                        ({{ (task.due_date - task.due_date.now()).days|abs }} días de retraso)
+                    </small>
+                </li>
+                {% endfor %}
+                {% if overdue_tasks|length > 5 %}
+                <li class="task-item" style="text-align: center; color: #6c757d;">
+                    <em>... y {{ overdue_tasks|length - 5 }} más</em>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Tareas que vencen próximamente -->
+        {% if due_soon %}
+        <div class="summary-box">
+            <h3 style="color: #ffc107;">⚠️ Tareas Próximas a Vencer ({{ due_soon|length }})</h3>
+            <p style="font-size: 13px; color: #6c757d;">Tareas que vencen en los próximos 7 días</p>
+            <ul class="task-list">
+                {% for task in due_soon[:5] %}
+                <li class="task-item">
+                    <strong>{{ task.title }}</strong>
+                    <span class="badge badge-warning">{{ task.priority.value|upper }}</span>
+                    <br>
+                    <small style="color: #6c757d;">
+                        Vence: {{ task.due_date.strftime('%d/%m/%Y') }}
+                        ({{ task.days_until_due }} día{{ 's' if task.days_until_due != 1 else '' }})
+                    </small>
+                </li>
+                {% endfor %}
+                {% if due_soon|length > 5 %}
+                <li class="task-item" style="text-align: center; color: #6c757d;">
+                    <em>... y {{ due_soon|length - 5 }} más</em>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Tareas pendientes -->
+        {% if pending_tasks %}
+        <div class="summary-box">
+            <h3 style="color: #17a2b8;">📋 Tareas Pendientes ({{ pending_tasks|length }})</h3>
+            <ul class="task-list">
+                {% for task in pending_tasks[:5] %}
+                <li class="task-item">
+                    <strong>{{ task.title }}</strong>
+                    <span class="badge badge-info">{{ task.status.value }}</span>
+                    <br>
+                    <small style="color: #6c757d;">
+                        Progreso: {{ task.progress }}% |
+                        Vence: {{ task.due_date.strftime('%d/%m/%Y') }}
+                    </small>
+                </li>
+                {% endfor %}
+                {% if pending_tasks|length > 5 %}
+                <li class="task-item" style="text-align: center; color: #6c757d;">
+                    <em>... y {{ pending_tasks|length - 5 }} más</em>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if not overdue_tasks and not due_soon and not pending_tasks %}
+        <div class="summary-box" style="text-align: center; padding: 40px;">
+            <h3 style="color: #28a745;">✅ ¡Excelente trabajo!</h3>
+            <p>No tienes tareas pendientes, vencidas o próximas a vencer.</p>
+        </div>
+        {% endif %}
+
+        <p style="text-align: center;">
+            <a href="{{ dashboard_url }}" class="button">Ver Dashboard Completo</a>
+        </p>
+
+        <p style="font-size: 12px; color: #6c757d;">
+            <strong>Recomendaciones:</strong>
+        </p>
+        <ul style="font-size: 12px; color: #6c757d;">
+            <li>Prioriza las tareas vencidas y de alta prioridad</li>
+            <li>Actualiza el progreso de las tareas en curso regularmente</li>
+            <li>Adjunta evidencias y documentación necesaria</li>
+            <li>Solicita ayuda si necesitas más tiempo para completar una tarea</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p>Este es un correo automático del ISMS Manager.</p>
+        <p>Por favor, no respondas a este correo.</p>
+        <p>&copy; 2025 ISMS Manager - ISO/IEC 27001:2023</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario Anual de Tareas - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .year-calendar {
+        background: white;
+        border-radius: 8px;
+    }
+    .year-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 2px solid #dee2e6;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px 8px 0 0;
+    }
+    .month-card {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        margin-bottom: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .month-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .month-card-header {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+    }
+    .month-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .stat-badge i {
+        margin-right: 4px;
+    }
+    .badge-critica { background: #dc3545; color: white; }
+    .badge-alta { background: #fd7e14; color: white; }
+    .badge-media { background: #ffc107; color: #333; }
+    .badge-baja { background: #28a745; color: white; }
+    .badge-total { background: #6c757d; color: white; }
+
+    .task-mini-list {
+        max-height: 150px;
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+    .task-mini-item {
+        font-size: 0.8rem;
+        padding: 4px 0;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .task-mini-item:last-child {
+        border-bottom: none;
+    }
+    .progress-ring {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto;
+    }
+    .summary-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .summary-stat {
+        text-align: center;
+        padding: 15px;
+    }
+    .summary-stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .summary-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('tasks.index') }}">Tareas</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('tasks.calendar_view') }}">Calendario</a></li>
+            <li class="breadcrumb-item active">Vista Anual {{ year }}</li>
+        </ol>
+    </nav>
+
+    <!-- Encabezado del año -->
+    <div class="card year-calendar mb-4">
+        <div class="year-header">
+            <div>
+                <a href="{{ url_for('tasks.calendar_view', view='year', year=prev_year) }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <span class="mx-3 fs-3 fw-bold">{{ year }}</span>
+                <a href="{{ url_for('tasks.calendar_view', view='year', year=next_year) }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+            <div>
+                <a href="{{ url_for('tasks.calendar_view') }}" class="btn btn-light btn-sm me-2">
+                    <i class="fas fa-calendar-day me-1"></i>Vista Mensual
+                </a>
+                <a href="{{ url_for('tasks.calendar_view', view='year', year=current_date.year) }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sync me-1"></i>Año Actual
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen anual -->
+    <div class="summary-card mb-4">
+        <h5 class="mb-4"><i class="fas fa-chart-bar me-2"></i>Resumen Anual</h5>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-number text-primary">
+                        {{ stats_by_month.values()|map(attribute='total')|sum }}
+                    </div>
+                    <div class="summary-stat-label">Total Tareas</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-number text-danger">
+                        {{ stats_by_month.values()|map(attribute='critica')|sum + stats_by_month.values()|map(attribute='alta')|sum }}
+                    </div>
+                    <div class="summary-stat-label">Alta Prioridad</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-number text-info">
+                        {{ stats_by_month.values()|map(attribute='en_progreso')|sum }}
+                    </div>
+                    <div class="summary-stat-label">En Progreso</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-number text-warning">
+                        {{ stats_by_month.values()|map(attribute='vencida')|sum }}
+                    </div>
+                    <div class="summary-stat-label">Vencidas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de 12 meses -->
+    <div class="row">
+        {% for month_num in range(1, 13) %}
+        <div class="col-md-4 col-lg-3">
+            <div class="month-card" onclick="window.location.href='{{ url_for('tasks.calendar_view', year=year, month=month_num) }}'">
+                <div class="month-card-header">
+                    <i class="fas fa-calendar me-2"></i>{{ month_names[month_num] }}
+                </div>
+
+                <!-- Estadísticas del mes -->
+                <div class="month-stats mb-2">
+                    {% if stats_by_month[month_num].total > 0 %}
+                        <span class="stat-badge badge-total">
+                            <i class="fas fa-tasks"></i>{{ stats_by_month[month_num].total }}
+                        </span>
+                        {% if stats_by_month[month_num].critica > 0 %}
+                        <span class="stat-badge badge-critica">
+                            <i class="fas fa-exclamation-circle"></i>{{ stats_by_month[month_num].critica }}
+                        </span>
+                        {% endif %}
+                        {% if stats_by_month[month_num].alta > 0 %}
+                        <span class="stat-badge badge-alta">
+                            <i class="fas fa-exclamation-triangle"></i>{{ stats_by_month[month_num].alta }}
+                        </span>
+                        {% endif %}
+                        {% if stats_by_month[month_num].media > 0 %}
+                        <span class="stat-badge badge-media">
+                            <i class="fas fa-info-circle"></i>{{ stats_by_month[month_num].media }}
+                        </span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted small">
+                            <i class="fas fa-check-circle me-1"></i>Sin tareas programadas
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Mini lista de tareas -->
+                {% if tasks_by_month[month_num] %}
+                <div class="task-mini-list">
+                    {% for task in tasks_by_month[month_num][:5] %}
+                    <div class="task-mini-item">
+                        <span class="text-truncate" style="max-width: 150px;" title="{{ task.title }}">
+                            {{ task.title }}
+                        </span>
+                        <span class="badge badge-sm bg-{{ 'danger' if task.priority.value in ['critica', 'alta'] else 'warning' if task.priority.value == 'media' else 'success' }}">
+                            {{ task.due_date.strftime('%d') }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    {% if tasks_by_month[month_num]|length > 5 %}
+                    <div class="task-mini-item">
+                        <small class="text-muted">
+                            <i class="fas fa-ellipsis-h"></i> +{{ tasks_by_month[month_num]|length - 5 }} más
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-check-circle text-success fa-2x"></i>
+                    <p class="text-muted small mt-2 mb-0">Sin tareas</p>
+                </div>
+                {% endif %}
+
+                <!-- Indicador de estado del mes -->
+                <div class="mt-2 text-center">
+                    {% if stats_by_month[month_num].vencida > 0 %}
+                    <small class="text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> {{ stats_by_month[month_num].vencida }} vencida(s)
+                    </small>
+                    {% elif stats_by_month[month_num].en_progreso > 0 %}
+                    <small class="text-info">
+                        <i class="fas fa-spinner"></i> {{ stats_by_month[month_num].en_progreso }} en progreso
+                    </small>
+                    {% elif stats_by_month[month_num].pendiente > 0 %}
+                    <small class="text-warning">
+                        <i class="fas fa-clock"></i> {{ stats_by_month[month_num].pendiente }} pendiente(s)
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if month_num % 4 == 0 and month_num < 12 %}
+        </div><div class="row">
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Leyenda -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Leyenda</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <span class="stat-badge badge-critica">
+                        <i class="fas fa-exclamation-circle"></i> Crítica
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <span class="stat-badge badge-alta">
+                        <i class="fas fa-exclamation-triangle"></i> Alta
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <span class="stat-badge badge-media">
+                        <i class="fas fa-info-circle"></i> Media
+                    </span>
+                </div>
+                <div class="col-md-3">
+                    <span class="stat-badge badge-baja">
+                        <i class="fas fa-check-circle"></i> Baja
+                    </span>
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-mouse-pointer me-1"></i>
+                    Haz clic en cualquier mes para ver el calendario mensual detallado
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

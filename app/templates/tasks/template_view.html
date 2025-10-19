@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.title }} - Plantilla de Tarea{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-file-alt"></i> {{ template.title }}</h2>
+            <p class="text-muted">Detalle de Plantilla de Tarea</p>
+        </div>
+        <div class="col-auto">
+            {% if current_user.has_role('admin') or current_user.has_role('ciso') %}
+            <a href="{{ url_for('tasks.edit_template', id=template.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <form method="POST" action="{{ url_for('tasks.generate_from_template', id=template.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-play"></i> Generar Tarea
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('tasks.templates') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información General</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Título:</dt>
+                        <dd class="col-sm-9">{{ template.title }}</dd>
+
+                        <dt class="col-sm-3">Descripción:</dt>
+                        <dd class="col-sm-9">{{ template.description }}</dd>
+
+                        <dt class="col-sm-3">Categoría:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-info">{{ template.category.value }}</span>
+                        </dd>
+
+                        <dt class="col-sm-3">Prioridad:</dt>
+                        <dd class="col-sm-9">
+                            {% if template.priority.name == 'CRITICA' %}
+                                <span class="badge bg-danger">Crítica</span>
+                            {% elif template.priority.name == 'ALTA' %}
+                                <span class="badge bg-warning">Alta</span>
+                            {% elif template.priority.name == 'MEDIA' %}
+                                <span class="badge bg-primary">Media</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Baja</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-3">Frecuencia:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-secondary">{{ template.frequency.value }}</span>
+                        </dd>
+
+                        <dt class="col-sm-3">Control ISO:</dt>
+                        <dd class="col-sm-9">
+                            {% if template.iso_control %}
+                                <span class="badge bg-success">{{ template.iso_control }}</span>
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-3">Horas Estimadas:</dt>
+                        <dd class="col-sm-9">{{ template.estimated_hours }} horas</dd>
+
+                        <dt class="col-sm-3">Estado:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-{{ 'success' if template.is_active else 'secondary' }}">
+                                {{ 'Activa' if template.is_active else 'Inactiva' }}
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            {% if template.checklist_template %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Lista de Verificación</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        {% for item in template.checklist_template %}
+                        <li class="mb-2">
+                            <i class="far fa-square"></i> {{ item }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user-clock"></i> Asignación</h5>
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Responsable por defecto:</dt>
+                        <dd>
+                            {% if template.default_assignee %}
+                                {{ template.default_assignee.first_name }} {{ template.default_assignee.last_name }}
+                            {% elif template.default_role %}
+                                <span class="badge bg-primary">Rol: {{ template.default_role.name }}</span>
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>Notificar antes:</dt>
+                        <dd>{{ template.notify_days_before }} días</dd>
+
+                        <dt>Requiere evidencia:</dt>
+                        <dd>
+                            {% if template.requires_evidence %}
+                                <span class="badge bg-success">Sí</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>Requiere aprobación:</dt>
+                        <dd>
+                            {% if template.requires_approval %}
+                                <span class="badge bg-warning">Sí</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info"></i> Información de Auditoría</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Creado por:</dt>
+                        <dd>{{ template.created_by.username if template.created_by else 'Sistema' }}</dd>
+
+                        <dt>Fecha de creación:</dt>
+                        <dd>{{ template.created_at.strftime('%d/%m/%Y %H:%M') if template.created_at else 'N/A' }}</dd>
+
+                        <dt>Última actualización:</dt>
+                        <dd>{{ template.updated_at.strftime('%d/%m/%Y %H:%M') if template.updated_at else 'N/A' }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

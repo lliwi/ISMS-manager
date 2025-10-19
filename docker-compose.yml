@@ -38,6 +38,15 @@ services:
       - AI_BASE_URL=${AI_BASE_URL:-http://localhost:11434}
       - AI_TIMEOUT=${AI_TIMEOUT:-120}
       - KNOWLEDGE_BASE_PATH=${KNOWLEDGE_BASE_PATH:-knowledge}
+      - MAIL_SERVER=${MAIL_SERVER:-mailhog}
+      - MAIL_PORT=${MAIL_PORT:-1025}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-False}
+      - MAIL_USE_SSL=${MAIL_USE_SSL:-False}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-sgsi@empresa.com}
+      - MAIL_MAX_EMAILS=${MAIL_MAX_EMAILS:-100}
+      - TASK_NOTIFICATION_ENABLED=${TASK_NOTIFICATION_ENABLED:-True}
     ports:
       - "5000:5000"
     volumes:
@@ -92,6 +101,22 @@ services:
     restart: always
     command: redis-server --appendonly yes
 
+  # MailHog - SMTP Server for Development/Testing
+  # Para producción, configurar servidor SMTP externo en variables de entorno
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - isms_network
+    restart: always
+    environment:
+      MH_STORAGE: maildir
+      MH_MAILDIR_PATH: /maildir
+    volumes:
+      - mailhog_data:/maildir
+
   # Ollama AI Service (Optional - for document verification)
   # Uncomment to enable local AI document verification
   # ollama:
@@ -112,6 +137,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  mailhog_data:
   # ollama_data:  # Uncomment if using Ollama service
 
 networks:

@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .task-detail-card {
+        border-left: 4px solid;
+    }
+    .task-detail-card.critica { border-left-color: #dc3545; }
+    .task-detail-card.alta { border-left-color: #fd7e14; }
+    .task-detail-card.media { border-left-color: #ffc107; }
+    .task-detail-card.baja { border-left-color: #28a745; }
+
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid #fff;
+    }
+    .checklist-item {
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .checklist-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('tasks.index') }}">Tareas</a></li>
+            <li class="breadcrumb-item active">{{ task.title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header con acciones -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{ task.title }}</h2>
+            <p class="text-muted">
+                {% if task.iso_control %}
+                <i class="fas fa-shield-alt me-1"></i>ISO 27001 Control {{ task.iso_control }} |
+                {% endif %}
+                Categoría: {{ task.category.value|replace('_', ' ')|title }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if task.status.value not in ['completada', 'cancelada'] %}
+                {% if current_user.id == task.assigned_to_id or current_user.id == task.created_by_id or current_user.role.name in ['Administrador', 'CISO'] %}
+                <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-outline-primary">
+                    <i class="fas fa-edit me-2"></i>Editar Detalles
+                </a>
+                {% endif %}
+                {% if current_user.id == task.assigned_to_id or current_user.role.name in ['Administrador', 'CISO'] %}
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateModal">
+                    <i class="fas fa-tasks me-2"></i>Actualizar Estado
+                </button>
+                {% if task.status.value != 'completada' %}
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#completeModal">
+                    <i class="fas fa-check me-2"></i>Completar
+                </button>
+                {% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-md-8">
+            <!-- Detalles de la Tarea -->
+            <div class="card task-detail-card {{ task.priority.value }} mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Detalles de la Tarea</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Estado:</strong>
+                            <span class="badge bg-{{ 'primary' if task.status.value == 'pendiente' else 'info' if task.status.value == 'en_progreso' else 'danger' if task.status.value == 'vencida' else 'success' }} ms-2">
+                                {{ task.status.value|replace('_', ' ')|upper }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Prioridad:</strong>
+                            <span class="badge bg-{{ 'danger' if task.priority.value in ['critica', 'alta'] else 'warning' if task.priority.value == 'media' else 'success' }} ms-2">
+                                {{ task.priority.value|upper }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Fecha de Vencimiento:</strong>
+                            <p>{{ task.due_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                            {% if task.days_until_due is not none %}
+                                {% if task.days_until_due < 0 %}
+                                <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Vencida hace {{ -task.days_until_due }} días</small>
+                                {% elif task.days_until_due <= 7 %}
+                                <small class="text-warning"><i class="fas fa-clock me-1"></i>Vence en {{ task.days_until_due }} días</small>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if task.start_date %}
+                            <strong>Fecha de Inicio:</strong>
+                            <p>{{ task.start_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Descripción:</strong>
+                        <p>{{ task.description }}</p>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Asignada a:</strong>
+                            <p>
+                                {% if task.assigned_to %}
+                                <i class="fas fa-user me-1"></i>{{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}
+                                {% else %}
+                                <span class="text-muted">No asignada</span>
+                                {% if current_user.role.name in ['Administrador', 'CISO'] %}
+                                <button type="button" class="btn btn-sm btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#assignModal">
+                                    <i class="fas fa-user-plus"></i> Asignar
+                                </button>
+                                {% endif %}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if task.estimated_hours %}
+                            <strong>Horas Estimadas:</strong>
+                            <p>{{ task.estimated_hours }}h</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Progreso:</strong>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ task.progress }}%;">
+                                {{ task.progress }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if task.observations %}
+                    <div class="mb-3">
+                        <strong>Observaciones:</strong>
+                        <div class="alert alert-info">{{ task.observations }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if task.result %}
+                    <div class="mb-3">
+                        <strong>Resultado:</strong>
+                        <div class="alert alert-success">{{ task.result }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Checklist -->
+            {% if task.checklist %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Lista de Verificación</h5>
+                </div>
+                <div class="card-body">
+                    {% for item in task.checklist %}
+                    <div class="checklist-item">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if item.completed %}checked{% endif %} disabled>
+                            <label class="form-check-label">
+                                {{ item.description }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Evidencias -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-paperclip me-2"></i>Evidencias ({{ task.evidences|length }})</h5>
+                    {% if task.status.value not in ['completada', 'cancelada'] and current_user.id == task.assigned_to_id %}
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadEvidenceModal">
+                        <i class="fas fa-upload me-1"></i>Subir Evidencia
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if task.evidences %}
+                    <div class="list-group">
+                        {% for evidence in task.evidences %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-file me-2"></i>{{ evidence.original_filename }}
+                                    </h6>
+                                    {% if evidence.description %}
+                                    <p class="mb-1 text-muted small">{{ evidence.description }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        Subido por {{ evidence.uploaded_by.username }} el {{ evidence.uploaded_at.strftime('%d/%m/%Y %H:%M') }}
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('tasks.download_evidence', evidence_id=evidence.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download"></i> Descargar
+                                    </a>
+                                    {% if current_user.id == evidence.uploaded_by_id or current_user.id == task.assigned_to_id or current_user.id == task.created_by_id or current_user.role.name in ['Administrador', 'CISO'] %}
+                                    <form method="POST" action="{{ url_for('tasks.delete_evidence', evidence_id=evidence.id) }}" style="display: inline;"
+                                          onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta evidencia? Esta acción no se puede deshacer.');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No hay evidencias adjuntas</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Comentarios -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Comentarios ({{ task.comments|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if task.comments %}
+                    <div class="mb-3">
+                        {% for comment in task.comments %}
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ comment.created_by.username }}</strong>
+                                    <small class="text-muted">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                <p class="mb-0 mt-2">{{ comment.comment }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Formulario nuevo comentario -->
+                    <form method="POST" action="{{ url_for('tasks.add_comment', id=task.id) }}">
+                        {{ comment_form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ comment_form.comment(class="form-control", rows="3", placeholder="Escribe un comentario...") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Comentario
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Información Adicional -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Creada por:</strong><br>
+                        {{ task.created_by.username if task.created_by else 'Sistema' }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Fecha de creación:</strong><br>
+                        {{ task.created_at.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                    {% if task.template %}
+                    <p class="mb-2">
+                        <strong>Plantilla origen:</strong><br>
+                        {{ task.template.title }}
+                    </p>
+                    {% endif %}
+                    {% if task.completion_date %}
+                    <p class="mb-2">
+                        <strong>Fecha de finalización:</strong><br>
+                        {{ task.completion_date.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                    {% if task.actual_hours %}
+                    <p class="mb-2">
+                        <strong>Horas reales:</strong><br>
+                        {{ task.actual_hours }}h
+                    </p>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historial de Cambios -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>Historial</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for entry in task.history %}
+                        <div class="timeline-item">
+                            <small class="text-muted">{{ entry.created_at.strftime('%d/%m %H:%M') }}</small>
+                            <p class="mb-0">
+                                <strong>{{ entry.user.username if entry.user else 'Sistema' }}</strong>
+                                {{ entry.details }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para subir evidencia -->
+<div class="modal fade" id="uploadEvidenceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subir Evidencia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('tasks.add_evidence', id=task.id) }}" enctype="multipart/form-data">
+                {{ evidence_form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {{ evidence_form.file.label(class="form-label") }}
+                        {{ evidence_form.file(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ evidence_form.description.label(class="form-label") }}
+                        {{ evidence_form.description(class="form-control", rows="3") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Subir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para actualizar tarea -->
+<div class="modal fade" id="updateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Actualizar Tarea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('tasks.update', id=task.id) }}">
+                {{ update_form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {{ update_form.status.label(class="form-label") }}
+                        {{ update_form.status(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ update_form.progress.label(class="form-label") }}
+                        {{ update_form.progress(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ update_form.actual_hours.label(class="form-label") }}
+                        {{ update_form.actual_hours(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ update_form.observations.label(class="form-label") }}
+                        {{ update_form.observations(class="form-control") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para completar tarea -->
+<div class="modal fade" id="completeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Completar Tarea</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('tasks.complete', id=task.id) }}">
+                {{ complete_form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {{ complete_form.result.label(class="form-label") }}
+                        {{ complete_form.result(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ complete_form.actual_hours.label(class="form-label") }}
+                        {{ complete_form.actual_hours(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ complete_form.observations.label(class="form-label") }}
+                        {{ complete_form.observations(class="form-control") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Completar Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Asignar Tarea -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Asignar Tarea</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('tasks.assign_task', id=task.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="assigned_to_id" class="form-label">Usuario Asignado</label>
+                        <select name="assigned_to_id" id="assigned_to_id" class="form-select" required>
+                            <option value="">Seleccionar usuario...</option>
+                            {% for user in active_users %}
+                            <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }} ({{ user.username }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">El usuario recibirá una notificación por correo electrónico.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Asignar Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

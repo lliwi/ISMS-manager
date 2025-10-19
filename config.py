@@ -34,6 +34,11 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@isms.local')
+    MAIL_MAX_EMAILS = int(os.environ.get('MAIL_MAX_EMAILS', '100'))
+
+    # Task Management Settings
+    TASK_AUTO_GENERATION_ENABLED = os.environ.get('TASK_AUTO_GENERATION_ENABLED', 'True').lower() == 'true'
+    TASK_NOTIFICATION_ENABLED = os.environ.get('TASK_NOTIFICATION_ENABLED', 'True').lower() == 'true'
 
     # File Upload Settings
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', '16777216'))  # 16MB

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Plantillas de Tareas - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('tasks.index') }}">Tareas</a></li>
+            <li class="breadcrumb-item active">Plantillas</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-file-alt me-2"></i>Plantillas de Tareas ISO 27001</h2>
+            <p class="text-muted">Plantillas predefinidas para tareas recurrentes del SGSI</p>
+        </div>
+        <div class="col-md-6 text-end">
+            {% if current_user.has_role('admin') or current_user.has_role('ciso') %}
+            <a href="{{ url_for('tasks.create_template') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nueva Plantilla
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Frecuencia</label>
+                    <select name="frequency" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="diaria">Diaria</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensual">Mensual</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="semestral">Semestral</option>
+                        <option value="anual">Anual</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Categoría</label>
+                    <select name="category" class="form-select">
+                        <option value="">Todas</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.value }}">{{ cat.value|replace('_', ' ')|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Plantillas -->
+    <div class="row">
+        {% for template in templates %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-{{ 'danger' if template.priority.value == 'critica' else 'warning' if template.priority.value == 'alta' else 'info' if template.priority.value == 'media' else 'success' }} text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="mb-0">{{ template.title }}</h5>
+                        <span class="badge bg-light text-dark">{{ template.frequency.value|upper }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ template.description }}</p>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Categoría</small>
+                            <small><strong>{{ template.category.value|replace('_', ' ')|title }}</strong></small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Control ISO</small>
+                            <small><strong>{{ template.iso_control }}</strong></small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Prioridad</small>
+                            <span class="badge bg-{{ 'danger' if template.priority.value in ['critica', 'alta'] else 'warning' if template.priority.value == 'media' else 'success' }}">
+                                {{ template.priority.value|upper }}
+                            </span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Tiempo estimado</small>
+                            <small><strong>{{ template.estimated_hours }}h</strong></small>
+                        </div>
+                    </div>
+
+                    {% if template.default_assignee %}
+                    <p class="mb-2">
+                        <small class="text-muted">Asignado por defecto:</small><br>
+                        <small><i class="fas fa-user me-1"></i>{{ template.default_assignee.username }}</small>
+                    </p>
+                    {% endif %}
+
+                    {% if template.checklist_template %}
+                    <p class="mb-2">
+                        <small class="text-muted"><i class="fas fa-list-check me-1"></i>Incluye checklist ({{ template.checklist_template|length }} items)</small>
+                    </p>
+                    {% endif %}
+
+                    {% if template.requires_evidence %}
+                    <p class="mb-2">
+                        <small class="text-warning"><i class="fas fa-paperclip me-1"></i>Requiere evidencia</small>
+                    </p>
+                    {% endif %}
+
+                    <div class="mt-3 d-flex justify-content-between">
+                        <div>
+                            <span class="badge bg-{{ 'success' if template.is_active else 'secondary' }}">
+                                {{ 'Activa' if template.is_active else 'Inactiva' }}
+                            </span>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('tasks.view_template', id=template.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if current_user.has_role('admin') or current_user.has_role('ciso') %}
+                            <a href="{{ url_for('tasks.edit_template', id=template.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('tasks.generate_from_template', id=template.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Generar tarea ahora">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="fas fa-clock me-1"></i>Última actualización: {{ template.updated_at.strftime('%d/%m/%Y') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay plantillas disponibles.
+                {% if current_user.has_role('admin') or current_user.has_role('ciso') %}
+                <a href="{{ url_for('tasks.create_template') }}">Crear la primera plantilla</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if templates.has_prev or templates.has_next %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item {{ 'disabled' if not templates.has_prev else '' }}">
+                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.prev_num) if templates.has_prev else '#' }}">
+                    Anterior
+                </a>
+            </li>
+            {% for page_num in templates.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {{ 'active' if page_num == templates.page else '' }}">
+                        <a class="page-link" href="{{ url_for('tasks.templates', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {{ 'disabled' if not templates.has_next else '' }}">
+                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.next_num) if templates.has_next else '#' }}">
+                    Siguiente
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Auto-submit en cambio de filtros
+    document.querySelectorAll('select[name="frequency"], select[name="category"]').forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+</script>
+{% endblock %}

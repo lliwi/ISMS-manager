@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_required, current_user
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from flask_mail import Mail
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 import os
@@ -23,6 +24,12 @@ def create_app(config_name=None):
 
     migrate = Migrate(app, db)
     csrf = CSRFProtect(app)
+
+    # Initialize Flask-Mail
+    mail = Mail(app)
+
+    # Make mail available globally for notification service
+    app.extensions['mail'] = mail
 
     login_manager = LoginManager()
     login_manager.init_app(app)
@@ -345,6 +352,15 @@ def create_app(config_name=None):
                 db.session.add(period)
 
             db.session.commit()
+
+        # Initialize task scheduler
+        try:
+            from app.services.scheduler_service import init_scheduler
+            scheduler = init_scheduler(app)
+            # Store scheduler in app context for access in routes
+            app.extensions['task_scheduler'] = scheduler
+        except Exception as e:
+            print(f"Warning: Task scheduler not initialized: {str(e)}")
 
     return app
 

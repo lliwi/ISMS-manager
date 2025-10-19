@@ -488,26 +488,8 @@ class Audit(db.Model):
     def __repr__(self):
         return f'<Audit {self.title}>'
 
-class Task(db.Model):
-    __tablename__ = 'tasks'
-
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.Text)
-    task_type = db.Column(db.String(50))  # review, maintenance, training, etc.
-    frequency = db.Column(db.String(50))  # daily, weekly, monthly, yearly
-    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, overdue
-    due_date = db.Column(db.DateTime, nullable=False)
-    completed_date = db.Column(db.DateTime)
-    assignee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    assignee = db.relationship('User', backref='tasks')
-
-    def __repr__(self):
-        return f'<Task {self.title}>'
+# Task models have been moved to app/models/task.py for comprehensive ISO 27001 compliance
+# Old simple Task model removed - new models are in app/models/task.py
 
 class TrainingSession(db.Model):
     __tablename__ = 'training_sessions'
@@ -2087,4 +2069,11 @@ from app.models.change import (
     RiskLevel, ApprovalLevel, ApprovalStatus,
     Change, ChangeApproval, ChangeTask, ChangeDocument,
     ChangeHistory, ChangeReview, ChangeRiskAssessment, ChangeAsset
+)
+
+# Import task management models
+from app.models.task import (
+    TaskFrequency, TaskStatus, TaskPriority, TaskCategory,
+    TaskTemplate, Task, TaskEvidence, TaskComment,
+    TaskHistory, TaskNotificationLog
 )

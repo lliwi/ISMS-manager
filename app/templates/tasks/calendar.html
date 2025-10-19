@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario de Tareas - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .calendar {
+        background: white;
+        border-radius: 8px;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #dee2e6;
+    }
+    .calendar-day-header {
+        background: #f8f9fa;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .calendar-day {
+        background: white;
+        min-height: 120px;
+        padding: 8px;
+        position: relative;
+    }
+    .calendar-day.other-month {
+        background: #f8f9fa;
+        opacity: 0.6;
+    }
+    .calendar-day.today {
+        background: #e7f3ff;
+    }
+    .calendar-day-number {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .calendar-task {
+        font-size: 0.75rem;
+        padding: 2px 5px;
+        margin-bottom: 2px;
+        border-radius: 3px;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .calendar-task.critica, .calendar-task.alta {
+        background: #f8d7da;
+        border-left: 3px solid #dc3545;
+    }
+    .calendar-task.media {
+        background: #fff3cd;
+        border-left: 3px solid #ffc107;
+    }
+    .calendar-task.baja {
+        background: #d1e7dd;
+        border-left: 3px solid #28a745;
+    }
+    .calendar-task.completada {
+        background: #d1e7dd;
+        border-left: 3px solid #198754;
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+    .task-list-sidebar {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('tasks.index') }}">Tareas</a></li>
+            <li class="breadcrumb-item active">Calendario</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Calendario -->
+        <div class="col-md-9">
+            <div class="card calendar">
+                <div class="calendar-header">
+                    <div>
+                        <a href="{{ url_for('tasks.calendar_view', year=prev_month.year, month=prev_month.month) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                        <span class="mx-3 fs-5 fw-bold">{{ month_name }} {{ year }}</span>
+                        <a href="{{ url_for('tasks.calendar_view', year=next_month.year, month=next_month.month) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('tasks.calendar_view') }}" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-calendar-day me-1"></i>Hoy
+                        </a>
+                        <a href="{{ url_for('tasks.calendar_view', view='year', year=year) }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-calendar-alt me-1"></i>Vista Anual
+                        </a>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <!-- Encabezados de días -->
+                    <div class="calendar-day-header">Lun</div>
+                    <div class="calendar-day-header">Mar</div>
+                    <div class="calendar-day-header">Mié</div>
+                    <div class="calendar-day-header">Jue</div>
+                    <div class="calendar-day-header">Vie</div>
+                    <div class="calendar-day-header">Sáb</div>
+                    <div class="calendar-day-header">Dom</div>
+
+                    <!-- Días del calendario -->
+                    {% for week in calendar_weeks %}
+                        {% for day in week %}
+                        <div class="calendar-day {{ 'other-month' if day.month != month else '' }} {{ 'today' if day == today else '' }}">
+                            <div class="calendar-day-number">{{ day.day }}</div>
+                            {% for task in tasks_by_date.get(day.strftime('%Y-%m-%d'), []) %}
+                            <div class="calendar-task {{ task.priority.value }} {{ task.status.value }}"
+                                 onclick="window.location.href='{{ url_for('tasks.view', id=task.id) }}'"
+                                 title="{{ task.title }}">
+                                {{ task.title[:20] }}{{ '...' if task.title|length > 20 else '' }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Leyenda -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6>Leyenda:</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <span class="calendar-task critica d-inline-block" style="width: 100px;">Crítica/Alta</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="calendar-task media d-inline-block" style="width: 100px;">Media</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="calendar-task baja d-inline-block" style="width: 100px;">Baja</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="calendar-task completada d-inline-block" style="width: 100px;">Completada</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar con lista de tareas del mes -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Tareas del Mes</h6>
+                </div>
+                <div class="card-body task-list-sidebar">
+                    {% if monthly_tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in monthly_tasks %}
+                        <a href="{{ url_for('tasks.view', id=task.id) }}" class="list-group-item list-group-item-action {{ 'list-group-item-danger' if task.is_overdue else '' }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 small">{{ task.title[:30] }}</h6>
+                                <small class="text-muted">{{ task.due_date.strftime('%d/%m') }}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{{ 'danger' if task.priority.value in ['critica', 'alta'] else 'warning' if task.priority.value == 'media' else 'success' }}">
+                                    {{ task.priority.value }}
+                                </span>
+                                <span class="badge bg-{{ 'primary' if task.status.value == 'pendiente' else 'info' if task.status.value == 'en_progreso' else 'success' }}">
+                                    {{ task.status.value }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No hay tareas programadas para este mes</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Próximas tareas venciendo -->
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Próximas a Vencer</h6>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in upcoming_tasks[:5] %}
+                        <a href="{{ url_for('tasks.view', id=task.id) }}" class="list-group-item list-group-item-action">
+                            <h6 class="mb-1 small">{{ task.title[:30] }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>{{ task.due_date.strftime('%d/%m/%Y') }}
+                                {% if task.days_until_due is not none and task.days_until_due >= 0 %}
+                                <br><span class="text-warning">En {{ task.days_until_due }} días</span>
+                                {% endif %}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small text-center py-2">No hay tareas próximas a vencer</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if template else 'Nueva' }} Plantilla{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-file-alt"></i>
+                {{ 'Editar' if template else 'Nueva' }} Plantilla de Tarea
+            </h2>
+            <p class="text-muted">{{ template.title if template else 'Crear nueva plantilla' }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('tasks.templates') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Cancelar
+            </a>
+        </div>
+    </div>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información General</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback">{{ form.title.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="4") }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.category.label(class="form-label") }}
+                                {{ form.category(class="form-select" + (" is-invalid" if form.category.errors else "")) }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback">{{ form.category.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.frequency.label(class="form-label") }}
+                                {{ form.frequency(class="form-select" + (" is-invalid" if form.frequency.errors else "")) }}
+                                {% if form.frequency.errors %}
+                                    <div class="invalid-feedback">{{ form.frequency.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.priority.label(class="form-label") }}
+                                {{ form.priority(class="form-select" + (" is-invalid" if form.priority.errors else "")) }}
+                                {% if form.priority.errors %}
+                                    <div class="invalid-feedback">{{ form.priority.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.iso_control.label(class="form-label") }}
+                                {{ form.iso_control(class="form-control", placeholder="Ej: 9.1, 9.2, 8.2") }}
+                                <small class="form-text text-muted">Control ISO 27001 relacionado</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.estimated_hours.label(class="form-label") }}
+                            {{ form.estimated_hours(class="form-control", type="number", step="0.5", min="0") }}
+                            <small class="form-text text-muted">Tiempo estimado para completar la tarea</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-clock"></i> Asignación y Notificaciones</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.default_assignee_id.label(class="form-label") }}
+                            {{ form.default_assignee_id(class="form-select") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.default_role_id.label(class="form-label") }}
+                            {{ form.default_role_id(class="form-select") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notify_days_before.label(class="form-label") }}
+                            {{ form.notify_days_before(class="form-control", type="number", min="0") }}
+                            <small class="form-text text-muted">Días antes del vencimiento para notificar</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Configuración</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            {{ form.requires_evidence(class="form-check-input") }}
+                            {{ form.requires_evidence.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="form-check mb-2">
+                            {{ form.requires_approval(class="form-check-input") }}
+                            {{ form.requires_approval.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> {{ 'Actualizar' if template else 'Crear' }} Plantilla
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
