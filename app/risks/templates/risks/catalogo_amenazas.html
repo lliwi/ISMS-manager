@@ -30,32 +30,32 @@
         <div class="col-md-3">
             <div class="card bg-danger text-white">
                 <div class="card-body">
-                    <div class="small">Ataques Intencionados</div>
-                    <div class="h4 mb-0">{{ stats.ATAQUES_INTENCIONADOS }}</div>
+                    <div class="small">Ataques</div>
+                    <div class="h4 mb-0">{{ stats.ATAQUES }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <div class="small">Errores No Intencionados</div>
-                    <div class="h4 mb-0">{{ stats.ERRORES_NO_INTENCIONADOS }}</div>
+                    <div class="small">Errores</div>
+                    <div class="h4 mb-0">{{ stats.ERRORES }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
-                    <div class="small">Origen Industrial</div>
-                    <div class="h4 mb-0">{{ stats.ORIGEN_INDUSTRIAL }}</div>
+                    <div class="small">Industriales</div>
+                    <div class="h4 mb-0">{{ stats.INDUSTRIALES }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-secondary text-white">
                 <div class="card-body">
-                    <div class="small">Desastres Naturales</div>
-                    <div class="h4 mb-0">{{ stats.DESASTRES_NATURALES }}</div>
+                    <div class="small">Naturales</div>
+                    <div class="h4 mb-0">{{ stats.NATURALES }}</div>
                 </div>
             </div>
         </div>
@@ -73,10 +73,10 @@
                 <div class="col-md-3">
                     <select name="grupo" class="form-select">
                         <option value="">Todos los grupos</option>
-                        <option value="ATAQUES_INTENCIONADOS">Ataques Intencionados</option>
-                        <option value="ERRORES_NO_INTENCIONADOS">Errores No Intencionados</option>
-                        <option value="ORIGEN_INDUSTRIAL">Origen Industrial</option>
-                        <option value="DESASTRES_NATURALES">Desastres Naturales</option>
+                        <option value="ATAQUES">Ataques</option>
+                        <option value="ERRORES">Errores</option>
+                        <option value="INDUSTRIALES">Industriales</option>
+                        <option value="NATURALES">Naturales</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -97,17 +97,17 @@
     {% for grupo, amenazas_grupo in amenazas_por_grupo.items() %}
     <div class="card mb-3">
         <div class="card-header
-            {% if grupo == 'ATAQUES_INTENCIONADOS' %}bg-danger text-white
-            {% elif grupo == 'ERRORES_NO_INTENCIONADOS' %}bg-warning text-white
-            {% elif grupo == 'ORIGEN_INDUSTRIAL' %}bg-info text-white
+            {% if grupo == 'ATAQUES' %}bg-danger text-white
+            {% elif grupo == 'ERRORES' %}bg-warning text-white
+            {% elif grupo == 'INDUSTRIALES' %}bg-info text-white
             {% else %}bg-secondary text-white{% endif %}">
             <h5 class="mb-0">
                 <i class="fas
-                    {% if grupo == 'ATAQUES_INTENCIONADOS' %}fa-user-secret
-                    {% elif grupo == 'ERRORES_NO_INTENCIONADOS' %}fa-user-times
-                    {% elif grupo == 'ORIGEN_INDUSTRIAL' %}fa-industry
+                    {% if grupo == 'ATAQUES' %}fa-user-secret
+                    {% elif grupo == 'ERRORES' %}fa-user-times
+                    {% elif grupo == 'INDUSTRIALES' %}fa-industry
                     {% else %}fa-cloud-sun-rain{% endif %} me-2"></i>
-                {{ grupo.replace('_', ' ').title() }}
+                {{ grupo }}
                 <span class="badge bg-light text-dark float-end">{{ amenazas_grupo|length }}</span>
             </h5>
         </div>

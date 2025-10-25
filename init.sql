@@ -68,3 +68,26 @@ BEGIN
     -- Tables will be created by Flask-Migrate
 
 END $$;
+
+-- Update threat group names to match model definitions
+-- Normalize amenazas group names for consistency
+DO $$
+BEGIN
+    -- Only execute if the amenazas table exists (for existing installations)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'amenazas'
+    ) THEN
+        -- Update old group names to new standardized names
+        UPDATE amenazas SET grupo = 'NATURALES' WHERE grupo = 'DESASTRES_NATURALES';
+        UPDATE amenazas SET grupo = 'INDUSTRIALES' WHERE grupo = 'ORIGEN_INDUSTRIAL';
+        UPDATE amenazas SET grupo = 'ERRORES' WHERE grupo = 'ERRORES_NO_INTENCIONADOS';
+        UPDATE amenazas SET grupo = 'ATAQUES' WHERE grupo = 'ATAQUES_INTENCIONADOS';
+
+        RAISE NOTICE 'Threat group names normalized successfully';
+    END IF;
+
+    -- If table doesn't exist, this is a new installation
+    -- Threat data will be seeded with correct group names
+
+END $$;

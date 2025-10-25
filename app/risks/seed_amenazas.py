@@ -10,12 +10,12 @@ from app.risks.models import Amenaza
 # Catálogo de amenazas MAGERIT 3.2
 # Organizado en 4 grupos principales
 AMENAZAS_MAGERIT = [
-    # ========== GRUPO 1: DESASTRES NATURALES ==========
+    # ========== GRUPO 1: NATURALES ==========
     {
         'codigo': 'N.1',
         'nombre': 'Fuego',
         'descripcion': 'Incendio que destruye o daña el equipamiento, las instalaciones o los soportes de información.',
-        'grupo': 'DESASTRES_NATURALES',
+        'grupo': 'NATURALES',
         'frecuencia_base': 1,  # Muy baja (1-5)
         'facilidad_base': 3    # Media
     },
@@ -23,7 +23,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'N.2',
         'nombre': 'Daños por agua',
         'descripcion': 'Inundación, humedad, filtración que afecta equipamiento, instalaciones o soportes de información.',
-        'grupo': 'DESASTRES_NATURALES',
+        'grupo': 'NATURALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -31,17 +31,17 @@ AMENAZAS_MAGERIT = [
         'codigo': 'N.*',
         'nombre': 'Desastres naturales',
         'descripcion': 'Otros fenómenos naturales como terremotos, tormentas, rayos, etc.',
-        'grupo': 'DESASTRES_NATURALES',
+        'grupo': 'NATURALES',
         'frecuencia_base': 1,
         'facilidad_base': 2
     },
 
-    # ========== GRUPO 2: ORIGEN INDUSTRIAL ==========
+    # ========== GRUPO 2: INDUSTRIALES ==========
     {
         'codigo': 'I.1',
         'nombre': 'Fuego',
         'descripcion': 'Incendio de origen industrial que afecta instalaciones o equipamiento.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 1,
         'facilidad_base': 3
     },
@@ -49,7 +49,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.2',
         'nombre': 'Daños por agua',
         'descripcion': 'Daños por agua de origen industrial (tuberías, sistemas de refrigeración, etc.).',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -57,7 +57,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.3',
         'nombre': 'Desastres industriales',
         'descripcion': 'Contaminación química, mecánica, electromagnética u otros daños de origen industrial.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 1,
         'facilidad_base': 2
     },
@@ -65,7 +65,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.4',
         'nombre': 'Contaminación electromagnética',
         'descripcion': 'Interferencias electromagnéticas que afectan equipos electrónicos.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -73,7 +73,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.5',
         'nombre': 'Avería de origen físico o lógico',
         'descripcion': 'Fallos en equipamiento o software por desgaste, envejecimiento o defecto de fabricación.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -81,7 +81,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.6',
         'nombre': 'Corte del suministro eléctrico',
         'descripcion': 'Interrupción del suministro eléctrico que afecta el funcionamiento de sistemas.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -89,7 +89,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.7',
         'nombre': 'Condiciones inadecuadas de temperatura o humedad',
         'descripcion': 'Fallo de sistemas de climatización que afecta el funcionamiento de equipos.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -97,7 +97,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.8',
         'nombre': 'Fallo de servicios de comunicaciones',
         'descripcion': 'Interrupción de enlaces de comunicaciones (Internet, WAN, telefonía).',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -105,7 +105,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.9',
         'nombre': 'Interrupción de otros servicios y suministros esenciales',
         'descripcion': 'Fallo de servicios auxiliares necesarios para el funcionamiento de sistemas.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -113,7 +113,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.10',
         'nombre': 'Degradación de los soportes de almacenamiento de la información',
         'descripcion': 'Deterioro de medios de almacenamiento por envejecimiento o desgaste.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -121,17 +121,17 @@ AMENAZAS_MAGERIT = [
         'codigo': 'I.11',
         'nombre': 'Emanaciones electromagnéticas',
         'descripcion': 'Fuga de información mediante interceptación de emanaciones electromagnéticas.',
-        'grupo': 'ORIGEN_INDUSTRIAL',
+        'grupo': 'INDUSTRIALES',
         'frecuencia_base': 1,
         'facilidad_base': 2
     },
 
-    # ========== GRUPO 3: ERRORES Y FALLOS NO INTENCIONADOS ==========
+    # ========== GRUPO 3: ERRORES ==========
     {
         'codigo': 'E.1',
         'nombre': 'Errores de los usuarios',
         'descripcion': 'Errores humanos no intencionados durante el uso de sistemas o manejo de información.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 4,
         'facilidad_base': 5
     },
@@ -139,7 +139,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.2',
         'nombre': 'Errores del administrador',
         'descripcion': 'Errores durante la administración, configuración o mantenimiento de sistemas.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -147,7 +147,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.3',
         'nombre': 'Errores de monitorización (log)',
         'descripcion': 'Fallo en la captura o análisis de registros de auditoría.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -155,7 +155,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.4',
         'nombre': 'Errores de configuración',
         'descripcion': 'Configuración inadecuada de sistemas, equipos o aplicaciones.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -163,7 +163,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.7',
         'nombre': 'Deficiencias en la organización',
         'descripcion': 'Falta de procedimientos, procesos inadecuados o mala asignación de responsabilidades.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -171,7 +171,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.8',
         'nombre': 'Difusión de software dañino',
         'descripcion': 'Propagación no intencionada de malware por parte de usuarios o sistemas.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -179,7 +179,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.9',
         'nombre': 'Errores de [re-]encaminamiento',
         'descripcion': 'Fallo en el enrutamiento de comunicaciones que afecta disponibilidad o confidencialidad.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -187,7 +187,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.10',
         'nombre': 'Errores de secuencia',
         'descripcion': 'Alteración no intencionada del orden de mensajes o transacciones.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -195,7 +195,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.15',
         'nombre': 'Alteración accidental de la información',
         'descripcion': 'Modificación no intencionada de datos por error humano o de sistema.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -203,7 +203,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.18',
         'nombre': 'Destrucción de información',
         'descripcion': 'Pérdida o eliminación no intencionada de información.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -211,7 +211,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.19',
         'nombre': 'Fugas de información',
         'descripcion': 'Divulgación no intencionada de información confidencial.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -219,7 +219,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.20',
         'nombre': 'Vulnerabilidades de los programas (software)',
         'descripcion': 'Fallos de seguridad en el código de aplicaciones o sistemas operativos.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -227,7 +227,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.21',
         'nombre': 'Errores de mantenimiento / actualización de programas (software)',
         'descripcion': 'Problemas durante el proceso de mantenimiento o actualización de software.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -235,7 +235,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.23',
         'nombre': 'Errores de mantenimiento / actualización de equipos (hardware)',
         'descripcion': 'Problemas durante el mantenimiento o actualización de equipamiento físico.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -243,7 +243,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.24',
         'nombre': 'Caída del sistema por agotamiento de recursos',
         'descripcion': 'Fallo del sistema por consumo excesivo de CPU, memoria, disco o red.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -251,7 +251,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.25',
         'nombre': 'Pérdida de equipos',
         'descripcion': 'Extravío no intencionado de dispositivos portátiles o equipamiento.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -259,17 +259,17 @@ AMENAZAS_MAGERIT = [
         'codigo': 'E.28',
         'nombre': 'Indisponibilidad del personal',
         'descripcion': 'Ausencia de personal clave por enfermedad, accidente o abandono.',
-        'grupo': 'ERRORES_NO_INTENCIONADOS',
+        'grupo': 'ERRORES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
 
-    # ========== GRUPO 4: ATAQUES INTENCIONADOS ==========
+    # ========== GRUPO 4: ATAQUES ==========
     {
         'codigo': 'A.3',
         'nombre': 'Manipulación de los registros de actividad (log)',
         'descripcion': 'Alteración o borrado intencionado de registros de auditoría para ocultar actividad maliciosa.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 3
     },
@@ -277,7 +277,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.4',
         'nombre': 'Manipulación de la configuración',
         'descripcion': 'Modificación no autorizada de configuraciones de sistemas para comprometer seguridad.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 3
     },
@@ -285,7 +285,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.5',
         'nombre': 'Suplantación de la identidad del usuario',
         'descripcion': 'Uso no autorizado de credenciales de usuario legítimo.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -293,7 +293,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.6',
         'nombre': 'Abuso de privilegios de acceso',
         'descripcion': 'Uso inadecuado de privilegios legítimos para fines no autorizados.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -301,7 +301,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.7',
         'nombre': 'Uso no previsto',
         'descripcion': 'Utilización de recursos de la organización para fines no autorizados.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -309,7 +309,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.8',
         'nombre': 'Difusión de software dañino',
         'descripcion': 'Instalación intencionada de malware, virus, troyanos, ransomware, etc.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 5,
         'facilidad_base': 4
     },
@@ -317,7 +317,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.9',
         'nombre': '[Re-]encaminamiento de mensajes',
         'descripcion': 'Modificación intencionada del enrutamiento para interceptar o redirigir comunicaciones.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 2
     },
@@ -325,7 +325,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.10',
         'nombre': 'Alteración de secuencia',
         'descripcion': 'Manipulación del orden de mensajes o transacciones para comprometer integridad.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 2
     },
@@ -333,7 +333,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.11',
         'nombre': 'Acceso no autorizado',
         'descripcion': 'Acceso ilegítimo a sistemas, aplicaciones o información sin autorización.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -341,7 +341,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.12',
         'nombre': 'Análisis de tráfico',
         'descripcion': 'Análisis de patrones de comunicación para obtener información confidencial.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -349,7 +349,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.13',
         'nombre': 'Repudio',
         'descripcion': 'Negación de participación en transacción o comunicación realizada.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -357,7 +357,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.14',
         'nombre': 'Interceptación de información (escucha)',
         'descripcion': 'Captura no autorizada de comunicaciones o información en tránsito.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 3
     },
@@ -365,7 +365,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.15',
         'nombre': 'Modificación deliberada de la información',
         'descripcion': 'Alteración intencionada de datos para comprometer su integridad.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 3
     },
@@ -373,7 +373,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.18',
         'nombre': 'Destrucción de información',
         'descripcion': 'Eliminación intencionada de información para causar daño.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 3
     },
@@ -381,7 +381,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.19',
         'nombre': 'Divulgación de información',
         'descripcion': 'Revelación deliberada de información confidencial a terceros no autorizados.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -389,7 +389,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.22',
         'nombre': 'Manipulación de programas',
         'descripcion': 'Modificación no autorizada de código fuente o ejecutables.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 2
     },
@@ -397,7 +397,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.23',
         'nombre': 'Manipulación de los equipos',
         'descripcion': 'Modificación física de equipamiento para comprometer su funcionamiento.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 2
     },
@@ -405,7 +405,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.24',
         'nombre': 'Denegación de servicio',
         'descripcion': 'Ataque que impide el uso legítimo de sistemas o servicios (DoS/DDoS).',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 4,
         'facilidad_base': 4
     },
@@ -413,7 +413,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.25',
         'nombre': 'Robo de equipos o documentos',
         'descripcion': 'Sustracción física de dispositivos o documentación.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 3,
         'facilidad_base': 4
     },
@@ -421,7 +421,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.26',
         'nombre': 'Ataque destructivo',
         'descripcion': 'Daño físico intencionado a instalaciones, equipos o soportes.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 1,
         'facilidad_base': 3
     },
@@ -429,7 +429,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.27',
         'nombre': 'Ocupación enemiga',
         'descripcion': 'Toma de control de instalaciones por parte de atacantes.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 1,
         'facilidad_base': 2
     },
@@ -437,7 +437,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.28',
         'nombre': 'Indisponibilidad del personal',
         'descripcion': 'Ausencia intencionada o coaccionada de personal clave.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -445,7 +445,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.29',
         'nombre': 'Extorsión',
         'descripcion': 'Chantaje o amenazas para obtener información, dinero o acciones específicas.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 2,
         'facilidad_base': 3
     },
@@ -453,7 +453,7 @@ AMENAZAS_MAGERIT = [
         'codigo': 'A.30',
         'nombre': 'Ingeniería social (piratería)',
         'descripcion': 'Manipulación psicológica para obtener información o acceso no autorizado.',
-        'grupo': 'ATAQUES_INTENCIONADOS',
+        'grupo': 'ATAQUES',
         'frecuencia_base': 4,
         'facilidad_base': 5
     },
