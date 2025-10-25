@@ -130,23 +130,26 @@ La instalación automáticamente crea:
    - Todos con `applicability_status = 'aplicable'`
    - Todos con `maturity_score = 0` (no implementado)
 
+5. **Catálogo de Amenazas MAGERIT 3.2** ✨ NUEVO - Automático
+   - **55 amenazas** organizadas en 4 grupos:
+     - `NATURALES` (3 amenazas): Fuego, agua, fenómenos naturales
+     - `INDUSTRIALES` (11 amenazas): Cortes de suministro, averías, contaminación
+     - `ERRORES` (17 amenazas): Errores de usuarios, administradores, mantenimiento
+     - `ATAQUES` (24 amenazas): Accesos no autorizados, malware, sabotaje
+
+   **Nota**: Las amenazas se cargan automáticamente durante la inicialización. Los nombres de grupos están normalizados según `app/risks/models.py:204`
+
 ### 📝 Requieren Configuración Manual
 
-1. **Catálogo de Amenazas MAGERIT**
-   ```bash
-   docker exec ismsmanager-web-1 python -c \
-     "from app.risks.seed_amenazas import seed_amenazas; seed_amenazas()"
-   ```
-
-2. **Relaciones Control-Amenaza**
+1. **Relaciones Control-Amenaza** (Requerido para cálculo de riesgos)
    - Definir qué controles mitigan qué amenazas
    - Establecer efectividad de cada control sobre cada amenaza
    - Ver ejemplo en `migrations/014_seed_test_control_amenaza.sql`
 
-3. **Activos de Información**
+2. **Activos de Información**
    - Crear mediante interfaz web o importación
 
-4. **Procesos de Negocio**
+3. **Procesos de Negocio**
    - Definir procesos críticos de la organización
 
 ## Verificación Post-Instalación
@@ -179,13 +182,36 @@ docker exec ismsmanager-web-1 bash -c \
 
 Debe mostrar 93 controles (ISO 27002:2022).
 
-### 4. Acceder al Dashboard
+### 4. Verificar Amenazas Cargadas
+
+```bash
+docker exec ismsmanager-web-1 bash -c \
+  "PGPASSWORD=isms_secure_password psql -h db -U isms -d isms_db \
+   -c 'SELECT grupo, COUNT(*) as cantidad FROM amenazas GROUP BY grupo ORDER BY grupo;'"
+```
+
+**Resultado esperado**:
+```
+    grupo     | cantidad
+--------------+----------
+ ATAQUES      |       24
+ ERRORES      |       17
+ INDUSTRIALES |       11
+ NATURALES    |        3
+(4 rows)
+```
+
+### 5. Acceder al Dashboard
 
 1. Login en `http://localhost`
 2. Navegar a **Dashboard**
 3. Verificar que no hay errores 500
 4. Navegar a **SOA** (`http://localhost/soa/`)
 5. Debe mostrar los 93 controles
+6. Navegar a **Riesgos** > **Catálogo de Amenazas** (`http://localhost/riesgos/catalogo/amenazas`)
+7. Verificar que se muestran las 55 amenazas organizadas en 4 grupos
+8. Navegar a **Admin** > **Configuración** > **Amenazas** (`http://localhost/admin/settings/amenazas`)
+9. Verificar que las tarjetas muestran los totales correctos
 
 ## Migraciones SQL - ¿Son Necesarias?
 
@@ -335,7 +361,7 @@ docker restart ismsmanager-web-1
 3. ✅ Configurar SOA con controles aplicables
 4. ✅ Establecer niveles de madurez realistas
 5. ✅ Definir relaciones control-amenaza
-6. ✅ Importar catálogo de amenazas MAGERIT
+6. ~~Importar catálogo de amenazas MAGERIT~~ → **Ya incluido automáticamente** ✨
 7. ✅ Crear activos de información
 8. ✅ Realizar primera evaluación de riesgos
 

@@ -32,6 +32,9 @@ def seed_initial_data():
         # Seed ISO versions
         seed_iso_versions()
 
+        # Seed MAGERIT threats catalog
+        seed_amenazas()
+
         db.session.commit()
         print("✅ Initial data seeded successfully")
 
@@ -240,3 +243,35 @@ def seed_iso_versions():
             )
             db.session.add(iso_version)
             print(f"  → Created ISO version: {version_data['title']}")
+
+
+def seed_amenazas():
+    """Create MAGERIT 3.2 threats catalog if it doesn't exist"""
+    from app.risks.models import Amenaza
+
+    # Check if threats already exist
+    existing_count = Amenaza.query.count()
+    if existing_count > 0:
+        print(f"  → Amenazas catalog already exists ({existing_count} threats)")
+        return
+
+    # Import and run the seed function in non-interactive mode
+    try:
+        from app.risks.seed_amenazas import seed_amenazas as load_amenazas
+        load_amenazas(force_reload=False, interactive=False)
+
+        # Count loaded threats by group
+        from sqlalchemy import func
+        stats = db.session.query(
+            Amenaza.grupo,
+            func.count(Amenaza.id).label('count')
+        ).group_by(Amenaza.grupo).order_by(Amenaza.grupo).all()
+
+        print("  → Created MAGERIT 3.2 threats catalog:")
+        for grupo, count in stats:
+            print(f"    • {grupo}: {count} amenazas")
+
+    except Exception as e:
+        print(f"  ⚠️  Warning: Could not load threats catalog: {str(e)}")
+        # Don't fail the entire seed process if threats can't be loaded
+        pass

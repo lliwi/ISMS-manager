@@ -460,36 +460,47 @@ AMENAZAS_MAGERIT = [
 ]
 
 
-def seed_amenazas():
+def seed_amenazas(force_reload=False, interactive=True):
     """
     Precarga el catálogo de amenazas MAGERIT 3.2
+
+    Args:
+        force_reload: Si True, elimina y recarga las amenazas existentes sin preguntar
+        interactive: Si False, no solicita confirmación (útil para inicialización automática)
     """
-    print("\n" + "="*80)
-    print("📋 PRECARGA DE AMENAZAS MAGERIT 3.2")
-    print("="*80)
+    if interactive:
+        print("\n" + "="*80)
+        print("📋 PRECARGA DE AMENAZAS MAGERIT 3.2")
+        print("="*80)
 
     # Verificar si ya existen amenazas
     count_existing = Amenaza.query.count()
     if count_existing > 0:
-        print(f"\n⚠️  Ya existen {count_existing} amenazas en la base de datos.")
-        respuesta = input("¿Desea eliminarlas y recargar el catálogo? (s/N): ")
-        if respuesta.lower() != 's':
-            print("❌ Operación cancelada.")
+        if interactive:
+            print(f"\n⚠️  Ya existen {count_existing} amenazas en la base de datos.")
+            respuesta = input("¿Desea eliminarlas y recargar el catálogo? (s/N): ")
+            if respuesta.lower() != 's':
+                print("❌ Operación cancelada.")
+                return
+        elif not force_reload:
+            # En modo no interactivo, si ya existen amenazas, no hacer nada
             return
 
         # Eliminar amenazas existentes
         Amenaza.query.delete()
         db.session.commit()
-        print("🗑️  Amenazas existentes eliminadas.")
+        if interactive:
+            print("🗑️  Amenazas existentes eliminadas.")
 
     # Insertar amenazas
-    print(f"\n📥 Insertando {len(AMENAZAS_MAGERIT)} amenazas...")
+    if interactive:
+        print(f"\n📥 Insertando {len(AMENAZAS_MAGERIT)} amenazas...")
 
     stats = {
-        'DESASTRES_NATURALES': 0,
-        'ORIGEN_INDUSTRIAL': 0,
-        'ERRORES_NO_INTENCIONADOS': 0,
-        'ATAQUES_INTENCIONADOS': 0
+        'NATURALES': 0,
+        'INDUSTRIALES': 0,
+        'ERRORES': 0,
+        'ATAQUES': 0
     }
 
     for amenaza_data in AMENAZAS_MAGERIT:
@@ -507,20 +518,22 @@ def seed_amenazas():
 
     try:
         db.session.commit()
-        print("✅ Amenazas insertadas correctamente!")
+        if interactive:
+            print("✅ Amenazas insertadas correctamente!")
 
-        # Mostrar estadísticas
-        print("\n📊 ESTADÍSTICAS DE CARGA:")
-        print(f"   • Desastres Naturales: {stats['DESASTRES_NATURALES']} amenazas")
-        print(f"   • Origen Industrial: {stats['ORIGEN_INDUSTRIAL']} amenazas")
-        print(f"   • Errores No Intencionados: {stats['ERRORES_NO_INTENCIONADOS']} amenazas")
-        print(f"   • Ataques Intencionados: {stats['ATAQUES_INTENCIONADOS']} amenazas")
-        print(f"\n   TOTAL: {sum(stats.values())} amenazas")
-        print("="*80 + "\n")
+            # Mostrar estadísticas
+            print("\n📊 ESTADÍSTICAS DE CARGA:")
+            print(f"   • Naturales: {stats['NATURALES']} amenazas")
+            print(f"   • Industriales: {stats['INDUSTRIALES']} amenazas")
+            print(f"   • Errores: {stats['ERRORES']} amenazas")
+            print(f"   • Ataques: {stats['ATAQUES']} amenazas")
+            print(f"\n   TOTAL: {sum(stats.values())} amenazas")
+            print("="*80 + "\n")
 
     except Exception as e:
         db.session.rollback()
-        print(f"\n❌ Error al insertar amenazas: {str(e)}")
+        if interactive:
+            print(f"\n❌ Error al insertar amenazas: {str(e)}")
         raise
 
 
