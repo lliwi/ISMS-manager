@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}{{ amenaza.codigo }} - {{ amenaza.nombre }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+            <code>{{ amenaza.codigo }}</code> - {{ amenaza.nombre }}
+        </h1>
+        <p class="text-muted">Detalle de amenaza MAGERIT</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('admin.edit_amenaza', id=amenaza.id) }}" class="btn btn-primary me-2">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        <a href="{{ url_for('admin.amenazas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información principal -->
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Información General</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Código:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        <code class="fs-5 text-danger">{{ amenaza.codigo }}</code>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Nombre:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        {{ amenaza.nombre }}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Grupo:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        {% set grupo_colors = {'NATURALES': 'primary', 'INDUSTRIALES': 'warning', 'ERRORES': 'info', 'ATAQUES': 'danger'} %}
+                        <span class="badge bg-{{ grupo_colors[amenaza.grupo] }} fs-6">
+                            {{ amenaza.grupo }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if amenaza.categoria_magerit %}
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Categoría MAGERIT:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        {{ amenaza.categoria_magerit }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Dimensiones Afectadas:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        {% if amenaza.afecta_confidencialidad %}
+                        <span class="badge bg-info fs-6 me-1">
+                            <i class="fas fa-lock"></i> Confidencialidad
+                        </span>
+                        {% endif %}
+                        {% if amenaza.afecta_integridad %}
+                        <span class="badge bg-primary fs-6 me-1">
+                            <i class="fas fa-check-circle"></i> Integridad
+                        </span>
+                        {% endif %}
+                        {% if amenaza.afecta_disponibilidad %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-server"></i> Disponibilidad
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if amenaza.descripcion %}
+                <hr>
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Descripción:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        <p class="mb-0">{{ amenaza.descripcion }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Controles asociados -->
+        {% if amenaza.controles %}
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt text-primary me-2"></i>
+                    Controles Asociados ({{ controles_count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Control</th>
+                                <th>Tipo</th>
+                                <th>Efectividad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for control in amenaza.controles %}
+                            <tr>
+                                <td>
+                                    <code>{{ control.control_codigo }}</code>
+                                    {% set soa_control = control.get_soa_control() %}
+                                    {% if soa_control %}
+                                    <br><small class="text-muted">{{ soa_control.title[:60] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if control.tipo_control == 'PREVENTIVO' %}
+                                    <span class="badge bg-success">Preventivo</span>
+                                    {% elif control.tipo_control == 'REACTIVO' %}
+                                    <span class="badge bg-warning">Reactivo</span>
+                                    {% elif control.tipo_control == 'DETECTIVE' %}
+                                    <span class="badge bg-info">Detective</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ control.tipo_control }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ (control.efectividad * 100)|round(0)|int }}%</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Riesgos que usan esta amenaza -->
+        {% if amenaza.riesgos %}
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                    Riesgos Asociados ({{ riesgos_count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Esta amenaza está siendo utilizada en <strong>{{ riesgos_count }}</strong> evaluación(es) de riesgos.
+                    Para verlos, accede al módulo de Gestión de Riesgos.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Activo</th>
+                                <th>Dimensión</th>
+                                <th>Riesgo Intrínseco</th>
+                                <th>Riesgo Efectivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for riesgo in amenaza.riesgos[:10] %}
+                            <tr>
+                                <td><code>{{ riesgo.codigo }}</code></td>
+                                <td>{{ riesgo.activo.nombre if riesgo.activo else '-' }}</td>
+                                <td>
+                                    {% if riesgo.dimension == 'C' %}
+                                    <span class="badge bg-info">C</span>
+                                    {% elif riesgo.dimension == 'I' %}
+                                    <span class="badge bg-primary">I</span>
+                                    {% elif riesgo.dimension == 'D' %}
+                                    <span class="badge bg-success">D</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ riesgo.nivel_riesgo_intrinseco|round(2) if riesgo.nivel_riesgo_intrinseco else '-' }}</td>
+                                <td>{{ riesgo.nivel_riesgo_efectivo|round(2) if riesgo.nivel_riesgo_efectivo else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if amenaza.riesgos|length > 10 %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    <small>... y {{ amenaza.riesgos|length - 10 }} más</small>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="col-md-4">
+        <!-- Estadísticas -->
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Estadísticas</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span><i class="fas fa-shield-alt text-primary"></i> Controles:</span>
+                    <strong>{{ controles_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span><i class="fas fa-exclamation-circle text-warning"></i> Riesgos:</span>
+                    <strong>{{ riesgos_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span><i class="fas fa-cube text-info"></i> Recursos:</span>
+                    <strong>{{ recursos_count }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadatos -->
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Metadatos</h6>
+            </div>
+            <div class="card-body small">
+                <p class="mb-2"><strong>ID:</strong> {{ amenaza.id }}</p>
+                <p class="mb-2"><strong>Creado:</strong><br>
+                    {{ amenaza.created_at.strftime('%d/%m/%Y %H:%M') if amenaza.created_at else '-' }}
+                </p>
+                <p class="mb-0"><strong>Última actualización:</strong><br>
+                    {{ amenaza.updated_at.strftime('%d/%m/%Y %H:%M') if amenaza.updated_at else '-' }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Acciones</h6>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('admin.edit_amenaza', id=amenaza.id) }}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-edit"></i> Editar Amenaza
+                </a>
+                {% if not amenaza.riesgos or amenaza.riesgos|length == 0 %}
+                <button class="btn btn-danger w-100" onclick="confirmDelete()">
+                    <i class="fas fa-trash"></i> Eliminar Amenaza
+                </button>
+                {% else %}
+                <button class="btn btn-danger w-100" disabled title="No se puede eliminar porque tiene riesgos asociados">
+                    <i class="fas fa-lock"></i> No se puede eliminar
+                </button>
+                <small class="text-muted mt-2 d-block">
+                    Esta amenaza está en uso y no puede eliminarse
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete() {
+    if (confirm('¿Está seguro que desea eliminar la amenaza {{ amenaza.codigo }} - {{ amenaza.nombre }}?\n\nEsta acción no se puede deshacer.')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("admin.delete_amenaza", id=amenaza.id) }}';
+
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        form.appendChild(csrfInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

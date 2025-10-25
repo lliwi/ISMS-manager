@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '009_task_management'
+revision = '009_add_comprehensive_task_management'
 down_revision = '008_change_management'
 branch_labels = None
 depends_on = None

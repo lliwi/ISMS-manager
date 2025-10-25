@@ -2126,3 +2126,12 @@ from app.models.task import (
     TaskTemplate, Task, TaskEvidence, TaskComment,
     TaskHistory, TaskNotificationLog
 )
+
+# Import risk management models
+from app.risks.models import (
+    ProcesoNegocio, ActivoInformacion, RecursoInformacion, ActivoProceso,
+    ActivoRecurso, Amenaza, AmenazaRecursoTipo, ControlISO27002,
+    ControlAmenaza, SalvaguardaImplantada, EvaluacionRiesgo, Riesgo,
+    HistorialRiesgo, TratamientoRiesgo, DeclaracionAplicabilidad,
+    PlanTratamientoRiesgos
+)

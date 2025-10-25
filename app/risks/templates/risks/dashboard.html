@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard de Gestión de Riesgos - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .risk-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    .risk-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .risk-muy-alto { border-left-color: #dc3545; }
+    .risk-alto { border-left-color: #fd7e14; }
+    .risk-medio { border-left-color: #ffc107; }
+    .risk-bajo { border-left-color: #20c997; }
+    .risk-muy-bajo { border-left-color: #28a745; }
+
+    .stat-card {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: scale(1.02);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Gestión de Riesgos
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Control 8.2 - Gestión de Riesgos de Seguridad de la Información | Metodología MAGERIT 3.2
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('risks.evaluaciones_create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nueva Evaluación
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small text-uppercase mb-1">Activos</div>
+                            <div class="h3 mb-0">{{ stats.total_activos }}</div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-database fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card stat-card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small text-uppercase mb-1">Riesgos Identificados</div>
+                            <div class="h3 mb-0">{{ stats.total_riesgos }}</div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-exclamation-circle fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card stat-card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small text-uppercase mb-1">Riesgos Críticos</div>
+                            <div class="h3 mb-0">{{ stats.riesgos_criticos }}</div>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="fas fa-fire fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matriz de Riesgos y Distribución -->
+    <div class="row mb-4">
+        <!-- Matriz de Riesgos -->
+        <div class="col-lg-8 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-th me-2"></i>Matriz de Riesgos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Debug Info -->
+                    <div class="alert alert-info small mb-3">
+                        <strong>Debug:</strong> Total riesgos en matriz: {{ matriz_riesgos.values()|sum if matriz_riesgos else 0 }}
+                        | Elementos: {{ matriz_riesgos|length if matriz_riesgos else 0 }}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center">
+                            <thead>
+                                <tr>
+                                    <th class="bg-light">Probabilidad ↓<br>Impacto →</th>
+                                    <th class="bg-success text-white">Muy Bajo (1)</th>
+                                    <th class="bg-success text-white">Bajo (2)</th>
+                                    <th class="bg-warning text-white">Medio (3)</th>
+                                    <th class="bg-danger text-white">Alto (4)</th>
+                                    <th class="bg-danger text-white">Muy Alto (5)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prob in [5, 4, 3, 2, 1] %}
+                                <tr>
+                                    <td class="bg-light"><strong>{{ prob }}</strong></td>
+                                    {% for imp in [1, 2, 3, 4, 5] %}
+                                    {% set nivel = (prob * imp) %}
+                                    {% if nivel <= 5 %}
+                                        {% set color = 'success' %}
+                                    {% elif nivel <= 10 %}
+                                        {% set color = 'warning' %}
+                                    {% elif nivel <= 15 %}
+                                        {% set color = 'orange' %}
+                                    {% else %}
+                                        {% set color = 'danger' %}
+                                    {% endif %}
+                                    <td class="bg-{{ color }} bg-opacity-25">
+                                        {% set key = (prob, imp) %}
+                                        {% set count = matriz_riesgos[key] if key in matriz_riesgos else 0 %}
+                                        <span class="badge bg-{{ color }}">
+                                            {{ count }}
+                                        </span>
+                                        <small class="d-block text-muted">({{ prob }},{{ imp }})</small>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribución de Riesgos -->
+        <div class="col-lg-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Distribución por Nivel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="riskDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Riesgos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>Top 10 Riesgos Más Críticos
+                    </h5>
+                    <a href="{{ url_for('risks.evaluaciones_list') }}" class="btn btn-sm btn-outline-primary">
+                        Ver todos <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th>Activo</th>
+                                    <th>Amenaza</th>
+                                    <th>Dimensión</th>
+                                    <th width="10%">Prob.</th>
+                                    <th width="10%">Impacto</th>
+                                    <th width="10%">Riesgo</th>
+                                    <th width="12%">Nivel</th>
+                                    <th width="10%">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for riesgo in top_riesgos %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <strong>{{ riesgo.activo.nombre }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small">{{ riesgo.amenaza.codigo }}</span>
+                                        {{ riesgo.amenaza.nombre }}
+                                    </td>
+                                    <td>
+                                        {% if riesgo.dimension == 'CONFIDENCIALIDAD' %}
+                                            <span class="badge bg-info"><i class="fas fa-lock me-1"></i>C</span>
+                                        {% elif riesgo.dimension == 'INTEGRIDAD' %}
+                                            <span class="badge bg-primary"><i class="fas fa-check-circle me-1"></i>I</span>
+                                        {% else %}
+                                            <span class="badge bg-success"><i class="fas fa-clock me-1"></i>D</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ riesgo.probabilidad_efectiva|round(1) if riesgo.probabilidad_efectiva else '-' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ riesgo.impacto_efectivo|round(1) if riesgo.impacto_efectivo else '-' }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ riesgo.nivel_riesgo_efectivo|round(1) if riesgo.nivel_riesgo_efectivo else '-' }}</strong>
+                                    </td>
+                                    <td>
+                                        {% set nivel = riesgo.nivel_riesgo_efectivo|default(0) %}
+                                        {% if nivel >= 20 %}
+                                            <span class="badge bg-danger">Muy Alto</span>
+                                        {% elif nivel >= 15 %}
+                                            <span class="badge bg-orange">Alto</span>
+                                        {% elif nivel >= 10 %}
+                                            <span class="badge bg-warning">Medio</span>
+                                        {% elif nivel >= 5 %}
+                                            <span class="badge bg-info">Bajo</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Muy Bajo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                           class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No hay riesgos identificados. Crea una evaluación para comenzar.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-database fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Activos</h5>
+                    <p class="card-text text-muted">Gestionar activos de información</p>
+                    <a href="/activos/" class="btn btn-outline-primary btn-sm">
+                        Ir a Activos <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-biohazard fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title">Amenazas</h5>
+                    <p class="card-text text-muted">Catálogo MAGERIT 3.2</p>
+                    <a href="{{ url_for('risks.catalogo_amenazas') }}" class="btn btn-outline-warning btn-sm">
+                        Ver Catálogo <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-shield-alt fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Controles</h5>
+                    <p class="card-text text-muted">ISO 27002:2022</p>
+                    <a href="{{ url_for('soa.index') }}" class="btn btn-outline-info btn-sm">
+                        Ver SOA <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.min.js') }}"></script>
+<script>
+// Gráfico de distribución de riesgos
+const ctx = document.getElementById('riskDistributionChart');
+if (ctx) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Muy Alto', 'Alto', 'Medio', 'Bajo', 'Muy Bajo'],
+            datasets: [{
+                data: [
+                    {{ distribucion_riesgos.MUY_ALTO|default(0) }},
+                    {{ distribucion_riesgos.ALTO|default(0) }},
+                    {{ distribucion_riesgos.MEDIO|default(0) }},
+                    {{ distribucion_riesgos.BAJO|default(0) }},
+                    {{ distribucion_riesgos.MUY_BAJO|default(0) }}
+                ],
+                backgroundColor: [
+                    '#dc3545',
+                    '#fd7e14',
+                    '#ffc107',
+                    '#17a2b8',
+                    '#28a745'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

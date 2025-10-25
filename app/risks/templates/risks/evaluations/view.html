@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}{{ evaluacion.nombre }} - ISMS Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .stat-box {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    .stat-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.dashboard') }}">Gestión de Riesgos</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.evaluaciones_list') }}">Evaluaciones</a></li>
+                    <li class="breadcrumb-item active">{{ evaluacion.nombre }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2>
+                        <i class="fas fa-clipboard-check text-primary me-2"></i>
+                        {{ evaluacion.nombre }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Versión {{ evaluacion.version }} |
+                        Fecha: {{ evaluacion.fecha_inicio.strftime('%d/%m/%Y') if evaluacion.fecha_inicio else '-' }}
+                    </p>
+                </div>
+                <div>
+                    <form method="POST" action="{{ url_for('risks.evaluaciones_recalcular', id=evaluacion.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-sync-alt me-2"></i>Recalcular Riesgos
+                        </button>
+                    </form>
+                    <a href="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id) }}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>Ver Todos los Riesgos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información General -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Información General
+                    </h5>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Estado:</strong>
+                            {% if evaluacion.estado == 'en_curso' %}
+                                <span class="badge bg-warning ms-2">En Curso</span>
+                            {% elif evaluacion.estado == 'completada' %}
+                                <span class="badge bg-success ms-2">Completada</span>
+                            {% elif evaluacion.estado == 'aprobada' %}
+                                <span class="badge bg-info ms-2">Aprobada</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2">{{ evaluacion.estado }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <strong>Umbral de Riesgo:</strong>
+                            <span class="badge bg-danger ms-2">{{ evaluacion.umbral_riesgo_objetivo }}</span>
+                        </div>
+                    </div>
+
+                    {% if evaluacion.descripcion %}
+                    <div class="mb-3">
+                        <strong>Descripción:</strong>
+                        <p class="mt-2">{{ evaluacion.descripcion }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if evaluacion.alcance_descripcion %}
+                    <div class="mb-3">
+                        <strong>Alcance:</strong>
+                        <p class="mt-2">{{ evaluacion.alcance_descripcion }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if evaluacion.responsable_evaluacion %}
+                    <div>
+                        <strong>Responsable:</strong>
+                        <span class="ms-2">{{ evaluacion.responsable_evaluacion.nombre }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="col-lg-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ estadisticas.total_riesgos if estadisticas else 0 }}</h1>
+                    <p class="mb-0">Riesgos Identificados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs de Riesgos -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-box border-danger h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Riesgos Muy Altos</h6>
+                    <h2 class="text-danger mb-0">{{ estadisticas.por_clasificacion.get('MUY_ALTO', 0) if estadisticas else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-box border-warning h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Riesgos Altos</h6>
+                    <h2 class="text-warning mb-0">{{ estadisticas.por_clasificacion.get('ALTO', 0) if estadisticas else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-box border-info h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Riesgos Medios</h6>
+                    <h2 class="text-info mb-0">{{ estadisticas.por_clasificacion.get('MEDIO', 0) if estadisticas else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-box border-success h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Riesgos Bajos</h6>
+                    <h2 class="text-success mb-0">{{ (estadisticas.por_clasificacion.get('BAJO', 0) + estadisticas.por_clasificacion.get('MUY_BAJO', 0)) if estadisticas else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Riesgos Críticos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-fire me-2 text-danger"></i>
+                        Top 10 Riesgos Más Críticos
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if riesgos_criticos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th>Activo</th>
+                                    <th>Amenaza</th>
+                                    <th>Dimensión</th>
+                                    <th width="10%">Nivel</th>
+                                    <th width="12%">Clasificación</th>
+                                    <th width="10%">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for riesgo in riesgos_criticos %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <strong>{{ riesgo.activo.nombre if riesgo.activo else '-' }}</strong>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ riesgo.amenaza.codigo if riesgo.amenaza else '-' }}</small>
+                                        {{ riesgo.amenaza.nombre if riesgo.amenaza else '-' }}
+                                    </td>
+                                    <td>
+                                        {% if riesgo.dimension == 'CONFIDENCIALIDAD' %}
+                                            <span class="badge bg-info">C</span>
+                                        {% elif riesgo.dimension == 'INTEGRIDAD' %}
+                                            <span class="badge bg-primary">I</span>
+                                        {% else %}
+                                            <span class="badge bg-success">D</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ riesgo.nivel_riesgo_efectivo|round(1) if riesgo.nivel_riesgo_efectivo else '-' }}</strong>
+                                    </td>
+                                    <td>
+                                        {% set nivel = riesgo.nivel_riesgo_efectivo|default(0) %}
+                                        {% if nivel >= 20 %}
+                                            <span class="badge bg-danger">Muy Alto</span>
+                                        {% elif nivel >= 15 %}
+                                            <span class="badge bg-warning">Alto</span>
+                                        {% elif nivel >= 10 %}
+                                            <span class="badge bg-info">Medio</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Bajo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No hay riesgos identificados en esta evaluación</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución por Activo -->
+    {% if riesgos_por_activo %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        Distribución de Riesgos por Activo
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Activo</th>
+                                    <th width="15%">Cantidad de Riesgos</th>
+                                    <th width="15%">Nivel Promedio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in riesgos_por_activo %}
+                                <tr>
+                                    <td>{{ item[0] }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ item[1] }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning">{{ item[2]|round(1) }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

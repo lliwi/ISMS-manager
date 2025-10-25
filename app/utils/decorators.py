@@ -6,15 +6,15 @@ from flask import flash, redirect, url_for
 from flask_login import current_user
 
 
-def role_required(roles):
+def role_required(*roles):
     """
     Decorador para restringir acceso por rol
 
     Args:
-        roles: Lista de roles permitidos o un solo rol como string
+        roles: Roles permitidos (puede ser uno o más argumentos)
 
     Usage:
-        @role_required(['admin', 'ciso'])
+        @role_required('admin', 'ciso')
         def admin_function():
             pass
 
@@ -29,13 +29,15 @@ def role_required(roles):
                 flash('Por favor, inicia sesión para acceder a esta página.', 'warning')
                 return redirect(url_for('auth.login'))
 
-            # Convertir string a lista si es necesario
-            allowed_roles = roles if isinstance(roles, list) else [roles]
-
             # Verificar si el usuario tiene alguno de los roles permitidos
-            user_role = current_user.role.name if current_user.role else None
+            # Usar el método has_role que maneja los aliases correctamente
+            has_required_role = False
+            for role in roles:
+                if hasattr(current_user, 'has_role') and current_user.has_role(role):
+                    has_required_role = True
+                    break
 
-            if user_role not in allowed_roles:
+            if not has_required_role:
                 flash('No tienes permisos para acceder a esta función.', 'danger')
                 return redirect(url_for('dashboard.index'))
 

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if amenaza else 'Nueva' }} Amenaza - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+            {{ 'Editar Amenaza' if amenaza else 'Nueva Amenaza' }}
+        </h1>
+        <p class="text-muted">{{ amenaza.codigo if amenaza else 'Crear nueva amenaza en el catálogo MAGERIT' }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Información de la Amenaza</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="amenazaForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Código y Nombre -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="codigo" name="codigo"
+                                       value="{{ amenaza.codigo if amenaza else (form_data.codigo if form_data else '') }}"
+                                       placeholder="Ej: A.25" required maxlength="20">
+                                <small class="form-text text-muted">
+                                    Formato: N.x, I.x, E.x, A.x
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="nombre" name="nombre"
+                                       value="{{ amenaza.nombre if amenaza else (form_data.nombre if form_data else '') }}"
+                                       placeholder="Ej: Robo de equipos o documentos" required maxlength="200">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4"
+                                  placeholder="Descripción detallada de la amenaza, escenarios típicos, ejemplos...">{{ amenaza.descripcion if amenaza else (form_data.descripcion if form_data else '') }}</textarea>
+                    </div>
+
+                    <!-- Grupo y Categoría -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="grupo" class="form-label">Grupo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="grupo" name="grupo" required>
+                                    <option value="">Seleccionar grupo...</option>
+                                    {% for grupo_opt in grupos %}
+                                    <option value="{{ grupo_opt }}"
+                                            {% if (amenaza and amenaza.grupo == grupo_opt) or (form_data and form_data.grupo == grupo_opt) %}selected{% endif %}>
+                                        {{ grupo_opt }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    NATURALES, INDUSTRIALES, ERRORES o ATAQUES
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria_magerit" class="form-label">Categoría MAGERIT</label>
+                                <input type="text" class="form-control" id="categoria_magerit" name="categoria_magerit"
+                                       value="{{ amenaza.categoria_magerit if amenaza else (form_data.categoria_magerit if form_data else '') }}"
+                                       placeholder="Ej: Robo" maxlength="50">
+                                <small class="form-text text-muted">
+                                    Clasificación adicional según MAGERIT
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Dimensiones CIA -->
+                    <div class="mb-3">
+                        <label class="form-label">Dimensiones Afectadas <span class="text-danger">*</span></label>
+                        <div class="alert alert-info">
+                            <small><i class="fas fa-info-circle"></i> Seleccione al menos una dimensión que puede verse afectada por esta amenaza</small>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="afecta_confidencialidad" name="afecta_confidencialidad"
+                                   {% if (amenaza and amenaza.afecta_confidencialidad) or (form_data and 'afecta_confidencialidad' in request.form) %}checked{% endif %}>
+                            <label class="form-check-label" for="afecta_confidencialidad">
+                                <span class="badge bg-info">C</span>
+                                <strong>Confidencialidad</strong>
+                                <br><small class="text-muted ms-4">La amenaza puede causar divulgación no autorizada de información</small>
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="afecta_integridad" name="afecta_integridad"
+                                   {% if (amenaza and amenaza.afecta_integridad) or (form_data and 'afecta_integridad' in request.form) %}checked{% endif %}>
+                            <label class="form-check-label" for="afecta_integridad">
+                                <span class="badge bg-primary">I</span>
+                                <strong>Integridad</strong>
+                                <br><small class="text-muted ms-4">La amenaza puede causar alteración no autorizada de información</small>
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="afecta_disponibilidad" name="afecta_disponibilidad"
+                                   {% if (amenaza and amenaza.afecta_disponibilidad) or (form_data and 'afecta_disponibilidad' in request.form) %}checked{% endif %}>
+                            <label class="form-check-label" for="afecta_disponibilidad">
+                                <span class="badge bg-success">D</span>
+                                <strong>Disponibilidad</strong>
+                                <br><small class="text-muted ms-4">La amenaza puede causar pérdida de acceso o interrupción del servicio</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.amenazas') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {{ 'Actualizar' if amenaza else 'Crear' }} Amenaza
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de ayuda -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-question-circle"></i> Ayuda</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary">Códigos de Amenazas MAGERIT</h6>
+                <ul class="small">
+                    <li><strong>N.*</strong> - Desastres Naturales (N.1, N.2...)</li>
+                    <li><strong>I.*</strong> - Desastres Industriales (I.1, I.2...)</li>
+                    <li><strong>E.*</strong> - Errores No Intencionados (E.1, E.2...)</li>
+                    <li><strong>A.*</strong> - Ataques Intencionados (A.1, A.2...)</li>
+                </ul>
+
+                <hr>
+
+                <h6 class="text-primary">Ejemplos de Amenazas</h6>
+                <div class="small">
+                    <p class="mb-2"><code>N.1</code> - Fuego</p>
+                    <p class="mb-2"><code>I.6</code> - Corte del suministro eléctrico</p>
+                    <p class="mb-2"><code>E.1</code> - Errores de los usuarios</p>
+                    <p class="mb-2"><code>A.25</code> - Robo de equipos o documentos</p>
+                </div>
+
+                <hr>
+
+                <h6 class="text-primary">Dimensiones CIA</h6>
+                <p class="small mb-0">
+                    La tríada de seguridad de la información:
+                </p>
+                <ul class="small mt-2">
+                    <li><strong>Confidencialidad:</strong> Evitar divulgación no autorizada</li>
+                    <li><strong>Integridad:</strong> Prevenir modificación no autorizada</li>
+                    <li><strong>Disponibilidad:</strong> Asegurar acceso cuando se necesite</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if amenaza %}
+        <div class="card mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Información</h6>
+            </div>
+            <div class="card-body small">
+                <p><strong>Creado:</strong> {{ amenaza.created_at.strftime('%d/%m/%Y %H:%M') if amenaza.created_at else '-' }}</p>
+                <p><strong>Última actualización:</strong> {{ amenaza.updated_at.strftime('%d/%m/%Y %H:%M') if amenaza.updated_at else '-' }}</p>
+                <p class="mb-0"><strong>ID:</strong> {{ amenaza.id }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Validación JavaScript -->
+<script>
+document.getElementById('amenazaForm').addEventListener('submit', function(e) {
+    // Verificar que al menos una dimensión esté marcada
+    var c = document.getElementById('afecta_confidencialidad').checked;
+    var i = document.getElementById('afecta_integridad').checked;
+    var d = document.getElementById('afecta_disponibilidad').checked;
+
+    if (!c && !i && !d) {
+        e.preventDefault();
+        alert('Debe seleccionar al menos una dimensión afectada (Confidencialidad, Integridad o Disponibilidad)');
+        return false;
+    }
+});
+</script>
+{% endblock %}

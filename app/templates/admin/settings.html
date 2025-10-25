@@ -135,6 +135,36 @@
             </div>
         </div>
     </div>
+
+    <!-- Catálogo de Amenazas MAGERIT -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Catálogo de Amenazas
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Gestiona el catálogo de amenazas según metodología MAGERIT 3.2 (Naturales, Industriales, Errores, Ataques)
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ amenazas_count }}</h3>
+                        <small class="text-muted">amenazas configuradas</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.amenazas') }}" class="btn btn-danger w-100">
+                    <i class="fas fa-cog"></i> Gestionar Catálogo de Amenazas
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
     <!-- Roles del Sistema -->

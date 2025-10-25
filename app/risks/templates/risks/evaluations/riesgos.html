@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Riesgos - {{ evaluacion.nombre }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.dashboard') }}">Gestión de Riesgos</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.evaluaciones_list') }}">Evaluaciones</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.evaluaciones_view', id=evaluacion.id) }}">{{ evaluacion.nombre }}</a></li>
+                    <li class="breadcrumb-item active">Riesgos</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Riesgos - {{ evaluacion.nombre }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Versión {{ evaluacion.version }} | {{ riesgos|length }} riesgos identificados
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('risks.evaluaciones_view', id=evaluacion.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Evaluación
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id) }}">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Clasificación</label>
+                        <select class="form-select" name="clasificacion">
+                            <option value="">Todas</option>
+                            {% for clf in clasificaciones %}
+                            <option value="{{ clf }}" {% if request.args.get('clasificacion') == clf %}selected{% endif %}>
+                                {{ clf.replace('_', ' ').title() }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Dimensión</label>
+                        <select class="form-select" name="dimension">
+                            <option value="">Todas</option>
+                            {% for dim in dimensiones %}
+                            <option value="{{ dim }}" {% if request.args.get('dimension') == dim %}selected{% endif %}>
+                                {% if dim == 'C' %}Confidencialidad
+                                {% elif dim == 'I' %}Integridad
+                                {% else %}Disponibilidad{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Activo</label>
+                        <select class="form-select" name="activo_id">
+                            <option value="">Todos</option>
+                            {% for activo in activos %}
+                            <option value="{{ activo.id }}" {% if request.args.get('activo_id')|int == activo.id %}selected{% endif %}>
+                                {{ activo.codigo }} - {{ activo.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Riesgos -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Riesgos ({{ riesgos|length }})
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if riesgos %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th>Código</th>
+                            <th>Activo</th>
+                            <th>Amenaza</th>
+                            <th width="8%">Dim.</th>
+                            <th width="8%">Prob.</th>
+                            <th width="8%">Impacto</th>
+                            <th width="8%">Nivel</th>
+                            <th width="12%">Clasificación</th>
+                            <th width="10%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for riesgo in riesgos %}
+                        <tr>
+                            <td>{{ ((pagination.page - 1) * pagination.per_page + loop.index) if pagination else loop.index }}</td>
+                            <td>
+                                <code class="text-primary">{{ riesgo.codigo }}</code>
+                            </td>
+                            <td>
+                                {% if riesgo.activo %}
+                                    <strong>{{ riesgo.activo.codigo }}</strong><br>
+                                    <small class="text-muted">{{ riesgo.activo.nombre }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if riesgo.amenaza %}
+                                    <strong>{{ riesgo.amenaza.codigo }}</strong><br>
+                                    <small class="text-muted">{{ riesgo.amenaza.nombre }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if riesgo.dimension == 'C' %}
+                                    <span class="badge bg-info" title="Confidencialidad">
+                                        <i class="fas fa-lock me-1"></i>C
+                                    </span>
+                                {% elif riesgo.dimension == 'I' %}
+                                    <span class="badge bg-primary" title="Integridad">
+                                        <i class="fas fa-check-circle me-1"></i>I
+                                    </span>
+                                {% elif riesgo.dimension == 'D' %}
+                                    <span class="badge bg-success" title="Disponibilidad">
+                                        <i class="fas fa-clock me-1"></i>D
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if riesgo.probabilidad_efectiva %}
+                                    <span class="badge bg-secondary">{{ riesgo.probabilidad_efectiva|round(1) }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if riesgo.impacto_efectivo %}
+                                    <span class="badge bg-secondary">{{ riesgo.impacto_efectivo|round(1) }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if riesgo.nivel_riesgo_efectivo %}
+                                    <strong class="text-dark">{{ riesgo.nivel_riesgo_efectivo|round(1) }}</strong>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% set nivel = riesgo.nivel_riesgo_efectivo|default(0) %}
+                                {% if nivel >= 20 %}
+                                    <span class="badge bg-danger">Muy Alto</span>
+                                {% elif nivel >= 15 %}
+                                    <span class="badge bg-warning">Alto</span>
+                                {% elif nivel >= 10 %}
+                                    <span class="badge bg-info">Medio</span>
+                                {% elif nivel >= 5 %}
+                                    <span class="badge bg-success">Bajo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Muy Bajo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if pagination and pagination.pages > 1 %}
+            <div class="card-footer">
+                <nav aria-label="Navegación de riesgos">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id, page=pagination.prev_num, clasificacion=request.args.get('clasificacion'), dimension=request.args.get('dimension'), activo_id=request.args.get('activo_id')) if pagination.has_prev else '#' }}">
+                                Anterior
+                            </a>
+                        </li>
+
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id, page=page_num, clasificacion=request.args.get('clasificacion'), dimension=request.args.get('dimension'), activo_id=request.args.get('activo_id')) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id, page=pagination.next_num, clasificacion=request.args.get('clasificacion'), dimension=request.args.get('dimension'), activo_id=request.args.get('activo_id')) if pagination.has_next else '#' }}">
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No hay riesgos identificados</h4>
+                <p class="text-muted">
+                    {% if request.args.get('clasificacion') or request.args.get('dimension') or request.args.get('activo_id') %}
+                        No se encontraron riesgos con los filtros aplicados.
+                    {% else %}
+                        Esta evaluación aún no tiene riesgos generados.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import User, Role, AuditLog, DocumentType, ISOVersion, AssetType, AssetCategory, DepreciationPeriod, db
+from app.risks.models import Amenaza
 from app.forms.user_forms import UserCreateForm, UserEditForm, ChangePasswordForm, ResetPasswordForm, UserSearchForm
 from utils.decorators import role_required, audit_action
 from utils.audit_helper import log_user_changes, log_password_change, log_account_lock, log_account_unlock, get_user_activity
@@ -434,11 +435,13 @@ def settings():
     doc_types_count = DocumentType.query.count()
     iso_versions_count = ISOVersion.query.count()
     asset_types_count = AssetType.query.count()
+    amenazas_count = Amenaza.query.count()
 
     return render_template('admin/settings.html',
                          doc_types_count=doc_types_count,
                          iso_versions_count=iso_versions_count,
-                         asset_types_count=asset_types_count)
+                         asset_types_count=asset_types_count,
+                         amenazas_count=amenazas_count)
 
 
 @admin_bp.route('/settings/document-types')
@@ -1025,3 +1028,240 @@ def calculate_depreciation_api():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ========================================================================
+# GESTIÓN DE AMENAZAS
+# ========================================================================
+
+@admin_bp.route('/settings/amenazas')
+@login_required
+@role_required('admin', 'ciso')
+def amenazas():
+    """Gestión del catálogo de amenazas MAGERIT"""
+    # Filtros
+    grupo_filter = request.args.get('grupo', '')
+    search = request.args.get('search', '')
+
+    query = Amenaza.query
+
+    if grupo_filter:
+        query = query.filter_by(grupo=grupo_filter)
+
+    if search:
+        query = query.filter(
+            or_(
+                Amenaza.codigo.ilike(f'%{search}%'),
+                Amenaza.nombre.ilike(f'%{search}%'),
+                Amenaza.descripcion.ilike(f'%{search}%')
+            )
+        )
+
+    amenazas_list = query.order_by(Amenaza.codigo).all()
+
+    # Contar por grupo
+    grupos_count = {}
+    for grupo in Amenaza.GRUPOS:
+        grupos_count[grupo] = Amenaza.query.filter_by(grupo=grupo).count()
+
+    return render_template('admin/amenazas.html',
+                         amenazas=amenazas_list,
+                         grupos=Amenaza.GRUPOS,
+                         grupos_count=grupos_count,
+                         grupo_filter=grupo_filter,
+                         search=search)
+
+
+@admin_bp.route('/settings/amenazas/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_amenaza():
+    """Crea una nueva amenaza"""
+    if request.method == 'POST':
+        try:
+            codigo = request.form.get('codigo')
+            nombre = request.form.get('nombre')
+            descripcion = request.form.get('descripcion')
+            grupo = request.form.get('grupo')
+            categoria_magerit = request.form.get('categoria_magerit')
+
+            # Dimensiones
+            afecta_confidencialidad = 'afecta_confidencialidad' in request.form
+            afecta_integridad = 'afecta_integridad' in request.form
+            afecta_disponibilidad = 'afecta_disponibilidad' in request.form
+
+            # Validaciones
+            if not codigo or not nombre or not grupo:
+                flash('Los campos Código, Nombre y Grupo son obligatorios', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            # Verificar que el código no exista
+            existing = Amenaza.query.filter_by(codigo=codigo).first()
+            if existing:
+                flash(f'Ya existe una amenaza con el código {codigo}', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            # Al menos una dimensión debe estar marcada
+            if not (afecta_confidencialidad or afecta_integridad or afecta_disponibilidad):
+                flash('Debe seleccionar al menos una dimensión afectada (C, I o D)', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            nueva_amenaza = Amenaza(
+                codigo=codigo,
+                nombre=nombre,
+                descripcion=descripcion,
+                grupo=grupo,
+                categoria_magerit=categoria_magerit,
+                afecta_confidencialidad=afecta_confidencialidad,
+                afecta_integridad=afecta_integridad,
+                afecta_disponibilidad=afecta_disponibilidad
+            )
+
+            db.session.add(nueva_amenaza)
+            db.session.commit()
+
+            flash(f'Amenaza {codigo} - {nombre} creada exitosamente', 'success')
+            return redirect(url_for('admin.amenazas'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la amenaza: {str(e)}', 'danger')
+            return render_template('admin/amenaza_form.html',
+                                 form_data=request.form,
+                                 grupos=Amenaza.GRUPOS)
+
+    return render_template('admin/amenaza_form.html',
+                         form_data=None,
+                         grupos=Amenaza.GRUPOS)
+
+
+@admin_bp.route('/settings/amenazas/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_amenaza(id):
+    """Edita una amenaza existente"""
+    amenaza = Amenaza.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            codigo = request.form.get('codigo')
+            nombre = request.form.get('nombre')
+            descripcion = request.form.get('descripcion')
+            grupo = request.form.get('grupo')
+            categoria_magerit = request.form.get('categoria_magerit')
+
+            # Dimensiones
+            afecta_confidencialidad = 'afecta_confidencialidad' in request.form
+            afecta_integridad = 'afecta_integridad' in request.form
+            afecta_disponibilidad = 'afecta_disponibilidad' in request.form
+
+            # Validaciones
+            if not codigo or not nombre or not grupo:
+                flash('Los campos Código, Nombre y Grupo son obligatorios', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     amenaza=amenaza,
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            # Verificar código único (excepto el actual)
+            existing = Amenaza.query.filter_by(codigo=codigo).first()
+            if existing and existing.id != id:
+                flash(f'Ya existe una amenaza con el código {codigo}', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     amenaza=amenaza,
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            # Al menos una dimensión debe estar marcada
+            if not (afecta_confidencialidad or afecta_integridad or afecta_disponibilidad):
+                flash('Debe seleccionar al menos una dimensión afectada (C, I o D)', 'danger')
+                return render_template('admin/amenaza_form.html',
+                                     amenaza=amenaza,
+                                     form_data=request.form,
+                                     grupos=Amenaza.GRUPOS)
+
+            amenaza.codigo = codigo
+            amenaza.nombre = nombre
+            amenaza.descripcion = descripcion
+            amenaza.grupo = grupo
+            amenaza.categoria_magerit = categoria_magerit
+            amenaza.afecta_confidencialidad = afecta_confidencialidad
+            amenaza.afecta_integridad = afecta_integridad
+            amenaza.afecta_disponibilidad = afecta_disponibilidad
+            amenaza.updated_at = datetime.utcnow()
+
+            db.session.commit()
+
+            flash(f'Amenaza {codigo} - {nombre} actualizada exitosamente', 'success')
+            return redirect(url_for('admin.amenazas'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la amenaza: {str(e)}', 'danger')
+            return render_template('admin/amenaza_form.html',
+                                 amenaza=amenaza,
+                                 form_data=request.form,
+                                 grupos=Amenaza.GRUPOS)
+
+    return render_template('admin/amenaza_form.html',
+                         amenaza=amenaza,
+                         form_data=None,
+                         grupos=Amenaza.GRUPOS)
+
+
+@admin_bp.route('/settings/amenazas/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_amenaza(id):
+    """Elimina una amenaza"""
+    amenaza = Amenaza.query.get_or_404(id)
+
+    try:
+        # Verificar si la amenaza está siendo usada en riesgos
+        if amenaza.riesgos and len(amenaza.riesgos) > 0:
+            flash(f'No se puede eliminar la amenaza {amenaza.codigo} porque está siendo usada en {len(amenaza.riesgos)} riesgo(s)', 'danger')
+            return redirect(url_for('admin.amenazas'))
+
+        # Verificar si tiene controles asociados
+        if amenaza.controles and len(amenaza.controles) > 0:
+            flash(f'No se puede eliminar la amenaza {amenaza.codigo} porque tiene {len(amenaza.controles)} control(es) asociado(s)', 'warning')
+            return redirect(url_for('admin.amenazas'))
+
+        codigo = amenaza.codigo
+        nombre = amenaza.nombre
+
+        db.session.delete(amenaza)
+        db.session.commit()
+
+        flash(f'Amenaza {codigo} - {nombre} eliminada exitosamente', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la amenaza: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.amenazas'))
+
+
+@admin_bp.route('/settings/amenazas/<int:id>')
+@login_required
+@role_required('admin', 'ciso')
+def view_amenaza(id):
+    """Ver detalle de una amenaza"""
+    amenaza = Amenaza.query.get_or_404(id)
+
+    # Obtener estadísticas
+    riesgos_count = len(amenaza.riesgos)
+    controles_count = len(amenaza.controles)
+    recursos_count = len(amenaza.aplicabilidad_recursos)
+
+    return render_template('admin/view_amenaza.html',
+                         amenaza=amenaza,
+                         riesgos_count=riesgos_count,
+                         controles_count=controles_count,
+                         recursos_count=recursos_count)

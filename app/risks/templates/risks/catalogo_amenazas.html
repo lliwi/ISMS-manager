@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Cat\u00e1logo de Amenazas MAGERIT 3.2 - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-biohazard text-warning me-2"></i>
+                        Catálogo de Amenazas
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-book me-1"></i>
+                        MAGERIT 3.2 - CCN-CERT
+                    </p>
+                </div>
+                <a href="{{ url_for('risks.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="small">Ataques Intencionados</div>
+                    <div class="h4 mb-0">{{ stats.ATAQUES_INTENCIONADOS }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="small">Errores No Intencionados</div>
+                    <div class="h4 mb-0">{{ stats.ERRORES_NO_INTENCIONADOS }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="small">Origen Industrial</div>
+                    <div class="h4 mb-0">{{ stats.ORIGEN_INDUSTRIAL }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="small">Desastres Naturales</div>
+                    <div class="h4 mb-0">{{ stats.DESASTRES_NATURALES }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Buscar por código, nombre o descripción..."
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="grupo" class="form-select">
+                        <option value="">Todos los grupos</option>
+                        <option value="ATAQUES_INTENCIONADOS">Ataques Intencionados</option>
+                        <option value="ERRORES_NO_INTENCIONADOS">Errores No Intencionados</option>
+                        <option value="ORIGEN_INDUSTRIAL">Origen Industrial</option>
+                        <option value="DESASTRES_NATURALES">Desastres Naturales</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Filtrar
+                    </button>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a href="{{ url_for('risks.catalogo_amenazas') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Amenazas por grupo -->
+    {% for grupo, amenazas_grupo in amenazas_por_grupo.items() %}
+    <div class="card mb-3">
+        <div class="card-header
+            {% if grupo == 'ATAQUES_INTENCIONADOS' %}bg-danger text-white
+            {% elif grupo == 'ERRORES_NO_INTENCIONADOS' %}bg-warning text-white
+            {% elif grupo == 'ORIGEN_INDUSTRIAL' %}bg-info text-white
+            {% else %}bg-secondary text-white{% endif %}">
+            <h5 class="mb-0">
+                <i class="fas
+                    {% if grupo == 'ATAQUES_INTENCIONADOS' %}fa-user-secret
+                    {% elif grupo == 'ERRORES_NO_INTENCIONADOS' %}fa-user-times
+                    {% elif grupo == 'ORIGEN_INDUSTRIAL' %}fa-industry
+                    {% else %}fa-cloud-sun-rain{% endif %} me-2"></i>
+                {{ grupo.replace('_', ' ').title() }}
+                <span class="badge bg-light text-dark float-end">{{ amenazas_grupo|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="8%">Código</th>
+                            <th width="20%">Nombre</th>
+                            <th>Descripción</th>
+                            <th width="15%">Dimensiones Afectadas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for amenaza in amenazas_grupo %}
+                        <tr>
+                            <td><strong>{{ amenaza.codigo }}</strong></td>
+                            <td>{{ amenaza.nombre }}</td>
+                            <td><small>{{ amenaza.descripcion }}</small></td>
+                            <td>
+                                {% if amenaza.afecta_confidencialidad %}
+                                    <span class="badge bg-info me-1" title="Confidencialidad">
+                                        <i class="fas fa-lock"></i> C
+                                    </span>
+                                {% endif %}
+                                {% if amenaza.afecta_integridad %}
+                                    <span class="badge bg-primary me-1" title="Integridad">
+                                        <i class="fas fa-check-circle"></i> I
+                                    </span>
+                                {% endif %}
+                                {% if amenaza.afecta_disponibilidad %}
+                                    <span class="badge bg-success" title="Disponibilidad">
+                                        <i class="fas fa-clock"></i> D
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not amenazas_por_grupo %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No se encontraron amenazas con los filtros aplicados.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

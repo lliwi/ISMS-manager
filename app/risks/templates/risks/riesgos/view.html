@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}{{ riesgo.codigo }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.dashboard') }}">Gestión de Riesgos</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.evaluaciones_list') }}">Evaluaciones</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.evaluaciones_view', id=riesgo.evaluacion_id) }}">Evaluación</a></li>
+                    <li class="breadcrumb-item active">{{ riesgo.codigo }}</li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                Riesgo {{ riesgo.codigo }}
+            </h2>
+        </div>
+    </div>
+
+    <!-- Información del Riesgo -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Detalle del Riesgo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Activo:</strong><br>
+                            <span class="text-primary">{{ riesgo.activo.codigo if riesgo.activo else '-' }}</span>
+                            - {{ riesgo.activo.nombre if riesgo.activo else '-' }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Recurso:</strong><br>
+                            <span class="text-info">{{ riesgo.recurso.codigo if riesgo.recurso else '-' }}</span>
+                            - {{ riesgo.recurso.nombre if riesgo.recurso else '-' }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Amenaza:</strong><br>
+                            <span class="text-danger">{{ riesgo.amenaza.codigo if riesgo.amenaza else '-' }}</span>
+                            - {{ riesgo.amenaza.nombre if riesgo.amenaza else '-' }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Dimensión:</strong><br>
+                            {% if riesgo.dimension == 'C' %}
+                                <span class="badge bg-info">Confidencialidad</span>
+                            {% elif riesgo.dimension == 'I' %}
+                                <span class="badge bg-primary">Integridad</span>
+                            {% elif riesgo.dimension == 'D' %}
+                                <span class="badge bg-success">Disponibilidad</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6 class="mb-3">Riesgo Intrínseco</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Probabilidad:</strong>
+                            <h4>{{ riesgo.probabilidad_intrinseca|round(2) if riesgo.probabilidad_intrinseca else '-' }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Impacto:</strong>
+                            <h4>{{ riesgo.impacto_intrinseco|round(2) if riesgo.impacto_intrinseco else '-' }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Nivel:</strong>
+                            <h4 class="text-danger">{{ riesgo.nivel_riesgo_intrinseco|round(2) if riesgo.nivel_riesgo_intrinseco else '-' }}</h4>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6 class="mb-3">Riesgo Efectivo (con controles)</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Probabilidad:</strong>
+                            <h4>{{ riesgo.probabilidad_efectiva|round(2) if riesgo.probabilidad_efectiva else '-' }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Impacto:</strong>
+                            <h4>{{ riesgo.impacto_efectivo|round(2) if riesgo.impacto_efectivo else '-' }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Nivel:</strong>
+                            <h4 class="text-warning">{{ riesgo.nivel_riesgo_efectivo|round(2) if riesgo.nivel_riesgo_efectivo else '-' }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Clasificación (Probabilidad × Impacto):</strong>
+                        {% set clasificacion = riesgo.clasificacion_efectiva|default('SIN_CLASIFICAR') %}
+                        {% if clasificacion == 'MUY_ALTO' %}
+                            <span class="badge bg-danger fs-5">Muy Alto</span>
+                        {% elif clasificacion == 'ALTO' %}
+                            <span class="badge bg-warning fs-5">Alto</span>
+                        {% elif clasificacion == 'MEDIO' %}
+                            <span class="badge bg-info fs-5">Medio</span>
+                        {% elif clasificacion == 'BAJO' %}
+                            <span class="badge bg-success fs-5">Bajo</span>
+                        {% elif clasificacion == 'MUY_BAJO' %}
+                            <span class="badge bg-secondary fs-5">Muy Bajo</span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-5">Sin Clasificar</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Información Adicional
+                    </h5>
+
+                    <p><strong>Evaluación:</strong><br>
+                    {{ riesgo.evaluacion.nombre if riesgo.evaluacion else '-' }}</p>
+
+                    <p><strong>Propietario del Riesgo:</strong><br>
+                    {{ riesgo.propietario_riesgo.full_name if riesgo.propietario_riesgo else 'Sin asignar' }}</p>
+
+                    <hr>
+
+                    <h6>Valores CIA del Activo:</h6>
+                    {% if riesgo.activo %}
+                    <ul class="list-unstyled">
+                        <li><strong>C:</strong> {{ riesgo.activo.confidencialidad }}/5</li>
+                        <li><strong>I:</strong> {{ riesgo.activo.integridad }}/5</li>
+                        <li><strong>D:</strong> {{ riesgo.activo.disponibilidad }}/5</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles Aplicados -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Controles Preventivos
+                    </h5>
+                    <small>Reducen la probabilidad de ocurrencia</small>
+                </div>
+                <div class="card-body">
+                    {% if controles_preventivos %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Control</th>
+                                        <th>Efectividad</th>
+                                        <th>Madurez SOA</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for control_amenaza in controles_preventivos %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ control_amenaza.control_codigo }}</strong><br>
+                                            <small class="text-muted">
+                                                {% set soa_control = control_amenaza.get_soa_control() %}
+                                                {{ soa_control.title[:60] if soa_control else 'Control ISO 27002' }}...
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ (control_amenaza.efectividad * 100)|round(0)|int }}%</span>
+                                        </td>
+                                        <td>
+                                            {% set soa_control = control_amenaza.get_soa_control() %}
+                                            {% if soa_control %}
+                                                {% set madurez = soa_control.maturity_score %}
+                                                {% if madurez >= 5 %}
+                                                    <span class="badge bg-success">{{ madurez }}/6</span>
+                                                {% elif madurez >= 3 %}
+                                                    <span class="badge bg-warning">{{ madurez }}/6</span>
+                                                {% elif madurez > 0 %}
+                                                    <span class="badge bg-info">{{ madurez }}/6</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">No impl.</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set soa_control = control_amenaza.get_soa_control() %}
+                                            {% if soa_control %}
+                                                {% if soa_control.applicability_status == 'aplicable' %}
+                                                    <i class="fas fa-check-circle text-success" title="Aplicable"></i>
+                                                {% elif soa_control.applicability_status == 'no_aplicable' %}
+                                                    <i class="fas fa-times-circle text-danger" title="No aplicable"></i>
+                                                {% else %}
+                                                    <i class="fas fa-share-square text-warning" title="Transferido"></i>
+                                                {% endif %}
+                                            {% else %}
+                                                <i class="fas fa-question-circle text-muted" title="No encontrado en SOA"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No hay controles preventivos definidos para esta amenaza.
+                            <hr class="my-2">
+                            <small>
+                                <strong>¿Cómo establecerlos?</strong><br>
+                                Debes crear relaciones en la tabla <code>controles_amenazas</code> indicando qué controles del SOA mitigan esta amenaza.
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-medkit me-2"></i>
+                        Controles Reactivos
+                    </h5>
+                    <small>Reducen el impacto si ocurre</small>
+                </div>
+                <div class="card-body">
+                    {% if controles_reactivos %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Control</th>
+                                        <th>Efectividad</th>
+                                        <th>Madurez SOA</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for control_amenaza in controles_reactivos %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ control_amenaza.control_codigo }}</strong><br>
+                                            <small class="text-muted">
+                                                {% set soa_control = control_amenaza.get_soa_control() %}
+                                                {{ soa_control.title[:60] if soa_control else 'Control ISO 27002' }}...
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ (control_amenaza.efectividad * 100)|round(0)|int }}%</span>
+                                        </td>
+                                        <td>
+                                            {% set soa_control = control_amenaza.get_soa_control() %}
+                                            {% if soa_control %}
+                                                {% set madurez = soa_control.maturity_score %}
+                                                {% if madurez >= 5 %}
+                                                    <span class="badge bg-success">{{ madurez }}/6</span>
+                                                {% elif madurez >= 3 %}
+                                                    <span class="badge bg-warning">{{ madurez }}/6</span>
+                                                {% elif madurez > 0 %}
+                                                    <span class="badge bg-info">{{ madurez }}/6</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">No impl.</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set soa_control = control_amenaza.get_soa_control() %}
+                                            {% if soa_control %}
+                                                {% if soa_control.applicability_status == 'aplicable' %}
+                                                    <i class="fas fa-check-circle text-success" title="Aplicable"></i>
+                                                {% elif soa_control.applicability_status == 'no_aplicable' %}
+                                                    <i class="fas fa-times-circle text-danger" title="No aplicable"></i>
+                                                {% else %}
+                                                    <i class="fas fa-share-square text-warning" title="Transferido"></i>
+                                                {% endif %}
+                                            {% else %}
+                                                <i class="fas fa-question-circle text-muted" title="No encontrado en SOA"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No hay controles reactivos definidos para esta amenaza.
+                            <hr class="my-2">
+                            <small>
+                                <strong>¿Cómo establecerlos?</strong><br>
+                                Debes crear relaciones en la tabla <code>controles_amenazas</code> indicando qué controles del SOA mitigan esta amenaza.
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información sobre cómo establecer controles -->
+    {% if not controles_preventivos and not controles_reactivos %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>
+                        ¿Cómo establecer controles para esta amenaza?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Para que el sistema calcule la reducción del riesgo, debes establecer qué controles del SOA mitigan esta amenaza:</p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-database me-2 text-primary"></i>Opción 1: SQL Directo</h6>
+                            <pre class="bg-light p-3 rounded"><code>INSERT INTO controles_amenazas
+  (control_codigo, amenaza_id, tipo_control, efectividad)
+VALUES
+  ('A.5.1', {{ riesgo.amenaza_id }}, 'PREVENTIVO', 0.80),
+  ('A.17.1', {{ riesgo.amenaza_id }}, 'REACTIVO', 0.70);</code></pre>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-list me-2 text-info"></i>Campos requeridos</h6>
+                            <ul>
+                                <li><strong>control_codigo:</strong> Código del control SOA (ej: "A.5.1")</li>
+                                <li><strong>amenaza_id:</strong> ID de la amenaza ({{ riesgo.amenaza_id }})</li>
+                                <li><strong>tipo_control:</strong> PREVENTIVO o REACTIVO</li>
+                                <li><strong>efectividad:</strong> 0.0 - 1.0 (qué tan efectivo es)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="alert alert-info mb-0">
+                        <strong><i class="fas fa-lightbulb me-2"></i>Recomendación:</strong>
+                        <ul class="mb-0">
+                            <li>Consulta el <strong>SOA activo</strong> en <a href="{{ url_for('soa.index') }}" class="alert-link">http://localhost/soa/</a> para ver los controles disponibles</li>
+                            <li>Usa el catálogo de <strong>amenazas MAGERIT</strong> como referencia para saber qué controles son típicamente efectivos</li>
+                            <li>La <strong>efectividad</strong> representa qué tan bien el control mitiga la amenaza (1.0 = 100% efectivo)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -48,7 +48,7 @@ def create_app(config_name=None):
     from app.blueprints.auth import auth_bp
     from app.blueprints.dashboard import dashboard_bp
     from app.blueprints.soa import soa_bp
-    from app.blueprints.risks import risks_bp
+    from app.risks import bp as risks_bp
     from app.blueprints.documents import documents_bp
     from app.blueprints.incidents import incidents_bp
     from app.blueprints.audits import audits_bp
@@ -104,6 +104,10 @@ def create_app(config_name=None):
             app.extensions['task_scheduler'] = scheduler
         except Exception as e:
             print(f"Warning: Task scheduler not initialized: {str(e)}")
+
+    # Register CLI commands for risk management
+    from app.risks.commands import init_app as init_risks_commands
+    init_risks_commands(app)
 
     return app
 

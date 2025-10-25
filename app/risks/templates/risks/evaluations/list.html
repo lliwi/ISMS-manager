@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluaciones de Riesgos - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('risks.dashboard') }}">Gestión de Riesgos</a></li>
+                    <li class="breadcrumb-item active">Evaluaciones</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="fas fa-clipboard-check text-primary me-2"></i>
+                        Evaluaciones de Riesgos
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Gestión de evaluaciones de riesgos de seguridad de la información
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('risks.evaluaciones_create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nueva Evaluación
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Evaluaciones -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if evaluaciones %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Versión</th>
+                                    <th>Fecha Inicio</th>
+                                    <th>Estado</th>
+                                    <th>Riesgos</th>
+                                    <th>Responsable</th>
+                                    <th width="15%">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for evaluacion in evaluaciones %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ evaluacion.nombre }}</strong>
+                                        {% if evaluacion.descripcion %}
+                                        <br>
+                                        <small class="text-muted">{{ evaluacion.descripcion[:80] }}{{ '...' if evaluacion.descripcion|length > 80 else '' }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">v{{ evaluacion.version }}</span>
+                                    </td>
+                                    <td>
+                                        {{ evaluacion.fecha_inicio.strftime('%d/%m/%Y') if evaluacion.fecha_inicio else '-' }}
+                                    </td>
+                                    <td>
+                                        {% if evaluacion.estado == 'en_curso' %}
+                                            <span class="badge bg-warning">En Curso</span>
+                                        {% elif evaluacion.estado == 'completada' %}
+                                            <span class="badge bg-success">Completada</span>
+                                        {% elif evaluacion.estado == 'borrador' %}
+                                            <span class="badge bg-secondary">Borrador</span>
+                                        {% elif evaluacion.estado == 'aprobada' %}
+                                            <span class="badge bg-info">Aprobada</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">{{ evaluacion.estado }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ evaluacion.riesgos|length if evaluacion.riesgos else 0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if evaluacion.responsable_evaluacion %}
+                                            {{ evaluacion.responsable_evaluacion.nombre }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ url_for('risks.evaluaciones_view', id=evaluacion.id) }}"
+                                               class="btn btn-outline-primary"
+                                               title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('risks.evaluaciones_riesgos', id=evaluacion.id) }}"
+                                               class="btn btn-outline-info"
+                                               title="Ver riesgos">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            </a>
+                                            <a href="{{ url_for('risks.evaluaciones_edit', id=evaluacion.id) }}"
+                                               class="btn btn-outline-warning"
+                                               title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    title="Eliminar"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteModal{{ evaluacion.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-list fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No hay evaluaciones registradas</h4>
+                        <p class="text-muted">
+                            Comienza creando tu primera evaluación de riesgos
+                        </p>
+                        <a href="{{ url_for('risks.evaluaciones_create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Crear Primera Evaluación
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales de Confirmación de Eliminación -->
+    {% for evaluacion in evaluaciones %}
+    <div class="modal fade" id="deleteModal{{ evaluacion.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ evaluacion.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteModalLabel{{ evaluacion.id }}">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        ¿Está seguro que desea eliminar la evaluación <strong>{{ evaluacion.nombre }}</strong>?
+                    </p>
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Advertencia:</strong> Esta acción eliminará todos los riesgos asociados a esta evaluación.
+                        Esta operación no se puede deshacer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <form method="POST" action="{{ url_for('risks.evaluaciones_delete', id=evaluacion.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Eliminar Evaluación
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

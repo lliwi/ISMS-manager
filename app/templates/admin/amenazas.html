@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo de Amenazas MAGERIT - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+            Catálogo de Amenazas MAGERIT
+        </h1>
+        <p class="text-muted">Gestionar amenazas según metodología MAGERIT 3.2</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_amenaza') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus"></i> Nueva Amenaza
+        </a>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Configuración
+        </a>
+    </div>
+</div>
+
+<!-- Filtros y búsqueda -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="grupo" class="form-label">Grupo</label>
+                <select name="grupo" id="grupo" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los grupos</option>
+                    {% for grupo in grupos %}
+                    <option value="{{ grupo }}" {% if grupo_filter == grupo %}selected{% endif %}>
+                        {{ grupo }} ({{ grupos_count[grupo] }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="search" class="form-label">Buscar</label>
+                <input type="text" name="search" id="search" class="form-control"
+                       placeholder="Código, nombre o descripción..." value="{{ search }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Estadísticas por grupo -->
+<div class="row mb-3">
+    {% set grupo_icons = {'NATURALES': 'cloud-bolt', 'INDUSTRIALES': 'industry', 'ERRORES': 'user-slash', 'ATAQUES': 'user-secret'} %}
+    {% set grupo_colors = {'NATURALES': 'primary', 'INDUSTRIALES': 'warning', 'ERRORES': 'info', 'ATAQUES': 'danger'} %}
+    {% for grupo in grupos %}
+    <div class="col-md-3">
+        <div class="card border-{{ grupo_colors[grupo] }}">
+            <div class="card-body text-center">
+                <i class="fas fa-{{ grupo_icons[grupo] }} fa-2x text-{{ grupo_colors[grupo] }} mb-2"></i>
+                <h5 class="card-title">{{ grupo }}</h5>
+                <h3 class="text-{{ grupo_colors[grupo] }}">{{ grupos_count[grupo] }}</h3>
+                <small class="text-muted">amenazas</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tabla de amenazas -->
+<div class="card">
+    <div class="card-body">
+        {% if amenazas %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Código</th>
+                        <th>Nombre</th>
+                        <th style="width: 120px;">Grupo</th>
+                        <th style="width: 100px;">Dimensiones</th>
+                        <th style="width: 100px;" class="text-center">Controles</th>
+                        <th style="width: 100px;" class="text-center">Riesgos</th>
+                        <th style="width: 150px;" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for amenaza in amenazas %}
+                    <tr>
+                        <td>
+                            <code class="text-danger">{{ amenaza.codigo }}</code>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.view_amenaza', id=amenaza.id) }}" class="text-decoration-none">
+                                <strong>{{ amenaza.nombre }}</strong>
+                            </a>
+                            {% if amenaza.descripcion %}
+                            <br><small class="text-muted">{{ amenaza.descripcion[:100] }}{{ '...' if amenaza.descripcion|length > 100 else '' }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ grupo_colors[amenaza.grupo] }}">
+                                {{ amenaza.grupo }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if amenaza.afecta_confidencialidad %}
+                            <span class="badge bg-info" title="Confidencialidad">C</span>
+                            {% endif %}
+                            {% if amenaza.afecta_integridad %}
+                            <span class="badge bg-primary" title="Integridad">I</span>
+                            {% endif %}
+                            {% if amenaza.afecta_disponibilidad %}
+                            <span class="badge bg-success" title="Disponibilidad">D</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if amenaza.controles %}
+                            <span class="badge bg-secondary">{{ amenaza.controles|length }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if amenaza.riesgos %}
+                            <span class="badge bg-warning text-dark">{{ amenaza.riesgos|length }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.view_amenaza', id=amenaza.id) }}"
+                               class="btn btn-sm btn-outline-info" title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('admin.edit_amenaza', id=amenaza.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                    onclick="confirmDelete('{{ amenaza.codigo }} - {{ amenaza.nombre }}', '{{ url_for('admin.delete_amenaza', id=amenaza.id) }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            {% if search or grupo_filter %}
+            No se encontraron amenazas con los criterios de búsqueda especificados.
+            <a href="{{ url_for('admin.amenazas') }}" class="alert-link">Limpiar filtros</a>
+            {% else %}
+            No hay amenazas configuradas en el sistema.
+            {% endif %}
+        </div>
+        {% if not search and not grupo_filter %}
+        <div class="text-center">
+            <a href="{{ url_for('admin.create_amenaza') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Crear Primera Amenaza
+            </a>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="fas fa-info-circle"></i>
+            <strong>MAGERIT 3.2:</strong> El catálogo de amenazas se organiza en 4 grupos:
+            <ul class="mb-0 mt-2">
+                <li><strong>NATURALES (N):</strong> Fuego, agua, fenómenos naturales</li>
+                <li><strong>INDUSTRIALES (I):</strong> Cortes de suministro, contaminación</li>
+                <li><strong>ERRORES (E):</strong> Errores de usuarios, administradores</li>
+                <li><strong>ATAQUES (A):</strong> Accesos no autorizados, malware, sabotaje</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Script para confirmar eliminación -->
+<script>
+function confirmDelete(name, url) {
+    if (confirm('¿Está seguro que desea eliminar la amenaza ' + name + '?\n\nEsta acción no se puede deshacer.')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token() }}';
+        form.appendChild(csrfInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}
