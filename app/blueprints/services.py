@@ -16,6 +16,42 @@ from utils.decorators import role_required
 services_bp = Blueprint('services', __name__, url_prefix='/servicios')
 
 
+def generate_service_code(service_type):
+    """
+    Genera un código único para el servicio basándose en el tipo
+    Formato: TIPO-NNNNN
+    Ejemplos: IT-00001, BUS-00001, SUPP-00001
+    """
+    # Prefijos según el tipo de servicio
+    type_prefixes = {
+        'IT': 'IT',           # Servicios de TI
+        'BUSINESS': 'BUS',    # Servicios de negocio
+        'SUPPORT': 'SUPP',    # Servicios de soporte
+        'CLOUD': 'CLD',       # Servicios en la nube
+        'EXTERNAL': 'EXT'     # Servicios externos
+    }
+
+    prefix = type_prefixes.get(service_type, 'SRV')
+
+    # Obtener el último número para este tipo
+    last_service = Service.query.filter(
+        Service.service_code.like(f'{prefix}-%')
+    ).order_by(Service.service_code.desc()).first()
+
+    if last_service:
+        try:
+            # Extraer el número del código (formato: PREFIX-NNNNN)
+            last_num = int(last_service.service_code.split('-')[1])
+            new_num = last_num + 1
+        except (IndexError, ValueError):
+            new_num = 1
+    else:
+        new_num = 1
+
+    # Generar código con formato PREFIX-NNNNN (5 dígitos con ceros a la izquierda)
+    return f"{prefix}-{new_num:05d}"
+
+
 def check_circular_dependency(service_id, depends_on_id, visited=None):
     """
     Verifica si agregar una dependencia crearía un ciclo
@@ -133,9 +169,13 @@ def create():
             annual_cost = request.form.get('annual_cost', type=float)
 
             # Validaciones
-            if not service_code or not name or not service_type or not service_owner_id:
-                flash('Código, nombre, tipo y propietario son obligatorios', 'error')
+            if not name or not service_type or not service_owner_id:
+                flash('Nombre, tipo y propietario son obligatorios', 'error')
                 return redirect(url_for('services.create'))
+
+            # Generar código automáticamente si no se proporciona
+            if not service_code:
+                service_code = generate_service_code(service_type)
 
             # Verificar si el código ya existe
             existing = Service.query.filter_by(service_code=service_code).first()
@@ -459,3 +499,29 @@ def api_search():
     } for s in services]
 
     return jsonify(results)
+
+
+@services_bp.route('/api/generate-code')
+@login_required
+def api_generate_code():
+    """API para generar código de servicio automáticamente"""
+    service_type = request.args.get('type', '').strip()
+
+    if not service_type:
+        return jsonify({'error': 'Tipo de servicio requerido'}), 400
+
+    try:
+        # Validar que el tipo de servicio existe
+        if service_type not in [t.name for t in ServiceType]:
+            return jsonify({'error': 'Tipo de servicio inválido'}), 400
+
+        # Generar código
+        service_code = generate_service_code(service_type)
+
+        return jsonify({
+            'service_code': service_code,
+            'type': service_type
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

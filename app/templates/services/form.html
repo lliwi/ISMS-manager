@@ -96,11 +96,36 @@
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label for="service_code" class="form-label">Código del Servicio <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="service_code" name="service_code"
-                                       value="{{ service.service_code if service else '' }}"
-                                       placeholder="SRV-001" required>
-                                <small class="text-muted">Código único para identificar el servicio</small>
+                                <label for="service_code" class="form-label">
+                                    Código del Servicio
+                                    {% if action == 'create' %}
+                                    <i class="fas fa-question-circle text-muted"
+                                       title="Se generará automáticamente según el tipo de servicio"
+                                       data-bs-toggle="tooltip"></i>
+                                    {% else %}
+                                    <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control {% if action == 'create' %}bg-light{% endif %}"
+                                           id="service_code" name="service_code"
+                                           value="{{ service.service_code if service else '' }}"
+                                           placeholder="Se generará automáticamente"
+                                           {% if action == 'create' %}readonly{% endif %}>
+                                    {% if action == 'create' %}
+                                    <button class="btn btn-outline-primary" type="button" id="manual_code_btn"
+                                            title="Introducir código manualmente">
+                                        <i class="fas fa-edit"></i> Manual
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted" id="service_code_info">
+                                    {% if action == 'create' %}
+                                    <i class="fas fa-robot"></i> Se generará automáticamente al seleccionar el tipo
+                                    {% else %}
+                                    Código único del servicio
+                                    {% endif %}
+                                </small>
                             </div>
                             <div class="col-md-8">
                                 <label for="name" class="form-label">Nombre del Servicio <span class="text-danger">*</span></label>
@@ -461,6 +486,93 @@
 </div>
 
 <script>
+    // Variables para gestión de código de servicio
+    let isManualCode = false;
+
+    // Generar código de servicio automáticamente
+    function generateServiceCode() {
+        if (isManualCode) return; // No generar si es manual
+
+        const serviceType = document.getElementById('service_type').value;
+
+        if (!serviceType) {
+            document.getElementById('service_code').value = '';
+            document.getElementById('service_code_info').innerHTML =
+                '<i class="fas fa-robot"></i> Selecciona un tipo de servicio para generar el código';
+            return;
+        }
+
+        // Llamar a la API para generar el código
+        fetch(`/servicios/api/generate-code?type=${serviceType}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al generar código');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    document.getElementById('service_code_info').innerHTML =
+                        `<i class="fas fa-exclamation-triangle text-danger"></i> Error: ${data.error}`;
+                    return;
+                }
+
+                // Actualizar el campo de código
+                document.getElementById('service_code').value = data.service_code;
+                document.getElementById('service_code_info').innerHTML =
+                    `<i class="fas fa-robot text-success"></i> Código generado automáticamente: <strong>${data.service_code}</strong>`;
+            })
+            .catch(error => {
+                console.error('Error al generar código:', error);
+                document.getElementById('service_code_info').innerHTML =
+                    '<i class="fas fa-exclamation-triangle text-danger"></i> Error al generar código';
+            });
+    }
+
+    // Alternar entre modo automático y manual
+    {% if action == 'create' %}
+    document.getElementById('manual_code_btn').addEventListener('click', function() {
+        isManualCode = !isManualCode;
+
+        const codeField = document.getElementById('service_code');
+        const btn = this;
+
+        if (isManualCode) {
+            // Modo manual
+            codeField.readOnly = false;
+            codeField.classList.remove('bg-light');
+            codeField.placeholder = 'Ej: SRV-001';
+            codeField.focus();
+            btn.innerHTML = '<i class="fas fa-robot"></i> Auto';
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-success');
+            document.getElementById('service_code_info').innerHTML =
+                '<i class="fas fa-user-edit text-primary"></i> Código manual - puedes editarlo';
+        } else {
+            // Modo automático
+            codeField.readOnly = true;
+            codeField.classList.add('bg-light');
+            codeField.placeholder = 'Se generará automáticamente';
+            btn.innerHTML = '<i class="fas fa-edit"></i> Manual';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-primary');
+            generateServiceCode();
+        }
+    });
+
+    // Generar código cuando cambia el tipo de servicio
+    document.getElementById('service_type').addEventListener('change', function() {
+        generateServiceCode();
+    });
+
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    {% endif %}
+
     // Update criticality badge in real-time
     function updateCriticalityBadge(value) {
         const badge = document.getElementById('criticality-badge');
