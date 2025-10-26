@@ -49,6 +49,44 @@ def seed_controles_command():
     seed_controles()
 
 
+@click.command('seed-control-amenaza')
+@with_appcontext
+def seed_control_amenaza_command():
+    """
+    Carga las relaciones control-amenaza según mejores prácticas.
+
+    Mapea controles ISO 27002:2022 con amenazas MAGERIT 3.2.
+    Necesario para que el cálculo de riesgos funcione.
+
+    Uso:
+        flask seed-control-amenaza
+
+    O desde Docker:
+        docker exec ismsmanager-web-1 flask seed-control-amenaza
+    """
+    from app.risks.seed_control_amenaza import seed_control_amenaza
+    seed_control_amenaza()
+
+
+@click.command('seed-amenaza-recurso')
+@with_appcontext
+def seed_amenaza_recurso_command():
+    """
+    Carga las relaciones amenaza-recurso-tipo según MAGERIT 3.2.
+
+    Define qué amenazas aplican a qué tipos de recursos y con qué frecuencia.
+    CRÍTICO para que el cálculo de riesgos funcione.
+
+    Uso:
+        flask seed-amenaza-recurso
+
+    O desde Docker:
+        docker exec ismsmanager-web-1 flask seed-amenaza-recurso
+    """
+    from app.risks.seed_amenaza_recurso import seed_amenaza_recurso
+    seed_amenaza_recurso()
+
+
 def init_app(app):
     """
     Registra los comandos CLI en la aplicación Flask
@@ -56,3 +94,5 @@ def init_app(app):
     app.cli.add_command(seed_risks_command)
     app.cli.add_command(seed_amenazas_command)
     app.cli.add_command(seed_controles_command)
+    app.cli.add_command(seed_control_amenaza_command)
+    app.cli.add_command(seed_amenaza_recurso_command)

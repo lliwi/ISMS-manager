@@ -35,6 +35,12 @@ def seed_initial_data():
         # Seed MAGERIT threats catalog
         seed_amenazas()
 
+        # Seed control-threat relationships
+        seed_control_amenaza_relations()
+
+        # Seed threat-resource-type relationships
+        seed_amenaza_recurso_relations()
+
         db.session.commit()
         print("✅ Initial data seeded successfully")
 
@@ -274,4 +280,63 @@ def seed_amenazas():
     except Exception as e:
         print(f"  ⚠️  Warning: Could not load threats catalog: {str(e)}")
         # Don't fail the entire seed process if threats can't be loaded
+        pass
+
+
+def seed_control_amenaza_relations():
+    """Create control-threat relationships if they don't exist"""
+    from app.risks.models import ControlAmenaza
+
+    # Check if relationships already exist
+    existing_count = ControlAmenaza.query.count()
+    if existing_count > 0:
+        print(f"  → Control-threat relationships already exist ({existing_count} relationships)")
+        return
+
+    # Import and run the seed function in non-interactive mode
+    try:
+        from app.risks.seed_control_amenaza import seed_control_amenaza
+        seed_control_amenaza(force_reload=False, interactive=False)
+
+        # Count loaded relationships by type
+        from sqlalchemy import func
+        stats = db.session.query(
+            ControlAmenaza.tipo_control,
+            func.count(ControlAmenaza.id).label('count')
+        ).group_by(ControlAmenaza.tipo_control).order_by(ControlAmenaza.tipo_control).all()
+
+        total = sum(count for _, count in stats)
+        print(f"  → Created {total} control-threat relationships:")
+        for tipo, count in stats:
+            print(f"    • {tipo}: {count} relationships")
+
+    except Exception as e:
+        print(f"  ⚠️  Warning: Could not load control-threat relationships: {str(e)}")
+        # Don't fail the entire seed process if relationships can't be loaded
+        pass
+
+
+def seed_amenaza_recurso_relations():
+    """Create threat-resource-type relationships if they don't exist"""
+    from app.risks.models import AmenazaRecursoTipo
+
+    existing_count = AmenazaRecursoTipo.query.count()
+
+    if existing_count > 0:
+        print(f"  → Threat-resource relationships already exist ({existing_count} relationships)")
+        return
+
+    print("  → Loading threat-resource-type relationships...")
+
+    try:
+        from app.risks.seed_amenaza_recurso import seed_amenaza_recurso
+        seed_amenaza_recurso(force_reload=False, interactive=False)
+
+        # Show statistics
+        total = AmenazaRecursoTipo.query.count()
+        print(f"  ✅ Created {total} threat-resource-type relationships")
+
+    except Exception as e:
+        print(f"  ⚠️  Warning: Could not load threat-resource relationships: {str(e)}")
+        # Don't fail the entire seed process if relationships can't be loaded
         pass

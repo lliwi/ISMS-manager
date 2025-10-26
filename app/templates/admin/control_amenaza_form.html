@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if relacion else 'Nueva' }} Relación Control-Amenaza - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-link text-primary me-2"></i>
+            {{ 'Editar' if relacion else 'Nueva' }} Relación Control-Amenaza
+        </h1>
+        <p class="text-muted">{{ 'Modificar' if relacion else 'Crear' }} relación entre control ISO 27002 y amenaza MAGERIT</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="relationForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Control (solo lectura si es edición) -->
+                    <div class="mb-3">
+                        <label for="control_codigo" class="form-label">
+                            Control ISO 27002 <span class="text-danger">*</span>
+                        </label>
+                        {% if relacion %}
+                            <input type="text" class="form-control" value="{{ relacion.control_codigo }}" readonly>
+                            <input type="hidden" name="control_codigo" value="{{ relacion.control_codigo }}">
+                        {% else %}
+                            <select class="form-select" id="control_codigo" name="control_codigo" required onchange="updateControlInfo()">
+                                <option value="">Seleccione un control...</option>
+                                {% for control in controles_soa %}
+                                <option value="{{ control.control_id }}" data-title="{{ control.title }}" data-category="{{ control.category }}">
+                                    {{ control.control_id }} - {{ control.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div id="controlInfo" class="alert alert-info mt-2" style="display:none;">
+                                <strong>Categoría:</strong> <span id="controlCategory"></span><br>
+                                <strong>Título:</strong> <span id="controlTitle"></span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Amenaza (solo lectura si es edición) -->
+                    <div class="mb-3">
+                        <label for="amenaza_id" class="form-label">
+                            Amenaza MAGERIT <span class="text-danger">*</span>
+                        </label>
+                        {% if relacion %}
+                            <input type="text" class="form-control" value="{{ relacion.amenaza.codigo }} - {{ relacion.amenaza.nombre }}" readonly>
+                            <input type="hidden" name="amenaza_id" value="{{ relacion.amenaza.id }}">
+                        {% else %}
+                            <select class="form-select" id="amenaza_id" name="amenaza_id" required onchange="updateAmenazaInfo()">
+                                <option value="">Seleccione una amenaza...</option>
+                                {% for amenaza in amenazas %}
+                                <option value="{{ amenaza.id }}" data-grupo="{{ amenaza.grupo }}" data-descripcion="{{ amenaza.descripcion }}">
+                                    {{ amenaza.codigo }} - {{ amenaza.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div id="amenazaInfo" class="alert alert-warning mt-2" style="display:none;">
+                                <strong>Grupo:</strong> <span id="amenazaGrupo"></span><br>
+                                <strong>Descripción:</strong> <span id="amenazaDescripcion"></span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tipo de Control -->
+                    <div class="mb-3">
+                        <label for="tipo_control" class="form-label">
+                            Tipo de Control <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="tipo_control" name="tipo_control" required>
+                            <option value="">Seleccione un tipo...</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo }}" {% if relacion and relacion.tipo_control == tipo %}selected{% endif %}>
+                                {{ tipo }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            <strong>PREVENTIVO:</strong> Reduce la probabilidad de que ocurra la amenaza<br>
+                            <strong>REACTIVO:</strong> Reduce el impacto si la amenaza se materializa<br>
+                            <strong>DETECTIVE:</strong> Detecta cuando se materializa la amenaza<br>
+                            <strong>DISUASORIO:</strong> Disuade a atacantes potenciales
+                        </small>
+                    </div>
+
+                    <!-- Efectividad -->
+                    <div class="mb-3">
+                        <label for="efectividad" class="form-label">
+                            Efectividad del Control
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="efectividad" name="efectividad"
+                                   min="0" max="1" step="0.01"
+                                   value="{{ relacion.efectividad if relacion else '1.00' }}"
+                                   oninput="updateEfectividadDisplay()">
+                            <span class="input-group-text" id="efectividadDisplay">100%</span>
+                        </div>
+                        <small class="form-text text-muted">
+                            Valor entre 0.00 (0%) y 1.00 (100%). Indica qué tan efectivo es el control para mitigar la amenaza.
+                        </small>
+                        <div class="progress mt-2" style="height: 20px;">
+                            <div class="progress-bar" id="efectividadBar" role="progressbar"
+                                 style="width: {{ (relacion.efectividad * 100) if relacion else 100 }}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.controles_amenazas') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {{ 'Actualizar' if relacion else 'Crear' }} Relación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ayuda lateral -->
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-info-circle"></i> Información
+            </div>
+            <div class="card-body">
+                <h6>¿Para qué sirve esto?</h6>
+                <p class="small">
+                    Las relaciones control-amenaza son fundamentales para el cálculo de riesgos. Permiten al sistema saber:
+                </p>
+                <ul class="small">
+                    <li><strong>Qué controles</strong> mitigan qué amenazas</li>
+                    <li><strong>Cómo lo hacen:</strong> preventivo vs reactivo</li>
+                    <li><strong>Cuán efectivos</strong> son (0-100%)</li>
+                </ul>
+
+                <hr>
+
+                <h6>Tipos de Control</h6>
+                <div class="small">
+                    <p><span class="badge bg-success">PREVENTIVO</span> Reduce la probabilidad de que la amenaza ocurra</p>
+                    <p><span class="badge bg-warning text-dark">REACTIVO</span> Reduce el impacto cuando la amenaza se materializa</p>
+                    <p><span class="badge bg-info">DETECTIVE</span> Detecta la materialización de la amenaza</p>
+                    <p><span class="badge bg-secondary">DISUASORIO</span> Disuade a los atacantes</p>
+                </div>
+
+                <hr>
+
+                <h6>Efectividad</h6>
+                <p class="small">
+                    La efectividad indica qué tan bien el control mitiga la amenaza:
+                </p>
+                <ul class="small">
+                    <li><strong>1.00 (100%):</strong> Totalmente efectivo</li>
+                    <li><strong>0.75 (75%):</strong> Muy efectivo</li>
+                    <li><strong>0.50 (50%):</strong> Moderadamente efectivo</li>
+                    <li><strong>0.25 (25%):</strong> Poco efectivo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateControlInfo() {
+    const select = document.getElementById('control_codigo');
+    const option = select.options[select.selectedIndex];
+
+    if (option.value) {
+        document.getElementById('controlCategory').textContent = option.dataset.category;
+        document.getElementById('controlTitle').textContent = option.dataset.title;
+        document.getElementById('controlInfo').style.display = 'block';
+    } else {
+        document.getElementById('controlInfo').style.display = 'none';
+    }
+}
+
+function updateAmenazaInfo() {
+    const select = document.getElementById('amenaza_id');
+    const option = select.options[select.selectedIndex];
+
+    if (option.value) {
+        document.getElementById('amenazaGrupo').textContent = option.dataset.grupo;
+        document.getElementById('amenazaDescripcion').textContent = option.dataset.descripcion;
+        document.getElementById('amenazaInfo').style.display = 'block';
+    } else {
+        document.getElementById('amenazaInfo').style.display = 'none';
+    }
+}
+
+function updateEfectividadDisplay() {
+    const input = document.getElementById('efectividad');
+    const value = parseFloat(input.value) || 0;
+    const percentage = Math.round(value * 100);
+
+    document.getElementById('efectividadDisplay').textContent = percentage + '%';
+    document.getElementById('efectividadBar').style.width = percentage + '%';
+
+    // Cambiar color según efectividad
+    const bar = document.getElementById('efectividadBar');
+    bar.className = 'progress-bar';
+    if (percentage >= 75) {
+        bar.classList.add('bg-success');
+    } else if (percentage >= 50) {
+        bar.classList.add('bg-info');
+    } else if (percentage >= 25) {
+        bar.classList.add('bg-warning');
+    } else {
+        bar.classList.add('bg-danger');
+    }
+}
+
+// Inicializar display
+{% if relacion %}
+updateEfectividadDisplay();
+{% endif %}
+</script>
+
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Relaciones Control-Amenaza - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-link text-primary me-2"></i>
+            Relaciones Control-Amenaza
+        </h1>
+        <p class="text-muted">Define qué controles ISO 27002 mitigan qué amenazas MAGERIT</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_control_amenaza') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus"></i> Nueva Relación
+        </a>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Configuración
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="amenaza_id" class="form-label">Amenaza</label>
+                <select name="amenaza_id" id="amenaza_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todas las amenazas</option>
+                    {% for amenaza in amenazas %}
+                    <option value="{{ amenaza.id }}" {% if amenaza_id_filter == amenaza.id %}selected{% endif %}>
+                        {{ amenaza.codigo }} - {{ amenaza.nombre[:40] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="control_codigo" class="form-label">Control</label>
+                <input type="text" name="control_codigo" id="control_codigo" class="form-control"
+                       placeholder="Ej: A.5.1" value="{{ control_codigo_filter or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="tipo" class="form-label">Tipo de Control</label>
+                <select name="tipo" id="tipo" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los tipos</option>
+                    {% for tipo in tipos %}
+                    <option value="{{ tipo }}" {% if tipo_filter == tipo %}selected{% endif %}>{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-50 me-2">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <a href="{{ url_for('admin.controles_amenazas') }}" class="btn btn-outline-secondary w-50">
+                    <i class="fas fa-times"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Relaciones</h5>
+                <h2 class="text-primary">{{ relaciones|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h5 class="card-title">Preventivos</h5>
+                <h2 class="text-success">{{ relaciones|selectattr('tipo_control', 'equalto', 'PREVENTIVO')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h5 class="card-title">Reactivos</h5>
+                <h2 class="text-warning">{{ relaciones|selectattr('tipo_control', 'equalto', 'REACTIVO')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h5 class="card-title">Otros</h5>
+                <h2 class="text-info">{{ relaciones|rejectattr('tipo_control', 'in', ['PREVENTIVO', 'REACTIVO'])|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de relaciones -->
+<div class="card">
+    <div class="card-body">
+        {% if relaciones %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 100px;">Control</th>
+                        <th>Título del Control</th>
+                        <th style="width: 100px;">Amenaza</th>
+                        <th>Nombre Amenaza</th>
+                        <th style="width: 120px;">Tipo Control</th>
+                        <th style="width: 100px;" class="text-center">Efectividad</th>
+                        <th style="width: 150px;" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for relacion in relaciones %}
+                    <tr>
+                        <td><code class="text-primary">{{ relacion.control_codigo }}</code></td>
+                        <td>
+                            {% set control_soa = relacion.get_soa_control() %}
+                            {% if control_soa %}
+                                <small>{{ control_soa.title[:60] }}{{ '...' if control_soa.title|length > 60 else '' }}</small>
+                            {% else %}
+                                <small class="text-muted">Control no encontrado en SOA</small>
+                            {% endif %}
+                        </td>
+                        <td><code class="text-danger">{{ relacion.amenaza.codigo }}</code></td>
+                        <td>
+                            <a href="{{ url_for('admin.view_amenaza', id=relacion.amenaza.id) }}" class="text-decoration-none">
+                                {{ relacion.amenaza.nombre[:40] }}{{ '...' if relacion.amenaza.nombre|length > 40 else '' }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if relacion.tipo_control == 'PREVENTIVO' %}
+                                <span class="badge bg-success">{{ relacion.tipo_control }}</span>
+                            {% elif relacion.tipo_control == 'REACTIVO' %}
+                                <span class="badge bg-warning text-dark">{{ relacion.tipo_control }}</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ relacion.tipo_control }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-primary">{{ "%.0f"|format(relacion.efectividad * 100) }}%</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.edit_control_amenaza', id=relacion.id) }}"
+                               class="btn btn-sm btn-outline-primary me-1"
+                               title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="confirmDelete({{ relacion.id }}, '{{ relacion.control_codigo }}', '{{ relacion.amenaza.codigo }}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No hay relaciones control-amenaza configuradas.
+            <a href="{{ url_for('admin.create_control_amenaza') }}" class="alert-link">Crea la primera relación</a> para habilitar el cálculo de riesgos.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<form id="deleteForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<script>
+function confirmDelete(id, control, amenaza) {
+    if (confirm(`¿Estás seguro de eliminar la relación entre el control ${control} y la amenaza ${amenaza}?\n\nEsta acción no se puede deshacer.`)) {
+        const form = document.getElementById('deleteForm');
+        form.action = `{{ url_for('admin.delete_control_amenaza', id=0) }}`.replace('/0', '/' + id);
+        form.submit();
+    }
+}
+</script>
+
+{% endblock %}

@@ -432,16 +432,22 @@ def audit_logs():
 @role_required('admin', 'ciso')
 def settings():
     """Página de configuración general del sistema"""
+    from app.risks.models import ControlAmenaza, AmenazaRecursoTipo
+
     doc_types_count = DocumentType.query.count()
     iso_versions_count = ISOVersion.query.count()
     asset_types_count = AssetType.query.count()
     amenazas_count = Amenaza.query.count()
+    controles_amenazas_count = ControlAmenaza.query.count()
+    amenazas_recursos_count = AmenazaRecursoTipo.query.count()
 
     return render_template('admin/settings.html',
                          doc_types_count=doc_types_count,
                          iso_versions_count=iso_versions_count,
                          asset_types_count=asset_types_count,
-                         amenazas_count=amenazas_count)
+                         amenazas_count=amenazas_count,
+                         controles_amenazas_count=controles_amenazas_count,
+                         amenazas_recursos_count=amenazas_recursos_count)
 
 
 @admin_bp.route('/settings/document-types')
@@ -1265,3 +1271,360 @@ def view_amenaza(id):
                          riesgos_count=riesgos_count,
                          controles_count=controles_count,
                          recursos_count=recursos_count)
+
+
+# ========================================================================
+# GESTIÓN DE RELACIONES CONTROL-AMENAZA
+# ========================================================================
+
+@admin_bp.route('/settings/controles-amenazas')
+@login_required
+@role_required('admin', 'ciso')
+def controles_amenazas():
+    """Gestión de relaciones control-amenaza"""
+    from app.risks.models import ControlAmenaza
+    from models import SOAControl, SOAVersion
+
+    # Filtros
+    amenaza_id_filter = request.args.get('amenaza_id', type=int)
+    control_codigo_filter = request.args.get('control_codigo')
+    tipo_filter = request.args.get('tipo')
+
+    query = ControlAmenaza.query
+
+    if amenaza_id_filter:
+        query = query.filter_by(amenaza_id=amenaza_id_filter)
+
+    if control_codigo_filter:
+        query = query.filter(ControlAmenaza.control_codigo.ilike(f'%{control_codigo_filter}%'))
+
+    if tipo_filter:
+        query = query.filter_by(tipo_control=tipo_filter)
+
+    relaciones = query.order_by(ControlAmenaza.control_codigo, ControlAmenaza.amenaza_id).all()
+
+    # Obtener listas para filtros
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    # Obtener controles del SOA activo
+    soa_activo = SOAVersion.query.filter_by(is_current=True).first()
+    controles_soa = []
+    if soa_activo:
+        controles_soa = SOAControl.query.filter_by(soa_version_id=soa_activo.id).order_by(SOAControl.control_id).all()
+
+    return render_template('admin/controles_amenazas.html',
+                         relaciones=relaciones,
+                         amenazas=amenazas,
+                         controles_soa=controles_soa,
+                         tipos=ControlAmenaza.TIPOS_CONTROL,
+                         amenaza_id_filter=amenaza_id_filter,
+                         control_codigo_filter=control_codigo_filter,
+                         tipo_filter=tipo_filter)
+
+
+@admin_bp.route('/settings/controles-amenazas/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_control_amenaza():
+    """Crear nueva relación control-amenaza"""
+    from app.risks.models import ControlAmenaza
+    from models import SOAControl, SOAVersion
+
+    if request.method == 'POST':
+        try:
+            control_codigo = request.form.get('control_codigo')
+            amenaza_id = request.form.get('amenaza_id')
+            tipo_control = request.form.get('tipo_control')
+            efectividad = request.form.get('efectividad')
+
+            # Validaciones
+            if not control_codigo or not amenaza_id or not tipo_control:
+                flash('Los campos Control, Amenaza y Tipo son obligatorios', 'danger')
+                return redirect(url_for('admin.create_control_amenaza'))
+
+            # Verificar que no exista ya
+            existing = ControlAmenaza.query.filter_by(
+                control_codigo=control_codigo,
+                amenaza_id=amenaza_id
+            ).first()
+
+            if existing:
+                flash(f'Ya existe una relación entre el control {control_codigo} y esta amenaza', 'danger')
+                return redirect(url_for('admin.create_control_amenaza'))
+
+            nueva_relacion = ControlAmenaza(
+                control_codigo=control_codigo,
+                amenaza_id=int(amenaza_id),
+                tipo_control=tipo_control,
+                efectividad=float(efectividad) if efectividad else 1.00
+            )
+
+            db.session.add(nueva_relacion)
+            db.session.commit()
+
+            amenaza = Amenaza.query.get(amenaza_id)
+            flash(f'Relación creada: Control {control_codigo} mitiga amenaza {amenaza.codigo}', 'success')
+            return redirect(url_for('admin.controles_amenazas'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la relación: {str(e)}', 'danger')
+
+    # GET: preparar datos para el formulario
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    # Obtener controles del SOA activo
+    soa_activo = SOAVersion.query.filter_by(is_current=True).first()
+    controles_soa = []
+    if soa_activo:
+        controles_soa = SOAControl.query.filter_by(soa_version_id=soa_activo.id).order_by(SOAControl.control_id).all()
+
+    from app.risks.models import ControlAmenaza
+
+    return render_template('admin/control_amenaza_form.html',
+                         relacion=None,
+                         amenazas=amenazas,
+                         controles_soa=controles_soa,
+                         tipos=ControlAmenaza.TIPOS_CONTROL)
+
+
+@admin_bp.route('/settings/controles-amenazas/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_control_amenaza(id):
+    """Editar relación control-amenaza existente"""
+    from app.risks.models import ControlAmenaza
+    from models import SOAControl, SOAVersion
+
+    relacion = ControlAmenaza.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            tipo_control = request.form.get('tipo_control')
+            efectividad = request.form.get('efectividad')
+
+            relacion.tipo_control = tipo_control
+            relacion.efectividad = float(efectividad) if efectividad else 1.00
+
+            db.session.commit()
+
+            flash(f'Relación actualizada exitosamente', 'success')
+            return redirect(url_for('admin.controles_amenazas'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la relación: {str(e)}', 'danger')
+
+    # GET: preparar datos para el formulario
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    # Obtener controles del SOA activo
+    soa_activo = SOAVersion.query.filter_by(is_current=True).first()
+    controles_soa = []
+    if soa_activo:
+        controles_soa = SOAControl.query.filter_by(soa_version_id=soa_activo.id).order_by(SOAControl.control_id).all()
+
+    return render_template('admin/control_amenaza_form.html',
+                         relacion=relacion,
+                         amenazas=amenazas,
+                         controles_soa=controles_soa,
+                         tipos=ControlAmenaza.TIPOS_CONTROL)
+
+
+@admin_bp.route('/settings/controles-amenazas/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_control_amenaza(id):
+    """Eliminar relación control-amenaza"""
+    from app.risks.models import ControlAmenaza
+
+    relacion = ControlAmenaza.query.get_or_404(id)
+
+    try:
+        control_codigo = relacion.control_codigo
+        amenaza_codigo = relacion.amenaza.codigo
+
+        db.session.delete(relacion)
+        db.session.commit()
+
+        flash(f'Relación eliminada: Control {control_codigo} - Amenaza {amenaza_codigo}', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la relación: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.controles_amenazas'))
+
+
+# ========================================================================
+# GESTIÓN DE RELACIONES AMENAZA-RECURSO-TIPO
+# ========================================================================
+
+@admin_bp.route('/settings/amenazas-recursos')
+@login_required
+@role_required('admin', 'ciso')
+def amenazas_recursos():
+    """Gestión de relaciones amenaza-recurso-tipo"""
+    from app.risks.models import AmenazaRecursoTipo
+
+    # Filtros
+    amenaza_id_filter = request.args.get('amenaza_id', type=int)
+    tipo_recurso_filter = request.args.get('tipo_recurso')
+    dimension_filter = request.args.get('dimension')
+
+    query = AmenazaRecursoTipo.query
+
+    if amenaza_id_filter:
+        query = query.filter_by(amenaza_id=amenaza_id_filter)
+
+    if tipo_recurso_filter:
+        query = query.filter(AmenazaRecursoTipo.tipo_recurso.ilike(f'%{tipo_recurso_filter}%'))
+
+    if dimension_filter:
+        query = query.filter_by(dimension_afectada=dimension_filter)
+
+    relaciones = query.order_by(AmenazaRecursoTipo.amenaza_id, AmenazaRecursoTipo.tipo_recurso).all()
+
+    # Obtener listas para filtros
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    # Tipos de recursos de MAGERIT
+    from app.risks.models import RecursoInformacion
+    tipos_recurso = RecursoInformacion.TIPOS_RECURSO if hasattr(RecursoInformacion, 'TIPOS_RECURSO') else [
+        'HW', 'SW', 'DAT', 'COM', 'AUX', 'NET', 'PE', 'L', 'S'
+    ]
+
+    return render_template('admin/amenazas_recursos.html',
+                         relaciones=relaciones,
+                         amenazas=amenazas,
+                         tipos_recurso=tipos_recurso,
+                         dimensiones=AmenazaRecursoTipo.DIMENSIONES,
+                         amenaza_id_filter=amenaza_id_filter,
+                         tipo_recurso_filter=tipo_recurso_filter,
+                         dimension_filter=dimension_filter)
+
+
+@admin_bp.route('/settings/amenazas-recursos/new', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def create_amenaza_recurso():
+    """Crear nueva relación amenaza-recurso-tipo"""
+    from app.risks.models import AmenazaRecursoTipo, RecursoInformacion
+
+    if request.method == 'POST':
+        try:
+            amenaza_id = request.form.get('amenaza_id')
+            tipo_recurso = request.form.get('tipo_recurso')
+            dimension_afectada = request.form.get('dimension_afectada')
+            frecuencia_base = request.form.get('frecuencia_base')
+
+            # Validaciones
+            if not amenaza_id or not tipo_recurso or not dimension_afectada:
+                flash('Los campos Amenaza, Tipo de Recurso y Dimensión son obligatorios', 'danger')
+                return redirect(url_for('admin.create_amenaza_recurso'))
+
+            # Verificar que no exista ya
+            existing = AmenazaRecursoTipo.query.filter_by(
+                amenaza_id=amenaza_id,
+                tipo_recurso=tipo_recurso,
+                dimension_afectada=dimension_afectada
+            ).first()
+
+            if existing:
+                flash(f'Ya existe una relación para esta combinación', 'danger')
+                return redirect(url_for('admin.create_amenaza_recurso'))
+
+            nueva_relacion = AmenazaRecursoTipo(
+                amenaza_id=int(amenaza_id),
+                tipo_recurso=tipo_recurso,
+                dimension_afectada=dimension_afectada,
+                frecuencia_base=int(frecuencia_base) if frecuencia_base else 3
+            )
+
+            db.session.add(nueva_relacion)
+            db.session.commit()
+
+            amenaza = Amenaza.query.get(amenaza_id)
+            flash(f'Relación creada: Amenaza {amenaza.codigo} afecta {tipo_recurso}/{dimension_afectada}', 'success')
+            return redirect(url_for('admin.amenazas_recursos'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la relación: {str(e)}', 'danger')
+
+    # GET: preparar datos para el formulario
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    tipos_recurso = RecursoInformacion.TIPOS_RECURSO if hasattr(RecursoInformacion, 'TIPOS_RECURSO') else [
+        'HW', 'SW', 'DAT', 'COM', 'AUX', 'NET', 'PE', 'L', 'S'
+    ]
+
+    return render_template('admin/amenaza_recurso_form.html',
+                         relacion=None,
+                         amenazas=amenazas,
+                         tipos_recurso=tipos_recurso,
+                         dimensiones=AmenazaRecursoTipo.DIMENSIONES)
+
+
+@admin_bp.route('/settings/amenazas-recursos/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin', 'ciso')
+def edit_amenaza_recurso(id):
+    """Editar relación amenaza-recurso-tipo existente"""
+    from app.risks.models import AmenazaRecursoTipo, RecursoInformacion
+
+    relacion = AmenazaRecursoTipo.query.get_or_404(id)
+
+    if request.method == 'POST':
+        try:
+            frecuencia_base = request.form.get('frecuencia_base')
+
+            relacion.frecuencia_base = int(frecuencia_base) if frecuencia_base else 3
+
+            db.session.commit()
+
+            flash(f'Relación actualizada exitosamente', 'success')
+            return redirect(url_for('admin.amenazas_recursos'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la relación: {str(e)}', 'danger')
+
+    # GET: preparar datos para el formulario
+    amenazas = Amenaza.query.order_by(Amenaza.codigo).all()
+
+    tipos_recurso = RecursoInformacion.TIPOS_RECURSO if hasattr(RecursoInformacion, 'TIPOS_RECURSO') else [
+        'HW', 'SW', 'DAT', 'COM', 'AUX', 'NET', 'PE', 'L', 'S'
+    ]
+
+    return render_template('admin/amenaza_recurso_form.html',
+                         relacion=relacion,
+                         amenazas=amenazas,
+                         tipos_recurso=tipos_recurso,
+                         dimensiones=AmenazaRecursoTipo.DIMENSIONES)
+
+
+@admin_bp.route('/settings/amenazas-recursos/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_amenaza_recurso(id):
+    """Eliminar relación amenaza-recurso-tipo"""
+    from app.risks.models import AmenazaRecursoTipo
+
+    relacion = AmenazaRecursoTipo.query.get_or_404(id)
+
+    try:
+        amenaza_codigo = relacion.amenaza.codigo
+        tipo_recurso = relacion.tipo_recurso
+        dimension = relacion.dimension_afectada
+
+        db.session.delete(relacion)
+        db.session.commit()
+
+        flash(f'Relación eliminada: {amenaza_codigo} - {tipo_recurso}/{dimension}', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la relación: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.amenazas_recursos'))

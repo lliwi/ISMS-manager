@@ -291,17 +291,26 @@ class SOAControl(db.Model):
 
     @property
     def maturity_score(self):
-        """Retorna el score numérico del nivel de madurez"""
-        maturity_scores = {
+        """Convierte maturity_level (texto) a maturity_score (numérico 0-6)
+
+        Esta propiedad permite compatibilidad con el sistema de cálculo de riesgos
+        que espera un valor numérico.
+
+        Returns:
+            int: Nivel de madurez numérico (0-6)
+        """
+        maturity_score_map = {
             'no_implementado': 0,
             'inicial': 1,
             'repetible': 2,
             'definido': 3,
             'controlado': 4,
             'cuantificado': 5,
-            'optimizado': 6
+            'optimizado': 6,
+            None: 0,  # Si no está definido, asumir no implementado
+            '': 0
         }
-        return maturity_scores.get(self.maturity_level, 0)
+        return maturity_score_map.get(self.maturity_level, 0)
 
     @property
     def is_implemented(self):

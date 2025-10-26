@@ -165,6 +165,66 @@
             </div>
         </div>
     </div>
+
+    <!-- Relaciones Control-Amenaza -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-link"></i> Relaciones Control-Amenaza
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Define qué controles ISO 27002 mitigan qué amenazas MAGERIT y su efectividad (requerido para cálculo de riesgos)
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ controles_amenazas_count }}</h3>
+                        <small class="text-muted">relaciones configuradas</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-link fa-3x text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.controles_amenazas') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-cog"></i> Gestionar Relaciones Control-Amenaza
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relaciones Amenaza-Recurso-Tipo -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-network-wired"></i> Relaciones Amenaza-Recurso
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Define frecuencias específicas de amenazas por tipo de recurso y dimensión CIA (opcional, mejora precisión)
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ amenazas_recursos_count }}</h3>
+                        <small class="text-muted">relaciones configuradas</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-network-wired fa-3x text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.amenazas_recursos') }}" class="btn btn-warning text-dark w-100">
+                    <i class="fas fa-cog"></i> Gestionar Relaciones Amenaza-Recurso
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
     <!-- Roles del Sistema -->

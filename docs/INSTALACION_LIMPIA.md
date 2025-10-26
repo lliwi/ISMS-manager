@@ -130,7 +130,7 @@ La instalación automáticamente crea:
    - Todos con `applicability_status = 'aplicable'`
    - Todos con `maturity_score = 0` (no implementado)
 
-5. **Catálogo de Amenazas MAGERIT 3.2** ✨ NUEVO - Automático
+5. **Catálogo de Amenazas MAGERIT 3.2** ✨ Automático
    - **55 amenazas** organizadas en 4 grupos:
      - `NATURALES` (3 amenazas): Fuego, agua, fenómenos naturales
      - `INDUSTRIALES` (11 amenazas): Cortes de suministro, averías, contaminación
@@ -139,12 +139,20 @@ La instalación automáticamente crea:
 
    **Nota**: Las amenazas se cargan automáticamente durante la inicialización. Los nombres de grupos están normalizados según `app/risks/models.py:204`
 
+6. **Relaciones Control-Amenaza** ✨ NUEVO - Automático
+   - **~200+ relaciones** entre controles ISO 27002:2022 y amenazas MAGERIT
+   - Mapeo basado en mejores prácticas de seguridad
+   - Incluye tipo (PREVENTIVO/REACTIVO/DETECTIVE) y efectividad (0-100%)
+   - Cubre todos los controles organizacionales, de personas, físicos y tecnológicos
+
+   **Nota**: Las relaciones se cargan automáticamente. Pueden personalizarse desde `/admin/settings/controles-amenazas`
+
 ### 📝 Requieren Configuración Manual
 
-1. **Relaciones Control-Amenaza** (Requerido para cálculo de riesgos)
-   - Definir qué controles mitigan qué amenazas
-   - Establecer efectividad de cada control sobre cada amenaza
-   - Ver ejemplo en `migrations/014_seed_test_control_amenaza.sql`
+1. **Niveles de Madurez en SOA** (Requerido para cálculo de riesgos)
+   - Configurar `maturity_level` para cada control (inicial, repetible, definido, etc.)
+   - Se hace desde `/soa/` para cada control individual
+   - Por defecto todos están en NULL (equivale a "no implementado")
 
 2. **Activos de Información**
    - Crear mediante interfaz web o importación
@@ -359,9 +367,9 @@ docker restart ismsmanager-web-1
 1. ✅ Cambiar contraseña de admin
 2. ✅ Crear usuarios adicionales
 3. ✅ Configurar SOA con controles aplicables
-4. ✅ Establecer niveles de madurez realistas
-5. ✅ Definir relaciones control-amenaza
-6. ~~Importar catálogo de amenazas MAGERIT~~ → **Ya incluido automáticamente** ✨
+4. ⚠️ **Establecer niveles de madurez en controles SOA** (crítico para cálculo)
+5. ~~Definir relaciones control-amenaza~~ → **Ya incluidas automáticamente** ✨ (~200+ relaciones)
+6. ~~Importar catálogo de amenazas MAGERIT~~ → **Ya incluido automáticamente** ✨ (55 amenazas)
 7. ✅ Crear activos de información
 8. ✅ Realizar primera evaluación de riesgos
 

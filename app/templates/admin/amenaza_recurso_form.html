@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if relacion else 'Nueva' }} Relación Amenaza-Recurso - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-network-wired text-warning me-2"></i>
+            {{ 'Editar' if relacion else 'Nueva' }} Relación Amenaza-Recurso-Tipo
+        </h1>
+        <p class="text-muted">{{ 'Modificar' if relacion else 'Crear' }} relación entre amenaza y tipo de recurso</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Amenaza (solo lectura si es edición) -->
+                    <div class="mb-3">
+                        <label for="amenaza_id" class="form-label">
+                            Amenaza MAGERIT <span class="text-danger">*</span>
+                        </label>
+                        {% if relacion %}
+                            <input type="text" class="form-control" value="{{ relacion.amenaza.codigo }} - {{ relacion.amenaza.nombre }}" readonly>
+                            <input type="hidden" name="amenaza_id" value="{{ relacion.amenaza.id }}">
+                        {% else %}
+                            <select class="form-select" id="amenaza_id" name="amenaza_id" required onchange="updateAmenazaInfo()">
+                                <option value="">Seleccione una amenaza...</option>
+                                {% for amenaza in amenazas %}
+                                <option value="{{ amenaza.id }}" data-grupo="{{ amenaza.grupo }}" data-descripcion="{{ amenaza.descripcion }}">
+                                    {{ amenaza.codigo }} - {{ amenaza.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div id="amenazaInfo" class="alert alert-warning mt-2" style="display:none;">
+                                <strong>Grupo:</strong> <span id="amenazaGrupo"></span><br>
+                                <strong>Descripción:</strong> <span id="amenazaDescripcion"></span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tipo de Recurso (solo lectura si es edición) -->
+                    <div class="mb-3">
+                        <label for="tipo_recurso" class="form-label">
+                            Tipo de Recurso <span class="text-danger">*</span>
+                        </label>
+                        {% if relacion %}
+                            <input type="text" class="form-control" value="{{ relacion.tipo_recurso }}" readonly>
+                            <input type="hidden" name="tipo_recurso" value="{{ relacion.tipo_recurso }}">
+                        {% else %}
+                            <select class="form-select" id="tipo_recurso" name="tipo_recurso" required>
+                                <option value="">Seleccione un tipo de recurso...</option>
+                                {% for tipo in tipos_recurso %}
+                                <option value="{{ tipo }}">{{ tipo }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Tipos MAGERIT: HW (Hardware), SW (Software), DAT (Datos), COM (Comunicaciones),
+                                AUX (Auxiliares), NET (Redes), PE (Personal), L (Locales), S (Servicios)
+                            </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Dimensión Afectada (solo lectura si es edición) -->
+                    <div class="mb-3">
+                        <label for="dimension_afectada" class="form-label">
+                            Dimensión Afectada <span class="text-danger">*</span>
+                        </label>
+                        {% if relacion %}
+                            <input type="text" class="form-control"
+                                   value="{% if relacion.dimension_afectada == 'C' %}C - Confidencialidad{% elif relacion.dimension_afectada == 'I' %}I - Integridad{% else %}D - Disponibilidad{% endif %}"
+                                   readonly>
+                            <input type="hidden" name="dimension_afectada" value="{{ relacion.dimension_afectada }}">
+                        {% else %}
+                            <select class="form-select" id="dimension_afectada" name="dimension_afectada" required>
+                                <option value="">Seleccione una dimensión...</option>
+                                <option value="C">C - Confidencialidad</option>
+                                <option value="I">I - Integridad</option>
+                                <option value="D">D - Disponibilidad</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Dimensión de seguridad que se ve afectada por esta amenaza en este tipo de recurso
+                            </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Frecuencia Base -->
+                    <div class="mb-3">
+                        <label for="frecuencia_base" class="form-label">
+                            Frecuencia Base (0-5) <span class="text-danger">*</span>
+                        </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="range" class="form-range" id="frecuencia_base" name="frecuencia_base"
+                                       min="0" max="5" step="1"
+                                       value="{{ relacion.frecuencia_base if relacion else '3' }}"
+                                       oninput="updateFrecuenciaDisplay()" required>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info mb-0" id="frecuenciaDisplay">
+                                    <strong>Nivel <span id="frecuenciaValue">{{ relacion.frecuencia_base if relacion else 3 }}</span>:</strong>
+                                    <span id="frecuenciaLabel">{{ 'Media' if not relacion else '' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Frecuencia con la que esta amenaza puede afectar este tipo de recurso en esta dimensión
+                        </small>
+                        <div class="mt-2">
+                            <ul class="list-unstyled small">
+                                <li><strong>0 - Muy Baja:</strong> Prácticamente imposible</li>
+                                <li><strong>1 - Baja:</strong> Muy improbable en la práctica</li>
+                                <li><strong>2 - Media-Baja:</strong> Poco probable</li>
+                                <li><strong>3 - Media:</strong> Normal, esperado ocasionalmente</li>
+                                <li><strong>4 - Media-Alta:</strong> Bastante probable</li>
+                                <li><strong>5 - Alta:</strong> Ocurre con mucha frecuencia</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.amenazas_recursos') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {{ 'Actualizar' if relacion else 'Crear' }} Relación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ayuda lateral -->
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-info-circle"></i> Información
+            </div>
+            <div class="card-body">
+                <h6>¿Para qué sirve esto?</h6>
+                <p class="small">
+                    Las relaciones amenaza-recurso-tipo permiten:
+                </p>
+                <ul class="small">
+                    <li>Definir <strong>frecuencias específicas</strong> según el tipo de recurso</li>
+                    <li>Especificar qué <strong>dimensión se ve afectada</strong> (C, I, D)</li>
+                    <li>Cálculos de riesgo <strong>más precisos</strong> y contextualizados</li>
+                </ul>
+
+                <hr>
+
+                <h6>Dimensiones CIA</h6>
+                <div class="small">
+                    <p><span class="badge bg-danger">C</span> <strong>Confidencialidad:</strong> Protección contra acceso no autorizado</p>
+                    <p><span class="badge bg-warning text-dark">I</span> <strong>Integridad:</strong> Protección contra modificación no autorizada</p>
+                    <p><span class="badge bg-success">D</span> <strong>Disponibilidad:</strong> Garantía de acceso cuando se necesita</p>
+                </div>
+
+                <hr>
+
+                <h6>Ejemplo</h6>
+                <div class="small bg-white p-2 rounded">
+                    <strong>Amenaza:</strong> A.3 - Malware<br>
+                    <strong>Tipo Recurso:</strong> SW (Software)<br>
+                    <strong>Dimensión:</strong> I (Integridad)<br>
+                    <strong>Frecuencia:</strong> 4 (Media-Alta)<br>
+                    <small class="text-muted">El malware afecta frecuentemente la integridad del software</small>
+                </div>
+
+                <hr>
+
+                <h6>Nota Importante</h6>
+                <p class="small text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Si no defines estas relaciones, el sistema usará una frecuencia por defecto (3) para todos los cálculos.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateAmenazaInfo() {
+    const select = document.getElementById('amenaza_id');
+    const option = select.options[select.selectedIndex];
+
+    if (option.value) {
+        document.getElementById('amenazaGrupo').textContent = option.dataset.grupo;
+        document.getElementById('amenazaDescripcion').textContent = option.dataset.descripcion;
+        document.getElementById('amenazaInfo').style.display = 'block';
+    } else {
+        document.getElementById('amenazaInfo').style.display = 'none';
+    }
+}
+
+function updateFrecuenciaDisplay() {
+    const input = document.getElementById('frecuencia_base');
+    const value = parseInt(input.value);
+
+    const labels = {
+        0: 'Muy Baja - Prácticamente imposible',
+        1: 'Baja - Muy improbable',
+        2: 'Media-Baja - Poco probable',
+        3: 'Media - Ocasional',
+        4: 'Media-Alta - Bastante probable',
+        5: 'Alta - Muy frecuente'
+    };
+
+    const colors = {
+        0: 'secondary',
+        1: 'info',
+        2: 'primary',
+        3: 'warning',
+        4: 'orange',
+        5: 'danger'
+    };
+
+    document.getElementById('frecuenciaValue').textContent = value;
+    document.getElementById('frecuenciaLabel').textContent = labels[value];
+
+    const display = document.getElementById('frecuenciaDisplay');
+    display.className = 'alert alert-' + (colors[value] || 'info') + ' mb-0';
+}
+
+// Inicializar display
+{% if relacion %}
+updateFrecuenciaDisplay();
+{% endif %}
+</script>
+
+{% endblock %}

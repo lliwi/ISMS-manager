@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Relaciones Amenaza-Recurso-Tipo - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-network-wired text-warning me-2"></i>
+            Relaciones Amenaza-Recurso-Tipo
+        </h1>
+        <p class="text-muted">Define cómo las amenazas afectan diferentes tipos de recursos</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_amenaza_recurso') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus"></i> Nueva Relación
+        </a>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Configuración
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="amenaza_id" class="form-label">Amenaza</label>
+                <select name="amenaza_id" id="amenaza_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todas las amenazas</option>
+                    {% for amenaza in amenazas %}
+                    <option value="{{ amenaza.id }}" {% if amenaza_id_filter == amenaza.id %}selected{% endif %}>
+                        {{ amenaza.codigo }} - {{ amenaza.nombre[:40] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="tipo_recurso" class="form-label">Tipo de Recurso</label>
+                <input type="text" name="tipo_recurso" id="tipo_recurso" class="form-control"
+                       placeholder="Ej: HW, SW, DAT" value="{{ tipo_recurso_filter or '' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="dimension" class="form-label">Dimensión</label>
+                <select name="dimension" id="dimension" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for dimension in dimensiones %}
+                    <option value="{{ dimension }}" {% if dimension_filter == dimension %}selected{% endif %}>{{ dimension }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-50 me-2">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <a href="{{ url_for('admin.amenazas_recursos') }}" class="btn btn-outline-secondary w-50">
+                    <i class="fas fa-times"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Relaciones</h5>
+                <h2 class="text-primary">{{ relaciones|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h5 class="card-title">Confidencialidad (C)</h5>
+                <h2 class="text-danger">{{ relaciones|selectattr('dimension_afectada', 'equalto', 'C')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h5 class="card-title">Integridad (I)</h5>
+                <h2 class="text-warning">{{ relaciones|selectattr('dimension_afectada', 'equalto', 'I')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h5 class="card-title">Disponibilidad (D)</h5>
+                <h2 class="text-success">{{ relaciones|selectattr('dimension_afectada', 'equalto', 'D')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de relaciones -->
+<div class="card">
+    <div class="card-body">
+        {% if relaciones %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 100px;">Amenaza</th>
+                        <th>Nombre Amenaza</th>
+                        <th style="width: 120px;">Tipo Recurso</th>
+                        <th style="width: 100px;" class="text-center">Dimensión</th>
+                        <th style="width: 120px;" class="text-center">Frecuencia (0-5)</th>
+                        <th style="width: 150px;" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for relacion in relaciones %}
+                    <tr>
+                        <td><code class="text-danger">{{ relacion.amenaza.codigo }}</code></td>
+                        <td>
+                            <a href="{{ url_for('admin.view_amenaza', id=relacion.amenaza.id) }}" class="text-decoration-none">
+                                {{ relacion.amenaza.nombre[:50] }}{{ '...' if relacion.amenaza.nombre|length > 50 else '' }}
+                            </a>
+                        </td>
+                        <td><code class="text-info">{{ relacion.tipo_recurso }}</code></td>
+                        <td class="text-center">
+                            {% if relacion.dimension_afectada == 'C' %}
+                                <span class="badge bg-danger">C - Confidencialidad</span>
+                            {% elif relacion.dimension_afectada == 'I' %}
+                                <span class="badge bg-warning text-dark">I - Integridad</span>
+                            {% elif relacion.dimension_afectada == 'D' %}
+                                <span class="badge bg-success">D - Disponibilidad</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar {% if relacion.frecuencia_base >= 4 %}bg-danger{% elif relacion.frecuencia_base >= 3 %}bg-warning{% else %}bg-info{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ (relacion.frecuencia_base / 5 * 100)|round }}%">
+                                    {{ relacion.frecuencia_base }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.edit_amenaza_recurso', id=relacion.id) }}"
+                               class="btn btn-sm btn-outline-primary me-1"
+                               title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="confirmDelete({{ relacion.id }}, '{{ relacion.amenaza.codigo }}', '{{ relacion.tipo_recurso }}', '{{ relacion.dimension_afectada }}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No hay relaciones amenaza-recurso-tipo configuradas.
+            <a href="{{ url_for('admin.create_amenaza_recurso') }}" class="alert-link">Crea la primera relación</a> para definir frecuencias específicas por tipo de recurso.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<form id="deleteForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+<script>
+function confirmDelete(id, amenaza, tipoRecurso, dimension) {
+    if (confirm(`¿Estás seguro de eliminar la relación entre la amenaza ${amenaza} y el recurso ${tipoRecurso} (dimensión ${dimension})?\n\nEsta acción no se puede deshacer.`)) {
+        const form = document.getElementById('deleteForm');
+        form.action = `{{ url_for('admin.delete_amenaza_recurso', id=0) }}`.replace('/0', '/' + id);
+        form.submit();
+    }
+}
+</script>
+
+{% endblock %}
