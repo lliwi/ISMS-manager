@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
-from models import Risk, Incident, NonConformity, SOAControl, Audit, SOAVersion
+from models import Risk, Incident, NonConformity, SOAControl, Audit, SOAVersion, Document
 from models import IncidentStatus, NCStatus
 from app.models.task import Task, PeriodicTaskStatus
+from app.models.change import Change, ChangeStatus
 from app.risks.models import Riesgo
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -60,6 +61,34 @@ def index():
     ).count()
     kpis['overdue_tasks'] = overdue_tasks
     kpis['my_pending_tasks'] = pending_tasks
+
+    # Document metrics
+    approved_documents = Document.query.filter_by(status='approved').count()
+    pending_review_documents = Document.query.filter_by(status='review').count()
+    kpis['approved_documents'] = approved_documents
+    kpis['pending_review_documents'] = pending_review_documents
+
+    # Change metrics
+    pending_changes = Change.query.filter(
+        Change.status.in_([
+            ChangeStatus.SUBMITTED,
+            ChangeStatus.UNDER_REVIEW,
+            ChangeStatus.PENDING_APPROVAL,
+            ChangeStatus.APPROVED,
+            ChangeStatus.SCHEDULED,
+            ChangeStatus.IN_PROGRESS
+        ])
+    ).count()
+
+    # Cambios aprobados/implementados este mes (usando updated_at como referencia)
+    first_day_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    approved_changes_month = Change.query.filter(
+        Change.status.in_([ChangeStatus.APPROVED, ChangeStatus.IMPLEMENTED, ChangeStatus.CLOSED]),
+        Change.updated_at >= first_day_month
+    ).count()
+
+    kpis['pending_changes'] = pending_changes
+    kpis['approved_changes_month'] = approved_changes_month
 
     # Recent activity
     recent_incidents = Incident.query.order_by(Incident.created_at.desc()).limit(5).all()

@@ -12,12 +12,12 @@
 
 <!-- KPI Cards -->
 <div class="row mb-4">
-    <div class="col-md-3 mb-3">
-        <div class="card bg-primary text-white">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-primary text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Cumplimiento SOA</h6>
+                        <h6 class="card-title small">Cumplimiento SOA</h6>
                         <h3 class="mb-0">{{ "%.1f"|format(kpis.soa_compliance) }}%</h3>
                     </div>
                     <div class="align-self-center">
@@ -28,14 +28,14 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-white">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-warning text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Riesgos Altos/Críticos</h6>
+                        <h6 class="card-title small">Riesgos Altos</h6>
                         <h3 class="mb-0">{{ kpis.high_risk_count }}</h3>
-                        <small>de {{ kpis.total_risks }} total</small>
+                        <small class="d-block">de {{ kpis.total_risks }} total</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
@@ -45,14 +45,14 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-3">
-        <div class="card bg-danger text-white">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-danger text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Incidentes Abiertos</h6>
+                        <h6 class="card-title small">Incidentes</h6>
                         <h3 class="mb-0">{{ kpis.open_incidents }}</h3>
-                        <small>{{ kpis.incidents_this_month }} este mes</small>
+                        <small class="d-block">{{ kpis.incidents_this_month }} este mes</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-bug fa-2x opacity-75"></i>
@@ -62,14 +62,71 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-3">
-        <div class="card bg-info text-white">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <a href="{{ url_for('nonconformities.index') }}" class="text-decoration-none">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title small">No Conformidades</h6>
+                            <h3 class="mb-0">{{ kpis.open_nonconformities }}</h3>
+                            <small class="d-block">{{ kpis.overdue_nonconformities }} vencidas</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <a href="{{ url_for('changes.index') }}" class="text-decoration-none">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title small">Cambios</h6>
+                            <h3 class="mb-0">{{ kpis.pending_changes }}</h3>
+                            <small class="d-block">{{ kpis.approved_changes_month }} aprobados mes</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exchange-alt fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <a href="{{ url_for('documents.index') }}" class="text-decoration-none">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title small">Documentos</h6>
+                            <h3 class="mb-0">{{ kpis.approved_documents }}</h3>
+                            <small class="d-block">{{ kpis.pending_review_documents }} en revisión</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-info text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Tareas Pendientes</h6>
+                        <h6 class="card-title small">Mis Tareas</h6>
                         <h3 class="mb-0">{{ kpis.my_pending_tasks }}</h3>
-                        <small>{{ kpis.overdue_tasks }} vencidas</small>
+                        <small class="d-block">{{ kpis.overdue_tasks }} vencidas</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-tasks fa-2x opacity-75"></i>
