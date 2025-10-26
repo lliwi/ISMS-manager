@@ -173,34 +173,216 @@
     </div>
 </div>
 
-<!-- Additional Statistics -->
-<div class="row">
-    <div class="col-12">
+<!-- SOA Maturity Radar Chart -->
+<div class="row mb-4">
+    <div class="col-lg-8 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">Estado del Sistema ISMS</h6>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Madurez de Controles SOA por Categoría</h6>
+                    <small class="text-muted">Nivel de implementación promedio según ISO 27001</small>
+                </div>
+                <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list me-1"></i>Ver SOA
+                </a>
             </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <h5 class="text-primary">{{ kpis.soa_compliance|round(1) }}%</h5>
-                        <p class="text-muted mb-0">Controles Implementados</p>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-{{ 'success' if kpis.open_nonconformities == 0 else 'warning' }}">{{ kpis.open_nonconformities }}</h5>
-                        <p class="text-muted mb-0">No Conformidades Abiertas</p>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-{{ 'success' if kpis.overdue_nonconformities == 0 else 'danger' }}">{{ kpis.overdue_nonconformities }}</h5>
-                        <p class="text-muted mb-0">No Conformidades Vencidas</p>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-{{ 'success' if kpis.overdue_tasks == 0 else 'warning' }}">{{ kpis.overdue_tasks }}</h5>
-                        <p class="text-muted mb-0">Tareas Vencidas</p>
+                <div style="position: relative; height: 400px;">
+                    <canvas id="soaRadarChart"></canvas>
+                </div>
+                <div id="radarChartLegend" class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-12">
+                            <small class="text-muted">
+                                <strong>Escala de Madurez:</strong>
+                                <span class="badge bg-secondary mx-1">0 - No Implementado</span>
+                                <span class="badge bg-danger mx-1">1 - Inicial</span>
+                                <span class="badge bg-warning mx-1">2 - Repetible</span>
+                                <span class="badge bg-info mx-1">3 - Definido</span>
+                                <span class="badge bg-primary mx-1">4 - Controlado</span>
+                                <span class="badge bg-success mx-1">5 - Cuantificado</span>
+                                <span class="badge bg-dark mx-1">6 - Optimizado</span>
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Additional Statistics -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Estado del Sistema ISMS</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-3">
+                    <div class="col-6">
+                        <h5 class="text-primary mb-1">{{ kpis.soa_compliance|round(1) }}%</h5>
+                        <p class="text-muted small mb-0">Controles Implementados</p>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-{{ 'success' if kpis.open_nonconformities == 0 else 'warning' }} mb-1">{{ kpis.open_nonconformities }}</h5>
+                        <p class="text-muted small mb-0">No Conformidades Abiertas</p>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-{{ 'success' if kpis.overdue_nonconformities == 0 else 'danger' }} mb-1">{{ kpis.overdue_nonconformities }}</h5>
+                        <p class="text-muted small mb-0">No Conformidades Vencidas</p>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-{{ 'success' if kpis.overdue_tasks == 0 else 'warning' }} mb-1">{{ kpis.overdue_tasks }}</h5>
+                        <p class="text-muted small mb-0">Tareas Vencidas</p>
+                    </div>
+                </div>
+                <hr class="my-3">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-clipboard-list me-1"></i>Gestionar SOA
+                    </a>
+                    <a href="{{ url_for('assets.index') }}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-boxes me-1"></i>Ver Activos
+                    </a>
+                    <a href="{{ url_for('incidents.index') }}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-bug me-1"></i>Ver Incidentes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+<script>
+// Cargar datos del gráfico de radar de SOA
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/soa-radar-data')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar datos del SOA');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                console.error('Error:', data.error);
+                document.getElementById('soaRadarChart').parentElement.innerHTML =
+                    `<div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>${data.error}
+                    </div>`;
+                return;
+            }
+
+            // Crear gráfico de radar
+            const ctx = document.getElementById('soaRadarChart').getContext('2d');
+
+            // Acortar nombres de categorías muy largas
+            const labels = data.categories.map(cat => {
+                if (cat.length > 30) {
+                    return cat.substring(0, 27) + '...';
+                }
+                return cat;
+            });
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nivel de Madurez Promedio',
+                        data: data.maturity_scores,
+                        fill: true,
+                        backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                        borderColor: 'rgb(13, 110, 253)',
+                        pointBackgroundColor: 'rgb(13, 110, 253)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(13, 110, 253)',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: data.max_maturity,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value, index, values) {
+                                    const labels = ['No Impl.', 'Inicial', 'Repetible', 'Definido', 'Controlado', 'Cuantif.', 'Optimiz.'];
+                                    return labels[value] || value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return data.categories[context[0].dataIndex];
+                                },
+                                label: function(context) {
+                                    const score = context.parsed.r;
+                                    const maturityLabels = {
+                                        0: 'No Implementado',
+                                        1: 'Inicial',
+                                        2: 'Repetible',
+                                        3: 'Definido',
+                                        4: 'Controlado',
+                                        5: 'Cuantificado',
+                                        6: 'Optimizado'
+                                    };
+
+                                    const roundedScore = Math.round(score);
+                                    const maturityLabel = maturityLabels[roundedScore] || 'Desconocido';
+                                    const controlCount = data.control_counts[context.dataIndex];
+
+                                    return [
+                                        `Madurez: ${score.toFixed(2)}/6 (${maturityLabel})`,
+                                        `Controles: ${controlCount}`
+                                    ];
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: `Madurez SOA - ${data.soa_version}`,
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error al cargar el gráfico:', error);
+            document.getElementById('soaRadarChart').parentElement.innerHTML =
+                `<div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-circle me-2"></i>Error al cargar el gráfico de madurez SOA
+                </div>`;
+        });
+});
+</script>
 {% endblock %}

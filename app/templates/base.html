@@ -6,6 +6,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}ISMS Manager{% endblock %}</title>
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/logo-180.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='img/logo-192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='img/logo-512.png') }}">
+
+    <!-- Meta tags for PWA -->
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="description" content="Sistema de Gestión de Seguridad de la Información ISO 27001">
+    <meta name="application-name" content="ISMS Manager">
+
     <!-- Bootstrap CSS -->
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Font Awesome -->
@@ -19,7 +32,8 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
-                <i class="fas fa-shield-alt me-2"></i>ISMS Manager
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="ISMS Logo" height="28" class="d-inline-block align-text-top me-2">
+                ISMS Manager
             </a>
 
             {% if current_user.is_authenticated %}
