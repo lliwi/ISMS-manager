@@ -136,8 +136,6 @@ def create():
                 confidentiality_level=CIALevel[request.form['confidentiality_level']],
                 integrity_level=CIALevel[request.form['integrity_level']],
                 availability_level=CIALevel[request.form['availability_level']],
-                business_value=int(request.form.get('business_value', 5)),
-                criticality=int(request.form.get('criticality', 5)),
                 manufacturer=request.form.get('manufacturer'),
                 model=request.form.get('model'),
                 serial_number=request.form.get('serial_number'),
@@ -153,6 +151,18 @@ def create():
                 created_by_id=current_user.id,
                 updated_by_id=current_user.id
             )
+
+            # Calcular valores automáticamente o usar valores manuales
+            # Si el usuario proporciona valores manuales, usarlos; sino, calcular automáticamente
+            if request.form.get('business_value') and request.form.get('business_value').strip():
+                asset.business_value = int(request.form['business_value'])
+            else:
+                asset.business_value = asset.calculate_business_value()
+
+            if request.form.get('criticality') and request.form.get('criticality').strip():
+                asset.criticality = int(request.form['criticality'])
+            else:
+                asset.criticality = asset.calculate_criticality()
 
             db.session.add(asset)
             db.session.flush()  # Para obtener el ID del activo
@@ -249,8 +259,6 @@ def edit(id):
             asset.confidentiality_level = CIALevel[request.form['confidentiality_level']]
             asset.integrity_level = CIALevel[request.form['integrity_level']]
             asset.availability_level = CIALevel[request.form['availability_level']]
-            asset.business_value = int(request.form.get('business_value', 5))
-            asset.criticality = int(request.form.get('criticality', 5))
             asset.manufacturer = request.form.get('manufacturer')
             asset.model = request.form.get('model')
             asset.serial_number = request.form.get('serial_number')
@@ -260,7 +268,20 @@ def edit(id):
             asset.acceptable_use_policy = request.form.get('acceptable_use_policy')
             asset.handling_requirements = request.form.get('handling_requirements')
             asset.notes = request.form.get('notes')
+            asset.purchase_cost = float(request.form['purchase_cost']) if request.form.get('purchase_cost') else None
+            asset.current_value = float(request.form['current_value']) if request.form.get('current_value') else None
             asset.updated_by_id = current_user.id
+
+            # Calcular valores automáticamente o usar valores manuales
+            if request.form.get('business_value') and request.form.get('business_value').strip():
+                asset.business_value = int(request.form['business_value'])
+            else:
+                asset.business_value = asset.calculate_business_value()
+
+            if request.form.get('criticality') and request.form.get('criticality').strip():
+                asset.criticality = int(request.form['criticality'])
+            else:
+                asset.criticality = asset.calculate_criticality()
 
             # Registrar evento de modificación
             changes = []

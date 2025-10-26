@@ -126,18 +126,54 @@
                         </div>
                     </div>
 
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Cálculo Automático:</strong> El Valor de Negocio y la Criticidad se calculan automáticamente
+                        basándose en la Clasificación, CIA y Coste. Puedes ajustarlos manualmente si es necesario.
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="business_value" class="form-label">Valor de Negocio (1-10)</label>
-                            <input type="range" class="form-range" min="1" max="10" value="5"
-                                   id="business_value" name="business_value" oninput="document.getElementById('business_value_display').textContent = this.value">
-                            <span id="business_value_display">5</span>
+                            <label for="business_value" class="form-label">
+                                Valor de Negocio (1-10)
+                                <i class="fas fa-question-circle text-muted"
+                                   title="Calculado automáticamente: Clasificación (40%) + Coste (30%) + CIA promedio (30%)"
+                                   data-bs-toggle="tooltip"></i>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control bg-light" id="business_value_display_readonly"
+                                       min="1" max="10" readonly
+                                       title="Valor calculado automáticamente - haz clic en 'Ajustar' para modificar manualmente">
+                                <input type="hidden" id="business_value" name="business_value">
+                                <button class="btn btn-outline-primary" type="button" id="manual_business_value_btn"
+                                        title="Ajustar manualmente">
+                                    <i class="fas fa-edit"></i> Ajustar
+                                </button>
+                            </div>
+                            <small class="text-muted" id="business_value_info">
+                                <i class="fas fa-robot"></i> Calculado automáticamente
+                            </small>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="criticality" class="form-label">Criticidad (1-10)</label>
-                            <input type="range" class="form-range" min="1" max="10" value="5"
-                                   id="criticality" name="criticality" oninput="document.getElementById('criticality_display').textContent = this.value">
-                            <span id="criticality_display">5</span>
+                            <label for="criticality" class="form-label">
+                                Criticidad (1-10)
+                                <i class="fas fa-question-circle text-muted"
+                                   title="Calculado automáticamente: Disponibilidad (50%) + Integridad (30%) + Confidencialidad (20%)"
+                                   data-bs-toggle="tooltip"></i>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control bg-light" id="criticality_display_readonly"
+                                       min="1" max="10" readonly
+                                       title="Valor calculado automáticamente - haz clic en 'Ajustar' para modificar manualmente">
+                                <input type="hidden" id="criticality" name="criticality">
+                                <button class="btn btn-outline-primary" type="button" id="manual_criticality_btn"
+                                        title="Ajustar manualmente">
+                                    <i class="fas fa-edit"></i> Ajustar
+                                </button>
+                            </div>
+                            <small class="text-muted" id="criticality_info">
+                                <i class="fas fa-robot"></i> Calculado automáticamente
+                            </small>
                         </div>
                     </div>
 
@@ -252,6 +288,193 @@
 
 {% block extra_scripts %}
 <script>
+// Estado de los campos: true = automático, false = manual
+let isBusinessValueAuto = true;
+let isCriticalityAuto = true;
+
+// Funciones de cálculo automático de Valor de Negocio y Criticidad
+function calculateBusinessValue() {
+    if (!isBusinessValueAuto) return; // No calcular si es manual
+
+    // Mapeo de niveles de clasificación
+    const classificationScores = {
+        'PUBLIC': 2,
+        'INTERNAL': 5,
+        'CONFIDENTIAL': 8,
+        'RESTRICTED': 10
+    };
+
+    // Mapeo de niveles CIA
+    const ciaScores = {
+        'LOW': 2,
+        'MEDIUM': 5,
+        'HIGH': 8,
+        'CRITICAL': 10
+    };
+
+    const classification = document.getElementById('classification').value;
+    const confidentiality = document.getElementById('confidentiality_level').value;
+    const integrity = document.getElementById('integrity_level').value;
+    const availability = document.getElementById('availability_level').value;
+    const cost = parseFloat(document.getElementById('purchase_cost').value) ||
+                 parseFloat(document.getElementById('current_value').value) || 0;
+
+    // Componente clasificación (40%)
+    const classValue = (classificationScores[classification] || 5) * 0.4;
+
+    // Componente coste (30%)
+    let costValue = 1;
+    if (cost < 1000) costValue = 2;
+    else if (cost < 5000) costValue = 4;
+    else if (cost < 10000) costValue = 5;
+    else if (cost < 25000) costValue = 6;
+    else if (cost < 50000) costValue = 8;
+    else if (cost < 100000) costValue = 9;
+    else if (cost >= 100000) costValue = 10;
+    const costComponent = costValue * 0.3;
+
+    // Componente CIA promedio (30%)
+    const cScore = ciaScores[confidentiality] || 5;
+    const iScore = ciaScores[integrity] || 5;
+    const aScore = ciaScores[availability] || 5;
+    const ciaAverage = (cScore + iScore + aScore) / 3;
+    const ciaComponent = ciaAverage * 0.3;
+
+    // Total
+    const total = Math.round(Math.max(1, Math.min(10, classValue + costComponent + ciaComponent)));
+
+    // Actualizar campos
+    document.getElementById('business_value').value = total;
+    document.getElementById('business_value_display_readonly').value = total;
+    document.getElementById('business_value_info').innerHTML =
+        `<i class="fas fa-robot"></i> <span class="text-success">Calculado automáticamente: ${total}/10</span>`;
+
+    return total;
+}
+
+function calculateCriticality() {
+    if (!isCriticalityAuto) return; // No calcular si es manual
+
+    // Mapeo de niveles CIA
+    const ciaScores = {
+        'LOW': 2,
+        'MEDIUM': 5,
+        'HIGH': 8,
+        'CRITICAL': 10
+    };
+
+    const confidentiality = document.getElementById('confidentiality_level').value;
+    const integrity = document.getElementById('integrity_level').value;
+    const availability = document.getElementById('availability_level').value;
+
+    const aScore = (ciaScores[availability] || 5) * 0.5;
+    const iScore = (ciaScores[integrity] || 5) * 0.3;
+    const cScore = (ciaScores[confidentiality] || 5) * 0.2;
+
+    const total = Math.round(Math.max(1, Math.min(10, aScore + iScore + cScore)));
+
+    // Actualizar campos
+    document.getElementById('criticality').value = total;
+    document.getElementById('criticality_display_readonly').value = total;
+    document.getElementById('criticality_info').innerHTML =
+        `<i class="fas fa-robot"></i> <span class="text-success">Calculado automáticamente: ${total}/10</span>`;
+
+    return total;
+}
+
+// Botones para cambiar a modo manual
+document.getElementById('manual_business_value_btn').addEventListener('click', function() {
+    isBusinessValueAuto = !isBusinessValueAuto;
+
+    const displayField = document.getElementById('business_value_display_readonly');
+    const btn = this;
+
+    if (isBusinessValueAuto) {
+        // Cambiar a modo automático
+        displayField.readOnly = true;
+        displayField.classList.add('bg-light');
+        btn.innerHTML = '<i class="fas fa-edit"></i> Ajustar';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-primary');
+        calculateBusinessValue();
+    } else {
+        // Cambiar a modo manual
+        displayField.readOnly = false;
+        displayField.classList.remove('bg-light');
+        displayField.focus();
+        btn.innerHTML = '<i class="fas fa-robot"></i> Auto';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-success');
+        document.getElementById('business_value_info').innerHTML =
+            `<i class="fas fa-user-edit"></i> <span class="text-primary">Valor ajustado manualmente</span>`;
+    }
+});
+
+document.getElementById('manual_criticality_btn').addEventListener('click', function() {
+    isCriticalityAuto = !isCriticalityAuto;
+
+    const displayField = document.getElementById('criticality_display_readonly');
+    const btn = this;
+
+    if (isCriticalityAuto) {
+        // Cambiar a modo automático
+        displayField.readOnly = true;
+        displayField.classList.add('bg-light');
+        btn.innerHTML = '<i class="fas fa-edit"></i> Ajustar';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-primary');
+        calculateCriticality();
+    } else {
+        // Cambiar a modo manual
+        displayField.readOnly = false;
+        displayField.classList.remove('bg-light');
+        displayField.focus();
+        btn.innerHTML = '<i class="fas fa-robot"></i> Auto';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-success');
+        document.getElementById('criticality_info').innerHTML =
+            `<i class="fas fa-user-edit"></i> <span class="text-primary">Valor ajustado manualmente</span>`;
+    }
+});
+
+// Sincronizar valores cuando se edita manualmente
+document.getElementById('business_value_display_readonly').addEventListener('input', function() {
+    document.getElementById('business_value').value = this.value;
+});
+
+document.getElementById('criticality_display_readonly').addEventListener('input', function() {
+    document.getElementById('criticality').value = this.value;
+});
+
+// Calcular automáticamente cuando cambien campos relevantes (EN TIEMPO REAL)
+['classification', 'confidentiality_level', 'integrity_level', 'availability_level', 'purchase_cost', 'current_value'].forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        // Usar 'input' para tiempo real en lugar de 'change'
+        field.addEventListener('input', function() {
+            calculateBusinessValue();
+            calculateCriticality();
+        });
+        // También en 'change' para selects
+        field.addEventListener('change', function() {
+            calculateBusinessValue();
+            calculateCriticality();
+        });
+    }
+});
+
+// Calcular valores iniciales
+document.addEventListener('DOMContentLoaded', function() {
+    calculateBusinessValue();
+    calculateCriticality();
+});
+
+// Inicializar tooltips de Bootstrap
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
 // Cargar tipos de activo cuando cambia la categoría
 document.getElementById('category').addEventListener('change', function() {
     const category = this.value;

@@ -1,6 +1,46 @@
 """
 Modelos para la gestión de activos/inventario según ISO 27001:2023
 Control 5.9 - Inventario de información y otros activos asociados
+
+CÁLCULO AUTOMÁTICO DE VALOR DE NEGOCIO Y CRITICIDAD:
+
+1. VALOR DE NEGOCIO (1-10):
+   Fórmula: (Clasificación × 0.4) + (Coste × 0.3) + (CIA_promedio × 0.3)
+
+   - Clasificación (40% peso):
+     * Público: 2
+     * Interno: 5
+     * Confidencial: 8
+     * Restringido: 10
+
+   - Coste económico (30% peso):
+     * €0: 1
+     * < €1,000: 2
+     * €1,000-€4,999: 4
+     * €5,000-€9,999: 5
+     * €10,000-€24,999: 6
+     * €25,000-€49,999: 8
+     * €50,000-€99,999: 9
+     * ≥ €100,000: 10
+
+   - Promedio CIA (30% peso):
+     * Bajo: 2
+     * Medio: 5
+     * Alto: 8
+     * Crítico: 10
+
+2. CRITICIDAD (1-10):
+   Fórmula: (Disponibilidad × 0.5) + (Integridad × 0.3) + (Confidencialidad × 0.2)
+
+   - Disponibilidad (50% peso): Factor más importante para criticidad operacional
+   - Integridad (30% peso): Importancia de la precisión del activo
+   - Confidencialidad (20% peso): Peso menor ya que afecta menos a la continuidad
+
+   Valores CIA:
+     * Bajo: 2
+     * Medio: 5
+     * Alto: 8
+     * Crítico: 10
 """
 from models import db
 from datetime import datetime
@@ -133,6 +173,89 @@ class Asset(db.Model):
 
     def __repr__(self):
         return f'<Asset {self.asset_code}: {self.name}>'
+
+    def calculate_business_value(self):
+        """
+        Calcula automáticamente el valor de negocio (1-10) basado en:
+        - Clasificación del activo (40% peso)
+        - Coste económico (30% peso)
+        - Niveles CIA promedio (30% peso)
+        """
+        # Peso de clasificación
+        classification_scores = {
+            ClassificationLevel.PUBLIC: 2,
+            ClassificationLevel.INTERNAL: 5,
+            ClassificationLevel.CONFIDENTIAL: 8,
+            ClassificationLevel.RESTRICTED: 10
+        }
+
+        # Peso de CIA
+        cia_scores = {
+            CIALevel.LOW: 2,
+            CIALevel.MEDIUM: 5,
+            CIALevel.HIGH: 8,
+            CIALevel.CRITICAL: 10
+        }
+
+        # Calcular componente de clasificación (40%)
+        classification_value = classification_scores.get(self.classification, 5) * 0.4
+
+        # Calcular componente de coste (30%)
+        # Normalizar el coste: usar current_value si existe, sino purchase_cost
+        cost = self.current_value if self.current_value else (self.purchase_cost if self.purchase_cost else 0)
+        # Escala logarítmica para el coste (valores típicos: 0-100000)
+        # 0 = 1, 1000 = 3, 10000 = 5, 50000 = 7, 100000+ = 10
+        if cost == 0:
+            cost_value = 1
+        elif cost < 1000:
+            cost_value = 2
+        elif cost < 5000:
+            cost_value = 4
+        elif cost < 10000:
+            cost_value = 5
+        elif cost < 25000:
+            cost_value = 6
+        elif cost < 50000:
+            cost_value = 8
+        elif cost < 100000:
+            cost_value = 9
+        else:
+            cost_value = 10
+        cost_component = cost_value * 0.3
+
+        # Calcular componente CIA (30%)
+        c_score = cia_scores.get(self.confidentiality_level, 5)
+        i_score = cia_scores.get(self.integrity_level, 5)
+        a_score = cia_scores.get(self.availability_level, 5)
+        cia_average = (c_score + i_score + a_score) / 3
+        cia_component = cia_average * 0.3
+
+        # Valor total (redondear a entero 1-10)
+        total = classification_value + cost_component + cia_component
+        return max(1, min(10, round(total)))
+
+    def calculate_criticality(self):
+        """
+        Calcula automáticamente la criticidad (1-10) basado en:
+        - Disponibilidad (50% peso) - factor más importante para criticidad
+        - Integridad (30% peso)
+        - Confidencialidad (20% peso)
+        """
+        cia_scores = {
+            CIALevel.LOW: 2,
+            CIALevel.MEDIUM: 5,
+            CIALevel.HIGH: 8,
+            CIALevel.CRITICAL: 10
+        }
+
+        # Pesos según importancia para criticidad
+        a_score = cia_scores.get(self.availability_level, 5) * 0.5
+        i_score = cia_scores.get(self.integrity_level, 5) * 0.3
+        c_score = cia_scores.get(self.confidentiality_level, 5) * 0.2
+
+        # Valor total (redondear a entero 1-10)
+        total = a_score + i_score + c_score
+        return max(1, min(10, round(total)))
 
     def calculate_risk_score(self):
         """Calcula puntuación de riesgo basada en CIA y valor"""
