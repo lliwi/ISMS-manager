@@ -159,3 +159,117 @@ def soa_radar_data():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
+
+
+@dashboard_bp.route('/api/soa-controls-radar-data')
+@login_required
+def soa_controls_radar_data():
+    """
+    API endpoint para obtener datos del gráfico de radar de controles SOA
+    Muestra controles individuales agrupados por dominio ISO 27001
+    """
+    try:
+        # Obtener la versión actual del SOA
+        current_soa = SOAVersion.get_current_version()
+
+        if not current_soa:
+            # Si no hay versión activa, obtener todos los controles sin filtrar por versión
+            controls = SOAControl.query.filter_by(
+                applicability_status='aplicable'
+            ).all()
+            soa_version_name = 'Sin versión definida'
+        else:
+            # Obtener controles aplicables de la versión actual
+            controls = SOAControl.query.filter_by(
+                soa_version_id=current_soa.id,
+                applicability_status='aplicable'
+            ).all()
+            soa_version_name = f"{current_soa.title} (v{current_soa.version_number})"
+
+        if not controls:
+            return jsonify({'error': 'No hay controles aplicables en el sistema'}), 404
+
+        # Agrupar controles por dominio (A.5, A.6, A.7, A.8)
+        domain_data = defaultdict(lambda: {'controls': [], 'maturity_sum': 0, 'total': 0})
+
+        for control in controls:
+            # Extraer dominio del control_id (ej: A.5.1 -> A.5)
+            domain = control.control_id[:3] if len(control.control_id) >= 3 else 'Otro'
+            maturity_score = control.maturity_score
+
+            domain_data[domain]['controls'].append({
+                'control_id': control.control_id,
+                'title': control.title,
+                'maturity_score': maturity_score,
+                'category': control.category
+            })
+            domain_data[domain]['maturity_sum'] += maturity_score
+            domain_data[domain]['total'] += 1
+
+        # Seleccionar los controles más representativos de cada dominio
+        # (los de mayor impacto o más críticos)
+        selected_controls = []
+        control_labels = []
+        maturity_scores = []
+        control_details = []
+
+        # Límite de controles a mostrar (evitar saturación del gráfico)
+        max_controls_per_domain = 5
+
+        # Nombres de dominios ISO 27001:2022
+        domain_names = {
+            'A.5': 'Organizacional',
+            'A.6': 'Personas',
+            'A.7': 'Físico',
+            'A.8': 'Tecnológico'
+        }
+
+        for domain in sorted(domain_data.keys()):
+            domain_controls = domain_data[domain]['controls']
+
+            # Ordenar por madurez (mostrar controles con diferentes niveles)
+            # Mezclamos altos y bajos para mejor visualización
+            sorted_controls = sorted(domain_controls, key=lambda x: x['maturity_score'], reverse=True)
+
+            # Tomar hasta max_controls_per_domain controles representativos
+            for i, control in enumerate(sorted_controls[:max_controls_per_domain]):
+                # Crear etiqueta corta para el gráfico
+                short_label = f"{control['control_id']}"
+                full_label = f"{control['control_id']} - {control['title'][:30]}..."
+
+                control_labels.append(short_label)
+                maturity_scores.append(control['maturity_score'])
+                control_details.append({
+                    'control_id': control['control_id'],
+                    'title': control['title'],
+                    'domain': domain_names.get(domain, domain),
+                    'category': control['category'],
+                    'maturity_score': control['maturity_score'],
+                    'full_label': full_label
+                })
+
+        # Preparar respuesta
+        response = {
+            'control_labels': control_labels,
+            'maturity_scores': maturity_scores,
+            'control_details': control_details,
+            'total_controls_shown': len(control_labels),
+            'total_controls': len(controls),
+            'soa_version': soa_version_name,
+            'max_maturity': 6,
+            'domains': {
+                domain: {
+                    'name': domain_names.get(domain, domain),
+                    'total': data['total'],
+                    'avg_maturity': round(data['maturity_sum'] / data['total'], 2) if data['total'] > 0 else 0
+                }
+                for domain, data in domain_data.items()
+            }
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500

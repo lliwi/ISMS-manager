@@ -175,22 +175,40 @@
 
 <!-- SOA Maturity Radar Chart -->
 <div class="row mb-4">
-    <div class="col-lg-8 mb-4">
+    <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Madurez de Controles SOA por Categoría</h6>
-                    <small class="text-muted">Nivel de implementación promedio según ISO 27001</small>
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Madurez de Controles SOA</h6>
+                    <small class="text-muted" id="chartSubtitle">Nivel de implementación promedio según ISO 27001</small>
                 </div>
-                <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-list me-1"></i>Ver SOA
-                </a>
+                <div class="d-flex gap-2">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="btnShowCategories" onclick="toggleRadarChart('categories')">
+                            <i class="fas fa-layer-group me-1"></i>Por Categorías
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnShowControls" onclick="toggleRadarChart('controls')">
+                            <i class="fas fa-list me-1"></i>Por Controles
+                        </button>
+                    </div>
+                    <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-clipboard-list me-1"></i>Ver SOA
+                    </a>
+                </div>
             </div>
             <div class="card-body">
-                <div style="position: relative; height: 400px;">
+                <!-- Gráfico de Categorías -->
+                <div id="categoryChartContainer" style="position: relative; height: 400px;">
                     <canvas id="soaRadarChart"></canvas>
                 </div>
-                <div id="radarChartLegend" class="mt-3">
+
+                <!-- Gráfico de Controles Individuales -->
+                <div id="controlsChartContainer" style="position: relative; height: 450px; display: none;">
+                    <canvas id="soaControlsRadarChart"></canvas>
+                </div>
+
+                <!-- Leyenda para gráfico de categorías -->
+                <div id="categoryLegend" class="mt-3">
                     <div class="row text-center">
                         <div class="col-12">
                             <small class="text-muted">
@@ -206,46 +224,27 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Additional Statistics -->
-    <div class="col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h6 class="mb-0">Estado del Sistema ISMS</h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center g-3">
-                    <div class="col-6">
-                        <h5 class="text-primary mb-1">{{ kpis.soa_compliance|round(1) }}%</h5>
-                        <p class="text-muted small mb-0">Controles Implementados</p>
+                <!-- Estadísticas para gráfico de controles -->
+                <div id="controlsLegend" class="mt-3" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-3 text-center" id="domainA5">
+                            <h6 class="text-primary mb-1">-</h6>
+                            <small class="text-muted">Organizacional (A.5)</small>
+                        </div>
+                        <div class="col-md-3 text-center" id="domainA6">
+                            <h6 class="text-warning mb-1">-</h6>
+                            <small class="text-muted">Personas (A.6)</small>
+                        </div>
+                        <div class="col-md-3 text-center" id="domainA7">
+                            <h6 class="text-info mb-1">-</h6>
+                            <small class="text-muted">Físico (A.7)</small>
+                        </div>
+                        <div class="col-md-3 text-center" id="domainA8">
+                            <h6 class="text-success mb-1">-</h6>
+                            <small class="text-muted">Tecnológico (A.8)</small>
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <h5 class="text-{{ 'success' if kpis.open_nonconformities == 0 else 'warning' }} mb-1">{{ kpis.open_nonconformities }}</h5>
-                        <p class="text-muted small mb-0">No Conformidades Abiertas</p>
-                    </div>
-                    <div class="col-6">
-                        <h5 class="text-{{ 'success' if kpis.overdue_nonconformities == 0 else 'danger' }} mb-1">{{ kpis.overdue_nonconformities }}</h5>
-                        <p class="text-muted small mb-0">No Conformidades Vencidas</p>
-                    </div>
-                    <div class="col-6">
-                        <h5 class="text-{{ 'success' if kpis.overdue_tasks == 0 else 'warning' }} mb-1">{{ kpis.overdue_tasks }}</h5>
-                        <p class="text-muted small mb-0">Tareas Vencidas</p>
-                    </div>
-                </div>
-                <hr class="my-3">
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-clipboard-list me-1"></i>Gestionar SOA
-                    </a>
-                    <a href="{{ url_for('assets.index') }}" class="btn btn-sm btn-outline-info">
-                        <i class="fas fa-boxes me-1"></i>Ver Activos
-                    </a>
-                    <a href="{{ url_for('incidents.index') }}" class="btn btn-sm btn-outline-danger">
-                        <i class="fas fa-bug me-1"></i>Ver Incidentes
-                    </a>
                 </div>
             </div>
         </div>
@@ -383,6 +382,179 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-exclamation-circle me-2"></i>Error al cargar el gráfico de madurez SOA
                 </div>`;
         });
+});
+
+// Variables globales para los gráficos
+let controlsChart = null;
+let currentChartType = 'categories';
+
+// Cargar datos del gráfico de controles individuales
+function loadControlsRadarChart() {
+    fetch('/api/soa-controls-radar-data')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar datos de controles');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                console.error('Error:', data.error);
+                return;
+            }
+
+            // Actualizar estadísticas de dominios
+            if (data.domains) {
+                if (data.domains['A.5']) {
+                    document.querySelector('#domainA5 h6').textContent = data.domains['A.5'].avg_maturity.toFixed(2);
+                }
+                if (data.domains['A.6']) {
+                    document.querySelector('#domainA6 h6').textContent = data.domains['A.6'].avg_maturity.toFixed(2);
+                }
+                if (data.domains['A.7']) {
+                    document.querySelector('#domainA7 h6').textContent = data.domains['A.7'].avg_maturity.toFixed(2);
+                }
+                if (data.domains['A.8']) {
+                    document.querySelector('#domainA8 h6').textContent = data.domains['A.8'].avg_maturity.toFixed(2);
+                }
+            }
+
+            // Crear gráfico de radar de controles
+            const ctx = document.getElementById('soaControlsRadarChart').getContext('2d');
+
+            controlsChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: data.control_labels,
+                    datasets: [{
+                        label: 'Nivel de Madurez por Control',
+                        data: data.maturity_scores,
+                        fill: true,
+                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                        borderColor: 'rgb(220, 53, 69)',
+                        pointBackgroundColor: 'rgb(220, 53, 69)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(220, 53, 69)',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 6,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    const labels = ['No', 'Ini', 'Rep', 'Def', 'Ctrl', 'Cuant', 'Opt'];
+                                    return labels[value] || value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    return data.control_details[index].full_label;
+                                },
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const detail = data.control_details[index];
+                                    const score = detail.maturity_score;
+
+                                    const maturityLabels = {
+                                        0: 'No Implementado',
+                                        1: 'Inicial',
+                                        2: 'Repetible',
+                                        3: 'Definido',
+                                        4: 'Controlado',
+                                        5: 'Cuantificado',
+                                        6: 'Optimizado'
+                                    };
+
+                                    return [
+                                        `Madurez: ${score}/6 (${maturityLabels[score] || 'Desconocido'})`,
+                                        `Dominio: ${detail.domain}`,
+                                        `Categoría: ${detail.category}`
+                                    ];
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: `Controles Individuales - ${data.soa_version} (${data.total_controls_shown} de ${data.total_controls})`,
+                            font: {
+                                size: 13,
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                }
+            });
+
+        })
+        .catch(error => {
+            console.error('Error al cargar el gráfico de controles:', error);
+        });
+}
+
+// Función para alternar entre gráficos
+function toggleRadarChart(type) {
+    const categoryChartContainer = document.getElementById('categoryChartContainer');
+    const controlsChartContainer = document.getElementById('controlsChartContainer');
+    const categoryLegend = document.getElementById('categoryLegend');
+    const controlsLegend = document.getElementById('controlsLegend');
+    const btnCategories = document.getElementById('btnShowCategories');
+    const btnControls = document.getElementById('btnShowControls');
+    const chartSubtitle = document.getElementById('chartSubtitle');
+
+    if (type === 'categories') {
+        categoryChartContainer.style.display = 'block';
+        controlsChartContainer.style.display = 'none';
+        categoryLegend.style.display = 'block';
+        controlsLegend.style.display = 'none';
+        btnCategories.classList.add('active');
+        btnControls.classList.remove('active');
+        chartSubtitle.textContent = 'Nivel de implementación promedio según ISO 27001';
+        currentChartType = 'categories';
+    } else {
+        categoryChartContainer.style.display = 'none';
+        controlsChartContainer.style.display = 'block';
+        categoryLegend.style.display = 'none';
+        controlsLegend.style.display = 'block';
+        btnCategories.classList.remove('active');
+        btnControls.classList.add('active');
+        chartSubtitle.textContent = 'Top 5 controles por dominio ISO 27001 ordenados por madurez';
+        currentChartType = 'controls';
+    }
+}
+
+// Cargar ambos gráficos al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // El gráfico de categorías ya se carga arriba
+    // Cargar también el gráfico de controles
+    setTimeout(loadControlsRadarChart, 500);
 });
 </script>
 {% endblock %}
