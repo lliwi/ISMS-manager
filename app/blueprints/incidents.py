@@ -120,7 +120,7 @@ def create():
                 severity=IncidentSeverity[request.form['severity']],
                 priority=IncidentPriority[request.form['priority']],
                 status=IncidentStatus.NEW,
-                discovery_date=datetime.strptime(request.form['discovery_date'], '%Y-%m-%dT%H:%M'),
+                discovery_date=datetime.strptime(request.form['discovery_date'], '%Y-%m-%d'),
                 reported_date=datetime.utcnow(),
                 reported_by_id=current_user.id,
                 source=IncidentSource[request.form.get('source', 'UNKNOWN')],

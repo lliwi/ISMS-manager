@@ -1606,14 +1606,14 @@ class RCAMethod(enum.Enum):
     OTHER = "Otro"
 
 
-class ActionType(enum.Enum):
+class NCActionType(enum.Enum):
     """Tipo de acción según ISO 27001"""
     CORRECTIVE = "Correctiva"
     PREVENTIVE = "Preventiva"
     IMPROVEMENT = "Mejora"
 
 
-class ActionStatus(enum.Enum):
+class NCActionStatus(enum.Enum):
     """Estado de las acciones"""
     PENDING = "Pendiente"
     IN_PROGRESS = "En progreso"
@@ -1783,7 +1783,7 @@ class NonConformity(db.Model):
             return 0
 
         completed = sum(1 for action in self.actions
-                       if action.status in [ActionStatus.COMPLETED, ActionStatus.VERIFIED])
+                       if action.status in [NCActionStatus.COMPLETED, NCActionStatus.VERIFIED])
         total = len(self.actions)
 
         return int((completed / total) * 100) if total > 0 else 0
@@ -1836,7 +1836,7 @@ class CorrectiveAction(db.Model):
     nonconformity_id = db.Column(db.Integer, db.ForeignKey('nonconformities.id'), nullable=False)
     nonconformity = db.relationship('NonConformity', back_populates='actions')
 
-    action_type = db.Column(Enum(ActionType), nullable=False, default=ActionType.CORRECTIVE)
+    action_type = db.Column(Enum(NCActionType), nullable=False, default=NCActionType.CORRECTIVE)
     description = db.Column(db.Text, nullable=False)
 
     # Detalles de implementación
@@ -1847,7 +1847,7 @@ class CorrectiveAction(db.Model):
     responsible_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     responsible = db.relationship('User', foreign_keys=[responsible_id])
 
-    status = db.Column(Enum(ActionStatus), nullable=False, default=ActionStatus.PENDING)
+    status = db.Column(Enum(NCActionStatus), nullable=False, default=NCActionStatus.PENDING)
 
     due_date = db.Column(db.Date, nullable=False)
     start_date = db.Column(db.Date)
@@ -1884,13 +1884,13 @@ class CorrectiveAction(db.Model):
 
     def is_overdue(self):
         """Verifica si está vencida"""
-        if self.due_date and self.status not in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]:
+        if self.due_date and self.status not in [NCActionStatus.COMPLETED, NCActionStatus.VERIFIED]:
             return datetime.now().date() > self.due_date
         return False
 
     def calculate_days_remaining(self):
         """Calcula días restantes hasta vencimiento"""
-        if self.due_date and self.status not in [ActionStatus.COMPLETED, ActionStatus.VERIFIED]:
+        if self.due_date and self.status not in [NCActionStatus.COMPLETED, NCActionStatus.VERIFIED]:
             delta = self.due_date - datetime.now().date()
             return delta.days
         return None

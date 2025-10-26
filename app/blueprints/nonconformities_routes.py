@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from models import (
     db, User, Audit, Asset,
     NonConformity, CorrectiveAction, NCTimeline, NCAsset, NCAttachment,
-    NCOrigin, NCSeverity, NCStatus, RCAMethod, ActionType, ActionStatus,
+    NCOrigin, NCSeverity, NCStatus, RCAMethod, NCActionType, NCActionStatus,
     NCTimelineEventType
 )
 from werkzeug.utils import secure_filename
@@ -287,7 +287,7 @@ def view(id):
                          is_overdue=is_overdue,
                          users=users,
                          NCStatus=NCStatus,
-                         ActionStatus=ActionStatus)
+                         NCActionStatus=NCActionStatus)
 
 
 @nonconformities_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -473,7 +473,7 @@ def add_action(id):
     try:
         action = CorrectiveAction(
             nonconformity_id=nc.id,
-            action_type=ActionType[request.form.get('action_type')],
+            action_type=NCActionType[request.form.get('action_type')],
             description=request.form.get('description'),
             implementation_plan=request.form.get('implementation_plan'),
             resources_required=request.form.get('resources_required'),
@@ -518,7 +518,7 @@ def complete_action(action_id):
     action = CorrectiveAction.query.get_or_404(action_id)
 
     try:
-        action.status = ActionStatus.COMPLETED
+        action.status = NCActionStatus.COMPLETED
         action.completion_date = datetime.now().date()
         action.evidence_description = request.form.get('evidence_description')
 
@@ -605,7 +605,7 @@ def close_nc(id):
             return redirect(url_for('nonconformities.view', id=id))
 
         # Validar que todas las acciones estén completadas
-        pending_actions = [a for a in nc.actions if a.status != ActionStatus.COMPLETED and a.status != ActionStatus.VERIFIED]
+        pending_actions = [a for a in nc.actions if a.status != NCActionStatus.COMPLETED and a.status != NCActionStatus.VERIFIED]
         if pending_actions:
             flash(f'Hay {len(pending_actions)} acciones pendientes. Complete todas las acciones antes de cerrar.', 'warning')
             return redirect(url_for('nonconformities.view', id=id))

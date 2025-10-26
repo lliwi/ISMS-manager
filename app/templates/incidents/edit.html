@@ -142,10 +142,10 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label required">Fecha de Descubrimiento</label>
-                            <input type="datetime-local" name="discovery_date"
+                            <input type="date" name="discovery_date"
                                    class="form-control" required
-                                   value="{{ incident.discovery_date.strftime('%Y-%m-%dT%H:%M') if incident.discovery_date else '' }}"
-                                   max="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+                                   value="{{ incident.discovery_date.strftime('%Y-%m-%d') if incident.discovery_date else '' }}"
+                                   max="{{ now.strftime('%Y-%m-%d') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label required">Método de Detección</label>

@@ -116,9 +116,9 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label required">Fecha de Descubrimiento</label>
-                            <input type="datetime-local" name="discovery_date"
+                            <input type="date" name="discovery_date"
                                    class="form-control" required
-                                   max="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+                                   max="{{ now.strftime('%Y-%m-%d') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label required">Método de Detección</label>
@@ -230,10 +230,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Establecer fecha/hora actual por defecto
+    // Establecer fecha actual por defecto (sin hora)
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.querySelector('input[name="discovery_date"]').value = now.toISOString().slice(0,16);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    document.querySelector('input[name="discovery_date"]').value = `${year}-${month}-${day}`;
 
     // Validación del formulario
     document.getElementById('incidentForm').addEventListener('submit', function(e) {

@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from models import Risk, Incident, NonConformity, SOAControl, Audit, SOAVersion
 from models import IncidentStatus, NCStatus
 from app.models.task import Task, PeriodicTaskStatus
+from app.risks.models import Riesgo
 from datetime import datetime, timedelta
 from sqlalchemy import func
 from collections import defaultdict
@@ -20,9 +21,12 @@ def index():
     implemented_controls = SOAControl.query.filter_by(implementation_status='implemented').count()
     kpis['soa_compliance'] = (implemented_controls / total_controls * 100) if total_controls > 0 else 0
 
-    # Risk metrics
-    total_risks = Risk.query.count()
-    high_risks = Risk.query.filter(Risk.risk_level.in_(['high', 'critical'])).count()
+    # Risk metrics - usando tabla riesgos (sistema avanzado)
+    total_risks = Riesgo.query.count()
+    # Contar riesgos ALTO y MUY_ALTO
+    high_risks = Riesgo.query.filter(
+        Riesgo.clasificacion_efectiva.in_(['ALTO', 'MUY_ALTO'])
+    ).count()
     kpis['high_risk_count'] = high_risks
     kpis['total_risks'] = total_risks
 
