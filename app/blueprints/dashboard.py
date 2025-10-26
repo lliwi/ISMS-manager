@@ -194,6 +194,44 @@ def soa_radar_data():
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 
+@dashboard_bp.route('/api/soa-applicability-map')
+@login_required
+def soa_applicability_map():
+    """API endpoint para el mapa de aplicabilidad del SOA"""
+    try:
+        # Obtener la versión actual del SOA
+        current_soa = SOAVersion.get_current_version()
+
+        if not current_soa:
+            return jsonify({'error': 'No hay versión activa del SOA'})
+
+        # Obtener todos los controles ordenados por control_id
+        controls = SOAControl.query.filter_by(
+            soa_version_id=current_soa.id
+        ).order_by(SOAControl.control_id).all()
+
+        # Serializar controles
+        controls_data = []
+        for control in controls:
+            controls_data.append({
+                'control_id': control.control_id,
+                'title': control.title,
+                'category': control.category or 'Sin categoría',
+                'applicability_status': control.applicability_status
+            })
+
+        return jsonify({
+            'soa_version': f"{current_soa.title} (v{current_soa.version_number})",
+            'controls': controls_data
+        })
+
+    except Exception as e:
+        print(f"Error en soa_applicability_map: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Error al cargar datos: {str(e)}'})
+
+
 @dashboard_bp.route('/api/soa-controls-radar-data')
 @login_required
 def soa_controls_radar_data():

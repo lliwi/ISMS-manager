@@ -12,6 +12,7 @@
 
 <!-- KPI Cards -->
 <div class="row mb-4">
+    <!-- 1. SOA -->
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
         <div class="card bg-primary text-white h-100">
             <div class="card-body">
@@ -28,78 +29,7 @@
         </div>
     </div>
 
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-        <div class="card bg-warning text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title small">Riesgos Altos</h6>
-                        <h3 class="mb-0">{{ kpis.high_risk_count }}</h3>
-                        <small class="d-block">de {{ kpis.total_risks }} total</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-        <div class="card bg-danger text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title small">Incidentes</h6>
-                        <h3 class="mb-0">{{ kpis.open_incidents }}</h3>
-                        <small class="d-block">{{ kpis.incidents_this_month }} este mes</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-bug fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-        <a href="{{ url_for('nonconformities.index') }}" class="text-decoration-none">
-            <div class="card bg-dark text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title small">No Conformidades</h6>
-                            <h3 class="mb-0">{{ kpis.open_nonconformities }}</h3>
-                            <small class="d-block">{{ kpis.overdue_nonconformities }} vencidas</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-        <a href="{{ url_for('changes.index') }}" class="text-decoration-none">
-            <div class="card bg-secondary text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title small">Cambios</h6>
-                            <h3 class="mb-0">{{ kpis.pending_changes }}</h3>
-                            <small class="d-block">{{ kpis.approved_changes_month }} aprobados mes</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-exchange-alt fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
+    <!-- 2. Documentos -->
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
         <a href="{{ url_for('documents.index') }}" class="text-decoration-none">
             <div class="card bg-success text-white h-100">
@@ -119,6 +49,83 @@
         </a>
     </div>
 
+    <!-- 3. Riesgos -->
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">Riesgos Altos</h6>
+                        <h3 class="mb-0">{{ kpis.high_risk_count }}</h3>
+                        <small class="d-block">de {{ kpis.total_risks }} total</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Incidentes -->
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">Incidentes</h6>
+                        <h3 class="mb-0">{{ kpis.open_incidents }}</h3>
+                        <small class="d-block">{{ kpis.incidents_this_month }} este mes</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-bug fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. No Conformidades -->
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <a href="{{ url_for('nonconformities.index') }}" class="text-decoration-none">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title small">No Conformidades</h6>
+                            <h3 class="mb-0">{{ kpis.open_nonconformities }}</h3>
+                            <small class="d-block">{{ kpis.overdue_nonconformities }} vencidas</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 6. Cambios -->
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+        <a href="{{ url_for('changes.index') }}" class="text-decoration-none">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title small">Cambios</h6>
+                            <h3 class="mb-0">{{ kpis.pending_changes }}</h3>
+                            <small class="d-block">{{ kpis.approved_changes_month }} aprobados mes</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exchange-alt fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 7. Tareas -->
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
         <div class="card bg-info text-white h-100">
             <div class="card-body">
@@ -225,6 +232,47 @@
                 {% else %}
                     <p class="text-center text-muted py-3">No tienes tareas pendientes</p>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SOA Applicability Heatmap -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0"><i class="fas fa-th me-2"></i>Aplicabilidad de Controles SOA ISO 27001:2022</h6>
+                    <small class="text-muted">Mapa de aplicabilidad por dominios y categorías</small>
+                </div>
+                <a href="{{ url_for('soa.index') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-clipboard-list me-1"></i>Gestionar SOA
+                </a>
+            </div>
+            <div class="card-body">
+                <div id="soaApplicabilityMap" class="table-responsive">
+                    <!-- El contenido se cargará dinámicamente -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leyenda -->
+                <div class="mt-3">
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">
+                                <strong>Leyenda:</strong>
+                                <span class="badge ms-2" style="background-color: #0d6efd;">Aplicable</span>
+                                <span class="badge ms-2" style="background-color: #6c757d;">No Aplicable</span>
+                                <span class="badge ms-2" style="background-color: #ffc107; color: #000;">Transferido</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -607,11 +655,119 @@ function toggleRadarChart(type) {
     }
 }
 
+// Cargar mapa de aplicabilidad SOA
+function loadSOAApplicabilityMap() {
+    fetch('/api/soa-applicability-map')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Datos recibidos:', data);
+
+            if (data.error) {
+                document.getElementById('soaApplicabilityMap').innerHTML = `
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>${data.error}
+                    </div>`;
+                return;
+            }
+
+            if (!data.controls || data.controls.length === 0) {
+                document.getElementById('soaApplicabilityMap').innerHTML = `
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>No hay controles SOA disponibles
+                    </div>`;
+                return;
+            }
+
+            // Construir la tabla HTML
+            let html = '<table class="table table-sm table-bordered" style="font-size: 0.85rem;">';
+
+            // Agrupar por dominios
+            const domains = {
+                '5': { name: 'Controles organizacionales', categories: {} },
+                '6': { name: 'Personas', categories: {} },
+                '7': { name: 'Seguridad Física', categories: {} },
+                '8': { name: 'Técnico', categories: {} }
+            };
+
+            // Organizar controles por dominio y categoría
+            data.controls.forEach(control => {
+                // Extraer el número de dominio: "A.5.1" -> "5"
+                // control_id tiene formato "A.X.Y" donde X es el dominio
+                const parts = control.control_id.split('.');
+                const domainNum = parts[1]; // Obtener el segundo elemento después del split
+                const category = control.category;
+
+                // Validar que el dominio existe
+                if (!domains[domainNum]) {
+                    console.warn(`Dominio no reconocido: ${domainNum} para control ${control.control_id}`);
+                    return;
+                }
+
+                if (!domains[domainNum].categories[category]) {
+                    domains[domainNum].categories[category] = [];
+                }
+                domains[domainNum].categories[category].push(control);
+            });
+
+            // Generar HTML por dominio
+            Object.keys(domains).forEach(domainNum => {
+                const domain = domains[domainNum];
+                const categories = Object.keys(domain.categories);
+
+                if (categories.length === 0) return;
+
+                // Fila de encabezado de dominio
+                html += `<tr><td class="fw-bold bg-light" style="width: 30px;">${domainNum}</td>`;
+                html += `<td class="fw-bold bg-light" colspan="100">${domain.name}</td></tr>`;
+
+                // Filas por categoría
+                categories.forEach(category => {
+                    const controls = domain.categories[category];
+                    html += `<tr><td></td><td style="width: 200px; background-color: #f8f9fa;">${category}</td>`;
+
+                    controls.forEach(control => {
+                        let bgColor = '#6c757d'; // Por defecto: No Aplicable (gris)
+                        let textColor = '#fff';
+
+                        if (control.applicability_status === 'aplicable') {
+                            bgColor = '#0d6efd'; // Aplicable (azul)
+                            textColor = '#fff';
+                        } else if (control.applicability_status === 'no_aplicable') {
+                            bgColor = '#6c757d'; // No Aplicable (gris)
+                            textColor = '#fff';
+                        } else if (control.applicability_status === 'transferido') {
+                            bgColor = '#ffc107'; // Transferido (amarillo)
+                            textColor = '#000';
+                        }
+
+                        html += `<td class="text-center p-1" style="background-color: ${bgColor}; color: ${textColor}; min-width: 45px;" title="${control.title}">
+                            <small>${control.control_id.replace('A.', '')}</small>
+                        </td>`;
+                    });
+
+                    html += '</tr>';
+                });
+            });
+
+            html += '</table>';
+            document.getElementById('soaApplicabilityMap').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error al cargar mapa de aplicabilidad:', error);
+            document.getElementById('soaApplicabilityMap').innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-circle me-2"></i>Error al cargar el mapa de aplicabilidad
+                </div>`;
+        });
+}
+
 // Cargar ambos gráficos al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     // El gráfico de categorías ya se carga arriba
     // Cargar también el gráfico de controles
     setTimeout(loadControlsRadarChart, 500);
+    // Cargar mapa de aplicabilidad
+    setTimeout(loadSOAApplicabilityMap, 1000);
 });
 </script>
 {% endblock %}
