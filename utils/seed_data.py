@@ -41,6 +41,9 @@ def seed_initial_data():
         # Seed threat-resource-type relationships
         seed_amenaza_recurso_relations()
 
+        # Seed ISO 27001 task templates
+        seed_iso27001_task_templates()
+
         db.session.commit()
         print("✅ Initial data seeded successfully")
 
@@ -339,4 +342,108 @@ def seed_amenaza_recurso_relations():
     except Exception as e:
         print(f"  ⚠️  Warning: Could not load threat-resource relationships: {str(e)}")
         # Don't fail the entire seed process if relationships can't be loaded
+        pass
+
+
+def seed_iso27001_task_templates():
+    """
+    Create ISO/IEC 27001:2023 periodic task templates for new installations.
+    This function loads the complete catalog of recommended periodic tasks
+    from the init_iso27001_tasks module.
+    """
+    from app.models.task import TaskTemplate
+
+    # Check if task templates already exist
+    existing_count = TaskTemplate.query.count()
+    if existing_count > 0:
+        print(f"  → Task templates already exist ({existing_count} templates)")
+        return
+
+    print("  → Loading ISO/IEC 27001:2023 task templates...")
+
+    try:
+        # Import the task templates generator
+        import sys
+        import os
+        # Add project root to path to import the init script
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+
+        from init_iso27001_tasks import get_task_templates_iso27001
+        from models import Role
+
+        # Get roles for assignment
+        role_ciso = Role.query.filter_by(name='Responsable de Seguridad (CISO)').first()
+        role_admin = Role.query.filter_by(name='Administrador del Sistema').first()
+        role_auditor = Role.query.filter_by(name='Auditor Interno').first()
+
+        # Get task templates
+        templates_data = get_task_templates_iso27001()
+
+        # Role mappings by category
+        from app.models.task import TaskCategory
+        role_mappings = {
+            TaskCategory.AUDITORIA_INTERNA: role_auditor.id if role_auditor else None,
+            TaskCategory.EVALUACION_RIESGOS: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_POLITICAS: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_DIRECCION: role_ciso.id if role_ciso else None,
+            TaskCategory.FORMACION_CONCIENCIACION: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_PROVEEDORES: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_INCIDENTES: role_ciso.id if role_ciso else None,
+            TaskCategory.CONTINUIDAD_NEGOCIO: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_LEGAL: role_ciso.id if role_ciso else None,
+            TaskCategory.REVISION_CONTROLES: role_ciso.id if role_ciso else None,
+            TaskCategory.MANTENIMIENTO_SEGURIDAD: role_admin.id if role_admin else None,
+            TaskCategory.COPIAS_SEGURIDAD: role_admin.id if role_admin else None,
+            TaskCategory.REVISION_ACCESOS: role_admin.id if role_admin else None,
+            TaskCategory.ACTUALIZACION_INVENTARIOS: role_admin.id if role_admin else None,
+            TaskCategory.GESTION_VULNERABILIDADES: role_admin.id if role_admin else None,
+        }
+
+        # Create templates
+        created_count = 0
+        for template_data in templates_data:
+            # Assign default role if not specified
+            if 'default_role_id' not in template_data or template_data['default_role_id'] is None:
+                template_data['default_role_id'] = role_mappings.get(template_data['category'])
+
+            template = TaskTemplate(
+                title=template_data['title'],
+                description=template_data['description'],
+                category=template_data['category'],
+                frequency=template_data['frequency'],
+                priority=template_data['priority'],
+                iso_control=template_data.get('iso_control'),
+                estimated_hours=template_data.get('estimated_hours'),
+                default_role_id=template_data.get('default_role_id'),
+                notify_days_before=template_data.get('notify_days_before', 7),
+                requires_evidence=template_data.get('requires_evidence', False),
+                requires_approval=template_data.get('requires_approval', False),
+                checklist_template=template_data.get('checklist_template'),
+                is_active=True,
+                created_by_id=1,  # Admin user
+                created_at=datetime.utcnow()
+            )
+
+            db.session.add(template)
+            created_count += 1
+
+        # Count by frequency
+        from app.models.task import TaskFrequency
+        from sqlalchemy import func
+        stats = db.session.query(
+            TaskTemplate.frequency,
+            func.count(TaskTemplate.id).label('count')
+        ).group_by(TaskTemplate.frequency).all()
+
+        print(f"  ✅ Created {created_count} ISO 27001 task templates:")
+        for frequency, count in sorted(stats, key=lambda x: x[1], reverse=True):
+            print(f"    • {frequency.value}: {count} templates")
+
+    except Exception as e:
+        print(f"  ⚠️  Warning: Could not load ISO 27001 task templates: {str(e)}")
+        # Don't fail the entire seed process if task templates can't be loaded
+        import traceback
+        traceback.print_exc()
         pass

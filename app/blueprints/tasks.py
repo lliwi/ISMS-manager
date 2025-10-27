@@ -648,16 +648,42 @@ def delete_evidence(evidence_id):
 @login_required
 def templates():
     """Lista de plantillas de tareas"""
+    from flask import request
 
-    templates = TaskTemplate.query.order_by(
+    # Obtener parámetros de filtrado
+    frequency_filter = request.args.get('frequency', '')
+    category_filter = request.args.get('category', '')
+    page = request.args.get('page', 1, type=int)
+
+    # Construir query base
+    query = TaskTemplate.query
+
+    # Aplicar filtros
+    if frequency_filter:
+        query = query.filter(TaskTemplate.frequency == TaskFrequency(frequency_filter))
+
+    if category_filter:
+        query = query.filter(TaskTemplate.category == TaskCategory(category_filter))
+
+    # Ordenar
+    query = query.order_by(
         TaskTemplate.is_active.desc(),
         TaskTemplate.category.asc(),
         TaskTemplate.title.asc()
-    ).all()
+    )
+
+    # Paginar
+    templates = query.paginate(page=page, per_page=10, error_out=False)
 
     categories = TaskCategory
 
-    return render_template('tasks/templates.html', templates=templates, categories=categories)
+    return render_template(
+        'tasks/templates.html',
+        templates=templates,
+        categories=categories,
+        frequency_filter=frequency_filter,
+        category_filter=category_filter
+    )
 
 
 @tasks_bp.route('/templates/new', methods=['GET', 'POST'])

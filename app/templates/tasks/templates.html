@@ -35,12 +35,13 @@
                     <label class="form-label">Frecuencia</label>
                     <select name="frequency" class="form-select">
                         <option value="">Todas</option>
-                        <option value="diaria">Diaria</option>
-                        <option value="semanal">Semanal</option>
-                        <option value="mensual">Mensual</option>
-                        <option value="trimestral">Trimestral</option>
-                        <option value="semestral">Semestral</option>
-                        <option value="anual">Anual</option>
+                        <option value="diaria" {% if frequency_filter == 'diaria' %}selected{% endif %}>Diaria</option>
+                        <option value="semanal" {% if frequency_filter == 'semanal' %}selected{% endif %}>Semanal</option>
+                        <option value="quincenal" {% if frequency_filter == 'quincenal' %}selected{% endif %}>Quincenal</option>
+                        <option value="mensual" {% if frequency_filter == 'mensual' %}selected{% endif %}>Mensual</option>
+                        <option value="trimestral" {% if frequency_filter == 'trimestral' %}selected{% endif %}>Trimestral</option>
+                        <option value="semestral" {% if frequency_filter == 'semestral' %}selected{% endif %}>Semestral</option>
+                        <option value="anual" {% if frequency_filter == 'anual' %}selected{% endif %}>Anual</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -48,7 +49,7 @@
                     <select name="category" class="form-select">
                         <option value="">Todas</option>
                         {% for cat in categories %}
-                        <option value="{{ cat.value }}">{{ cat.value|replace('_', ' ')|title }}</option>
+                        <option value="{{ cat.value }}" {% if category_filter == cat.value %}selected{% endif %}>{{ cat.value|replace('_', ' ')|title }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -165,21 +166,21 @@
     <nav>
         <ul class="pagination justify-content-center">
             <li class="page-item {{ 'disabled' if not templates.has_prev else '' }}">
-                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.prev_num) if templates.has_prev else '#' }}">
+                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.prev_num, frequency=frequency_filter, category=category_filter) if templates.has_prev else '#' }}">
                     Anterior
                 </a>
             </li>
             {% for page_num in templates.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
                 {% if page_num %}
                     <li class="page-item {{ 'active' if page_num == templates.page else '' }}">
-                        <a class="page-link" href="{{ url_for('tasks.templates', page=page_num) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('tasks.templates', page=page_num, frequency=frequency_filter, category=category_filter) }}">{{ page_num }}</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
                 {% endif %}
             {% endfor %}
             <li class="page-item {{ 'disabled' if not templates.has_next else '' }}">
-                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.next_num) if templates.has_next else '#' }}">
+                <a class="page-link" href="{{ url_for('tasks.templates', page=templates.next_num, frequency=frequency_filter, category=category_filter) if templates.has_next else '#' }}">
                     Siguiente
                 </a>
             </li>

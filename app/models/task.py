@@ -87,7 +87,7 @@ class TaskTemplate(db.Model):
     estimated_hours = db.Column(db.Float)
 
     # Control ISO 27001 relacionado (Anexo A)
-    iso_control = db.Column(db.String(10))  # Ej: "5.1", "9.2.1"
+    iso_control = db.Column(db.String(20))  # Ej: "5.1", "9.2.1", "A.5.19/A.5.20"
 
     # Rol responsable por defecto
     default_role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
