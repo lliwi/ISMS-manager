@@ -53,4 +53,5 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # Start command (will be passed to entrypoint)
 # Gunicorn will run workers as user 'isms' (uid 1000)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "120", "--user", "1000", "--group", "1000", "wsgi:app"]
+# Timeout aumentado a 600s para permitir operaciones largas como backup/restore
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "600", "--user", "1000", "--group", "1000", "wsgi:app"]

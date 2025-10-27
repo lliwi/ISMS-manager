@@ -1628,3 +1628,195 @@ def delete_amenaza_recurso(id):
         flash(f'Error al eliminar la relación: {str(e)}', 'danger')
 
     return redirect(url_for('admin.amenazas_recursos'))
+
+
+# ============================================================================
+# BACKUP Y RESTAURACIÓN
+# ============================================================================
+
+@admin_bp.route('/backups')
+@login_required
+@role_required('admin')
+def backups():
+    """Gestión de backups del sistema"""
+    from app.services.backup_service import BackupService
+
+    backups_list = BackupService.list_backups()
+
+    return render_template('admin/backups.html', backups=backups_list)
+
+
+@admin_bp.route('/backups/create', methods=['POST'])
+@login_required
+@role_required('admin')
+@audit_action('backup_created')
+def create_backup():
+    """Crear un nuevo backup del sistema"""
+    from app.services.backup_service import BackupService
+
+    description = request.form.get('description', 'Backup manual')
+    include_files = request.form.get('include_files', 'true') == 'true'
+
+    try:
+        result = BackupService.create_backup(
+            description=description,
+            include_files=include_files
+        )
+
+        if result['success']:
+            flash(f'Backup creado exitosamente: {result["backup_name"]}', 'success')
+        else:
+            flash(f'Error al crear backup: {result.get("error")}', 'error')
+
+    except Exception as e:
+        flash(f'Error al crear backup: {str(e)}', 'error')
+
+    return redirect(url_for('admin.backups'))
+
+
+@admin_bp.route('/backups/<backup_name>/download')
+@login_required
+@role_required('admin')
+def download_backup(backup_name):
+    """Descargar un backup"""
+    from flask import send_file
+    from app.services.backup_service import BackupService
+    from pathlib import Path
+
+    backup_dir = BackupService.get_backup_directory()
+    backup_file = backup_dir / backup_name
+
+    if not backup_file.exists():
+        flash('Backup no encontrado', 'error')
+        return redirect(url_for('admin.backups'))
+
+    return send_file(
+        backup_file,
+        as_attachment=True,
+        download_name=backup_name,
+        mimetype='application/zip'
+    )
+
+
+@admin_bp.route('/backups/<backup_name>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+@audit_action('backup_deleted')
+def delete_backup(backup_name):
+    """Eliminar un backup"""
+    from app.services.backup_service import BackupService
+
+    try:
+        result = BackupService.delete_backup(backup_name)
+
+        if result['success']:
+            flash(f'Backup eliminado: {backup_name}', 'success')
+        else:
+            flash(f'Error al eliminar backup: {result.get("error")}', 'error')
+
+    except Exception as e:
+        flash(f'Error al eliminar backup: {str(e)}', 'error')
+
+    return redirect(url_for('admin.backups'))
+
+
+@admin_bp.route('/backups/restore', methods=['POST'])
+@login_required
+@role_required('admin')
+@audit_action('backup_restored')
+def restore_backup():
+    """Restaurar sistema desde un backup"""
+    import threading
+    from app.services.backup_service import BackupService
+
+    backup_name = request.form.get('backup_name')
+    restore_files = request.form.get('restore_files', 'true') == 'true'
+
+    if not backup_name:
+        flash('Debe seleccionar un backup', 'error')
+        return redirect(url_for('admin.backups'))
+
+    def restore_in_background(backup_name, restore_files, app):
+        """Ejecutar restauración en segundo plano"""
+        with app.app_context():
+            try:
+                backup_dir = BackupService.get_backup_directory()
+                backup_path = backup_dir / backup_name
+
+                print(f"\n{'='*60}")
+                print(f"🔄 INICIANDO RESTAURACIÓN EN SEGUNDO PLANO")
+                print(f"   Backup: {backup_name}")
+                print(f"   Restaurar archivos: {restore_files}")
+                print(f"{'='*60}\n")
+
+                result = BackupService.restore_backup(
+                    backup_path=backup_path,
+                    restore_files=restore_files
+                )
+
+                print(f"\n{'='*60}")
+                if result['success']:
+                    print(f"✅ RESTAURACIÓN COMPLETADA EXITOSAMENTE")
+                    print(f"   Se recomienda reiniciar la aplicación")
+                else:
+                    print(f"❌ ERROR EN RESTAURACIÓN: {result.get('error')}")
+                print(f"{'='*60}\n")
+
+            except Exception as e:
+                print(f"\n{'='*60}")
+                print(f"❌ ERROR CRÍTICO EN RESTAURACIÓN: {str(e)}")
+                print(f"{'='*60}\n")
+                import traceback
+                traceback.print_exc()
+
+    # Iniciar restauración en segundo plano
+    from flask import current_app
+    thread = threading.Thread(
+        target=restore_in_background,
+        args=(backup_name, restore_files, current_app._get_current_object())
+    )
+    thread.daemon = True
+    thread.start()
+
+    flash('🔄 Restauración iniciada en segundo plano. Revise los logs del contenedor para ver el progreso.', 'info')
+    flash('⚠️ Una vez completada, se recomienda reiniciar la aplicación.', 'warning')
+
+    return redirect(url_for('admin.backups'))
+
+
+@admin_bp.route('/backups/upload', methods=['POST'])
+@login_required
+@role_required('admin')
+@audit_action('backup_uploaded')
+def upload_backup():
+    """Subir un backup desde archivo"""
+    from app.services.backup_service import BackupService
+    from werkzeug.utils import secure_filename
+
+    if 'backup_file' not in request.files:
+        flash('No se seleccionó ningún archivo', 'error')
+        return redirect(url_for('admin.backups'))
+
+    file = request.files['backup_file']
+
+    if file.filename == '':
+        flash('No se seleccionó ningún archivo', 'error')
+        return redirect(url_for('admin.backups'))
+
+    if not file.filename.endswith('.zip'):
+        flash('El archivo debe ser un ZIP', 'error')
+        return redirect(url_for('admin.backups'))
+
+    try:
+        filename = secure_filename(file.filename)
+        backup_dir = BackupService.get_backup_directory()
+        file_path = backup_dir / filename
+
+        file.save(file_path)
+
+        flash(f'Backup subido exitosamente: {filename}', 'success')
+
+    except Exception as e:
+        flash(f'Error al subir backup: {str(e)}', 'error')
+
+    return redirect(url_for('admin.backups'))

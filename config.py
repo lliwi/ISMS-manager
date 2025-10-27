@@ -41,7 +41,7 @@ class Config:
     TASK_NOTIFICATION_ENABLED = os.environ.get('TASK_NOTIFICATION_ENABLED', 'True').lower() == 'true'
 
     # File Upload Settings
-    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', '16777216'))  # 16MB
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', '1073741824'))  # 1GB para backups
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}
 

@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Backups - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-database me-2"></i>Gestión de Backups</h2>
+            <p class="text-muted">ISO 27001:2023 - Control A.8.13 (Respaldo de información)</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- Información importante -->
+    <div class="alert alert-info">
+        <h5><i class="fas fa-info-circle me-2"></i>Información Importante</h5>
+        <ul class="mb-0">
+            <li>Los backups incluyen toda la base de datos del sistema</li>
+            <li>Opcionalmente se pueden incluir todos los archivos subidos (documentos, evidencias, etc.)</li>
+            <li>Los backups se almacenan en formato ZIP y pueden ser descargados o utilizados para restauración</li>
+            <li><strong>⚠️ La restauración sobrescribirá todos los datos actuales</strong></li>
+            <li>Se recomienda reiniciar la aplicación después de una restauración</li>
+        </ul>
+    </div>
+
+    <!-- Crear Nuevo Backup -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Crear Nuevo Backup</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.create_backup') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descripción del Backup</label>
+                            <input type="text" class="form-control" id="description" name="description"
+                                   placeholder="Ej: Backup antes de actualización" required>
+                            <small class="text-muted">Añade una descripción para identificar este backup más tarde</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Incluir Archivos</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="include_files" name="include_files" value="true" checked>
+                                <label class="form-check-label" for="include_files">
+                                    Incluir documentos y archivos subidos
+                                </label>
+                            </div>
+                            <small class="text-muted">Recomendado para backup completo</small>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save me-2"></i>Crear Backup Ahora
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subir Backup -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Subir Backup desde Archivo</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.upload_backup') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="row">
+                    <div class="col-md-10">
+                        <div class="mb-3">
+                            <label for="backup_file" class="form-label">Seleccionar archivo de backup</label>
+                            <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".zip" required>
+                            <small class="text-muted">Solo archivos ZIP de backups del sistema ISMS</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-info w-100 mb-3">
+                            <i class="fas fa-upload me-2"></i>Subir
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Backups -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Backups Disponibles</h5>
+        </div>
+        <div class="card-body">
+            {% if backups %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Fecha de Creación</th>
+                            <th>Tamaño</th>
+                            <th>Archivos Incluidos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for backup in backups %}
+                        <tr>
+                            <td>
+                                <i class="fas fa-file-archive text-warning me-2"></i>
+                                <code>{{ backup.name }}</code>
+                            </td>
+                            <td>{{ backup.metadata.description or '-' }}</td>
+                            <td>
+                                {% set dt = backup.created_at %}
+                                {% if dt %}
+                                {{ dt[:4] }}-{{ dt[4:6] }}-{{ dt[6:8] }} {{ dt[9:11] }}:{{ dt[11:13] }}:{{ dt[13:15] }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ backup.size_formatted }}</span>
+                            </td>
+                            <td>
+                                {% if backup.metadata.include_files %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Sí
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-times me-1"></i>No
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <!-- Descargar -->
+                                    <a href="{{ url_for('admin.download_backup', backup_name=backup.name) }}"
+                                       class="btn btn-outline-primary" title="Descargar backup">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+
+                                    <!-- Restaurar -->
+                                    <button type="button" class="btn btn-outline-success"
+                                            onclick="showRestoreModal('{{ backup.name }}', '{{ backup.metadata.description }}')"
+                                            title="Restaurar desde este backup">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+
+                                    <!-- Eliminar -->
+                                    <button type="button" class="btn btn-outline-danger"
+                                            onclick="showDeleteModal('{{ backup.name }}')"
+                                            title="Eliminar backup">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No hay backups disponibles</p>
+                <p>Crea el primer backup usando el formulario de arriba</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Restauración -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">⚠️ Confirmar Restauración</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¡ATENCIÓN!</strong> Esta acción sobrescribirá todos los datos actuales del sistema.
+                </div>
+                <p>¿Está seguro de que desea restaurar el sistema desde el backup:</p>
+                <p class="text-center"><strong id="restoreBackupName"></strong></p>
+                <p><strong id="restoreBackupDescription"></strong></p>
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="restore_files_modal" checked>
+                    <label class="form-check-label" for="restore_files_modal">
+                        Restaurar también los archivos y documentos
+                    </label>
+                </div>
+
+                <hr>
+                <p class="text-muted mb-0">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        Después de la restauración se recomienda reiniciar la aplicación.
+                    </small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <form id="restoreForm" method="POST" action="{{ url_for('admin.restore_backup') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="backup_name" id="restoreBackupNameInput">
+                    <input type="hidden" name="restore_files" id="restoreFilesInput" value="true">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-undo me-2"></i>Restaurar Sistema
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de que desea eliminar el backup:</p>
+                <p class="text-center"><strong id="deleteBackupName"></strong></p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar Backup
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Modal de restauración
+    function showRestoreModal(backupName, description) {
+        document.getElementById('restoreBackupName').textContent = backupName;
+        document.getElementById('restoreBackupDescription').textContent = description || '';
+        document.getElementById('restoreBackupNameInput').value = backupName;
+
+        // Sincronizar checkbox con input hidden
+        const checkbox = document.getElementById('restore_files_modal');
+        const hiddenInput = document.getElementById('restoreFilesInput');
+        checkbox.addEventListener('change', function() {
+            hiddenInput.value = this.checked ? 'true' : 'false';
+        });
+
+        const modal = new bootstrap.Modal(document.getElementById('restoreModal'));
+        modal.show();
+    }
+
+    // Modal de eliminación
+    function showDeleteModal(backupName) {
+        document.getElementById('deleteBackupName').textContent = backupName;
+        document.getElementById('deleteForm').action = `/admin/backups/${backupName}/delete`;
+
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
+</script>
+{% endblock %}
