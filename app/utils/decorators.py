@@ -11,7 +11,7 @@ def role_required(*roles):
     Decorador para restringir acceso por rol
 
     Args:
-        roles: Roles permitidos (puede ser uno o más argumentos)
+        roles: Roles permitidos (puede ser uno o más argumentos, o una lista)
 
     Usage:
         @role_required('admin', 'ciso')
@@ -21,6 +21,10 @@ def role_required(*roles):
         @role_required('admin')
         def super_admin_function():
             pass
+
+        @role_required(['admin', 'ciso'])
+        def another_function():
+            pass
     """
     def decorator(f):
         @wraps(f)
@@ -29,10 +33,13 @@ def role_required(*roles):
                 flash('Por favor, inicia sesión para acceder a esta página.', 'warning')
                 return redirect(url_for('auth.login'))
 
+            # Normalizar roles: si se pasó una lista como primer argumento, usarla
+            roles_list = roles[0] if len(roles) == 1 and isinstance(roles[0], (list, tuple)) else roles
+
             # Verificar si el usuario tiene alguno de los roles permitidos
             # Usar el método has_role que maneja los aliases correctamente
             has_required_role = False
-            for role in roles:
+            for role in roles_list:
                 if hasattr(current_user, 'has_role') and current_user.has_role(role):
                     has_required_role = True
                     break
