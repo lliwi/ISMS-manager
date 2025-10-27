@@ -512,6 +512,46 @@ def assign_task(id):
     return redirect(url_for('tasks.view', id=id))
 
 
+@tasks_bp.route('/<int:id>/delete', methods=['POST'])
+@login_required
+def delete(id):
+    """Eliminar una tarea (solo administradores, CISO o creador)"""
+    try:
+        task = Task.query.get_or_404(id)
+        task_title = task.title
+
+        # Verificar permisos
+        allowed_roles = ['Administrador del Sistema', 'Responsable de Seguridad (CISO)']
+        if current_user.role.name not in allowed_roles and task.created_by_id != current_user.id:
+            flash('No tiene permisos para eliminar esta tarea', 'error')
+            return redirect(url_for('tasks.index'))
+
+        # Eliminar archivos de evidencias asociadas si existen
+        if task.evidences:
+            for evidence in task.evidences:
+                try:
+                    if evidence.file_path and os.path.exists(evidence.file_path):
+                        os.remove(evidence.file_path)
+                except Exception as file_error:
+                    print(f"Error eliminando archivo de evidencia {evidence.file_path}: {file_error}")
+
+        # Eliminar todas las relaciones asociadas
+        # Las relaciones con cascade='all, delete-orphan' se eliminarán automáticamente
+        # Esto incluye: comentarios, historial, evidencias, notificaciones
+        db.session.delete(task)
+        db.session.commit()
+
+        flash(f'Tarea "{task_title}" eliminada exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error eliminando tarea: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error al eliminar la tarea: {str(e)}', 'error')
+
+    return redirect(url_for('tasks.index'))
+
+
 # ==================== COMENTARIOS ====================
 
 @tasks_bp.route('/<int:id>/comment', methods=['POST'])

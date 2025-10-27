@@ -222,6 +222,7 @@ class Task(db.Model):
     evidences = db.relationship('TaskEvidence', back_populates='task', cascade='all, delete-orphan')
     comments = db.relationship('TaskComment', back_populates='task', cascade='all, delete-orphan')
     history = db.relationship('TaskHistory', back_populates='task', cascade='all, delete-orphan', order_by='TaskHistory.created_at.desc()')
+    notification_logs = db.relationship('TaskNotificationLog', back_populates='task', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Task {self.title}>'
@@ -398,7 +399,7 @@ class TaskNotificationLog(db.Model):
     error_message = db.Column(db.Text)
 
     # Relaciones
-    task = db.relationship('Task', backref='notification_logs')
+    task = db.relationship('Task', back_populates='notification_logs')
 
     def __repr__(self):
         return f'<TaskNotificationLog {self.notification_type} to {self.recipient_email}>'

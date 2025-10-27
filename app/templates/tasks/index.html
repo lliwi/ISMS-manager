@@ -270,14 +270,23 @@
                                 </div>
                             </td>
                             <td>
-                                <a href="{{ url_for('tasks.view', id=task.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if task.status.value not in ['completada', 'cancelada'] %}
-                                <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-sm btn-outline-secondary" title="Editar tarea">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('tasks.view', id=task.id) }}" class="btn btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if task.status.value not in ['completada', 'cancelada'] %}
+                                    <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-outline-secondary" title="Editar tarea">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if current_user.role.name in ['Administrador del Sistema', 'Responsable de Seguridad (CISO)'] or task.created_by_id == current_user.id %}
+                                    <button type="button" class="btn btn-outline-danger"
+                                            onclick="confirmDeleteTask({{ task.id }}, '{{ task.title }}')"
+                                            title="Eliminar tarea">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -315,6 +324,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div class="modal fade" id="deleteTaskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirmar Eliminación de Tarea</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                    </div>
+                    <p>¿Está seguro de que desea eliminar la tarea <strong id="deleteTaskTitle"></strong>?</p>
+                    <p class="text-muted mb-0">Se eliminarán todos los datos relacionados: comentarios, historial, evidencias, notificaciones, etc.</p>
+                </div>
+                <div class="modal-footer">
+                    <form id="deleteTaskForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Eliminar Tarea
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -326,5 +364,13 @@
             this.form.submit();
         });
     });
+
+    // Función para confirmar eliminación de tarea
+    function confirmDeleteTask(taskId, taskTitle) {
+        document.getElementById('deleteTaskTitle').textContent = taskTitle;
+        document.getElementById('deleteTaskForm').action = `/tareas/${taskId}/delete`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteTaskModal'));
+        modal.show();
+    }
 </script>
 {% endblock %}
