@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test D3.js</title>
+    <style>
+        body {
+            margin: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #test-svg {
+            border: 2px solid #000;
+            background: #f0f0f0;
+        }
+        .node circle {
+            fill: #69b3a2;
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+        .link {
+            stroke: #999;
+            stroke-width: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test de D3.js - Grafo Simple</h1>
+    <div id="info">
+        <p>Estado de D3: <span id="d3-status">Cargando...</span></p>
+        <p>Datos del servidor: <span id="data-status">Esperando...</span></p>
+    </div>
+    <svg id="test-svg" width="800" height="600"></svg>
+
+    <script src="/static/js/vendor/d3.v7.min.js"></script>
+    <script>
+        console.log('=== INICIANDO TEST DE D3.js ===');
+
+        // Verificar D3
+        if (typeof d3 !== 'undefined') {
+            document.getElementById('d3-status').textContent = '✅ Cargado (v' + d3.version + ')';
+            document.getElementById('d3-status').style.color = 'green';
+            console.log('✅ D3.js cargado correctamente, versión:', d3.version);
+        } else {
+            document.getElementById('d3-status').textContent = '❌ No cargado';
+            document.getElementById('d3-status').style.color = 'red';
+            console.error('❌ D3.js NO está cargado');
+        }
+
+        // Datos de prueba simples
+        const testData = {
+            nodes: [
+                { id: 1, name: 'Nodo 1' },
+                { id: 2, name: 'Nodo 2' },
+                { id: 3, name: 'Nodo 3' },
+                { id: 4, name: 'Nodo 4' }
+            ],
+            links: [
+                { source: 1, target: 2 },
+                { source: 2, target: 3 },
+                { source: 3, target: 4 },
+                { source: 4, target: 1 }
+            ]
+        };
+
+        console.log('Datos de prueba:', testData);
+
+        // Renderizar grafo simple
+        const width = 800;
+        const height = 600;
+
+        const svg = d3.select('#test-svg');
+        const g = svg.append('g');
+
+        console.log('SVG seleccionado:', svg.node());
+
+        // Crear simulación
+        const simulation = d3.forceSimulation(testData.nodes)
+            .force('link', d3.forceLink(testData.links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width / 2, height / 2));
+
+        console.log('Simulación creada');
+
+        // Crear enlaces
+        const link = g.append('g')
+            .selectAll('line')
+            .data(testData.links)
+            .enter().append('line')
+            .attr('class', 'link');
+
+        console.log('Enlaces creados:', link.size());
+
+        // Crear nodos
+        const node = g.append('g')
+            .selectAll('g')
+            .data(testData.nodes)
+            .enter().append('g')
+            .attr('class', 'node');
+
+        node.append('circle')
+            .attr('r', 20);
+
+        node.append('text')
+            .attr('dy', 35)
+            .attr('text-anchor', 'middle')
+            .text(d => d.name);
+
+        console.log('Nodos creados:', node.size());
+
+        // Actualizar posiciones
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+
+        console.log('✅ Grafo de prueba renderizado');
+
+        // Ahora probar con datos reales del servidor
+        fetch('/activos/api/graph-data')
+            .then(response => {
+                console.log('Respuesta del servidor:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos del servidor:', data);
+                document.getElementById('data-status').textContent =
+                    `✅ ${data.nodes.length} nodos, ${data.links.length} enlaces`;
+                document.getElementById('data-status').style.color = 'green';
+            })
+            .catch(error => {
+                console.error('Error obteniendo datos:', error);
+                document.getElementById('data-status').textContent = '❌ Error: ' + error.message;
+                document.getElementById('data-status').style.color = 'red';
+            });
+    </script>
+</body>
+</html>

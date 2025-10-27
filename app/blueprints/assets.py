@@ -670,3 +670,154 @@ def export():
     output.headers["Content-type"] = "text/csv; charset=utf-8"
 
     return output
+
+
+@assets_bp.route('/graph/test')
+@login_required
+def graph_test():
+    """Página de prueba de D3.js"""
+    return render_template('assets/graph_test.html')
+
+
+@assets_bp.route('/graph')
+@login_required
+def graph():
+    """Vista del grafo de relaciones entre activos"""
+    # Obtener estadísticas para el panel
+    total_assets = Asset.query.filter_by(status=AssetStatus.ACTIVE).count()
+    total_relationships = AssetRelationship.query.count()
+
+    # Obtener categorías y tipos de relación para filtros
+    categories = [cat.value for cat in AssetCategory]
+    relationship_types = [rt.value for rt in RelationshipType]
+
+    return render_template('assets/graph.html',
+                          total_assets=total_assets,
+                          total_relationships=total_relationships,
+                          categories=categories,
+                          relationship_types=relationship_types)
+
+
+@assets_bp.route('/api/graph-data')
+@login_required
+def graph_data():
+    """
+    API endpoint que devuelve datos del grafo en formato JSON para D3.js
+
+    Parámetros de consulta:
+    - category: Filtrar por categoría de activo
+    - min_criticality: Criticidad mínima (1-10)
+    - include_inactive: Incluir activos inactivos (true/false)
+    - relationship_type: Filtrar por tipo de relación
+    """
+    # Obtener parámetros de filtrado
+    category_filter = request.args.get('category', '')
+    min_criticality = request.args.get('min_criticality', 0, type=int)
+    include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+    relationship_filter = request.args.get('relationship_type', '')
+
+    print(f"🔍 Graph API llamado con filtros: category={category_filter}, criticality={min_criticality}, inactive={include_inactive}")
+
+    # Query base para activos
+    assets_query = Asset.query
+
+    # Filtrar por estado
+    if not include_inactive:
+        assets_query = assets_query.filter_by(status=AssetStatus.ACTIVE)
+        print(f"  → Filtrando solo activos ACTIVE")
+
+    # Filtrar por categoría
+    if category_filter:
+        try:
+            assets_query = assets_query.filter_by(category=AssetCategory[category_filter])
+        except KeyError:
+            pass
+
+    # Filtrar por criticidad mínima
+    if min_criticality > 0:
+        assets_query = assets_query.filter(Asset.criticality >= min_criticality)
+
+    assets = assets_query.all()
+    asset_ids = {asset.id for asset in assets}
+
+    print(f"  → Encontrados {len(assets)} activos")
+
+    # Construir nodos
+    nodes = []
+    for asset in assets:
+        nodes.append({
+            'id': asset.id,
+            'code': asset.asset_code,
+            'name': asset.name,
+            'category': asset.category.value if asset.category else 'Unknown',
+            'classification': asset.classification.value if asset.classification else 'Internal',
+            'criticality': asset.criticality or 5,
+            'business_value': asset.business_value or 5,
+            'status': asset.status.value if asset.status else 'Active',
+            'owner': asset.owner.name if asset.owner else 'Sin asignar',
+            'department': asset.department or '',
+            'location': asset.physical_location or '',
+            # Información CIA
+            'confidentiality': asset.confidentiality_level.value if asset.confidentiality_level else 'Medio',
+            'integrity': asset.integrity_level.value if asset.integrity_level else 'Medio',
+            'availability': asset.availability_level.value if asset.availability_level else 'Medio'
+        })
+
+    # Query para relaciones
+    relationships_query = AssetRelationship.query.filter(
+        AssetRelationship.source_asset_id.in_(asset_ids),
+        AssetRelationship.target_asset_id.in_(asset_ids)
+    )
+
+    # Filtrar por tipo de relación
+    if relationship_filter:
+        try:
+            relationships_query = relationships_query.filter_by(
+                relationship_type=RelationshipType[relationship_filter]
+            )
+        except KeyError:
+            pass
+
+    relationships = relationships_query.all()
+
+    print(f"  → Encontradas {len(relationships)} relaciones")
+
+    # Construir enlaces (links)
+    links = []
+    for rel in relationships:
+        links.append({
+            'source': rel.source_asset_id,
+            'target': rel.target_asset_id,
+            'type': rel.relationship_type.value if rel.relationship_type else 'USES',
+            'criticality': rel.criticality or 5,
+            'description': rel.description or ''
+        })
+
+    # Calcular estadísticas del grafo
+    stats = {
+        'total_nodes': len(nodes),
+        'total_links': len(links),
+        'avg_criticality': sum(n['criticality'] for n in nodes) / len(nodes) if nodes else 0,
+        'categories': {},
+        'orphan_nodes': 0  # Nodos sin relaciones
+    }
+
+    # Contar nodos por categoría
+    for node in nodes:
+        cat = node['category']
+        stats['categories'][cat] = stats['categories'].get(cat, 0) + 1
+
+    # Identificar nodos huérfanos
+    connected_nodes = set()
+    for link in links:
+        connected_nodes.add(link['source'])
+        connected_nodes.add(link['target'])
+    stats['orphan_nodes'] = len(nodes) - len(connected_nodes)
+
+    print(f"  → Devolviendo JSON con {len(nodes)} nodos y {len(links)} enlaces")
+
+    return jsonify({
+        'nodes': nodes,
+        'links': links,
+        'stats': stats
+    })
