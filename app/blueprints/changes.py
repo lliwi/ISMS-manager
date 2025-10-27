@@ -157,6 +157,60 @@ def new():
             # Crear el cambio
             change = ChangeService.create_change(data, current_user.id)
 
+            # Procesar archivos subidos
+            uploaded_files = request.files.getlist('documents')
+            if uploaded_files:
+                upload_success_count = 0
+                upload_error_count = 0
+
+                # Crear directorio si no existe
+                change_upload_dir = os.path.join(UPLOAD_FOLDER, str(change.id))
+                os.makedirs(change_upload_dir, exist_ok=True)
+
+                for file in uploaded_files:
+                    if file and file.filename and allowed_file(file.filename):
+                        try:
+                            # Validar tamaño
+                            file.seek(0, os.SEEK_END)
+                            file_size = file.tell()
+                            file.seek(0)
+
+                            if file_size > MAX_FILE_SIZE:
+                                flash(f'Archivo {file.filename} excede el tamaño máximo de 50MB', 'warning')
+                                upload_error_count += 1
+                                continue
+
+                            # Guardar archivo
+                            filename = secure_filename(file.filename)
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            unique_filename = f"{timestamp}_{filename}"
+                            file_path = os.path.join(change_upload_dir, unique_filename)
+                            file.save(file_path)
+
+                            # Crear registro en BD
+                            doc = ChangeDocument(
+                                change_id=change.id,
+                                document_type=DocumentType.TECHNICAL,
+                                file_name=filename,
+                                file_path=file_path,
+                                file_size=file_size,
+                                mime_type=file.content_type,
+                                uploaded_by_id=current_user.id
+                            )
+                            db.session.add(doc)
+                            upload_success_count += 1
+
+                        except Exception as e:
+                            print(f"Error subiendo archivo {file.filename}: {e}")
+                            upload_error_count += 1
+
+                db.session.commit()
+
+                if upload_success_count > 0:
+                    flash(f'{upload_success_count} documento(s) subido(s) correctamente', 'success')
+                if upload_error_count > 0:
+                    flash(f'{upload_error_count} documento(s) no pudo(ieron) ser subido(s)', 'warning')
+
             flash(f'Cambio {change.change_code} creado exitosamente', 'success')
             return redirect(url_for('changes.detail', change_id=change.id))
 
@@ -457,15 +511,34 @@ def cancel(change_id):
 @changes_bp.route('/<int:change_id>/delete', methods=['POST'])
 @login_required
 def delete(change_id):
-    """Eliminar un cambio (solo administradores)"""
+    """Eliminar un cambio (solo administradores y CISO)"""
     try:
-        # Verificar que el usuario sea administrador
-        if current_user.role.name != 'admin':
+        # Verificar que el usuario sea administrador o CISO
+        allowed_roles = ['admin', 'Administrador del Sistema', 'Administrador', 'CISO', 'Responsable de Seguridad (CISO)']
+        if current_user.role.name not in allowed_roles:
             flash('No tiene permisos para eliminar cambios', 'error')
             return redirect(url_for('changes.index'))
 
         change = Change.query.get_or_404(change_id)
         change_code = change.change_code
+
+        # Eliminar archivos asociados si existen
+        if change.documents:
+            for doc in change.documents:
+                try:
+                    if os.path.exists(doc.file_path):
+                        os.remove(doc.file_path)
+                except Exception as file_error:
+                    print(f"Error eliminando archivo {doc.file_path}: {file_error}")
+
+        # Eliminar directorio de uploads del cambio si existe
+        change_upload_dir = os.path.join(UPLOAD_FOLDER, str(change.id))
+        if os.path.exists(change_upload_dir):
+            try:
+                import shutil
+                shutil.rmtree(change_upload_dir)
+            except Exception as dir_error:
+                print(f"Error eliminando directorio {change_upload_dir}: {dir_error}")
 
         # Eliminar todas las relaciones asociadas
         # Las relaciones con cascade='all, delete-orphan' se eliminarán automáticamente
@@ -646,3 +719,28 @@ def api_history(change_id):
         'changed_at': h.changed_at.isoformat(),
         'comments': h.comments
     } for h in history])
+
+
+@changes_bp.route('/<int:change_id>/documents/<int:document_id>/download')
+@login_required
+def download_document(change_id, document_id):
+    """Descargar un documento del cambio"""
+    from flask import send_file
+
+    change = Change.query.get_or_404(change_id)
+    document = ChangeDocument.query.filter_by(
+        id=document_id,
+        change_id=change_id
+    ).first_or_404()
+
+    # Verificar que el archivo existe
+    if not os.path.exists(document.file_path):
+        flash('El archivo no existe', 'error')
+        return redirect(url_for('changes.detail', change_id=change_id))
+
+    return send_file(
+        document.file_path,
+        as_attachment=True,
+        download_name=document.file_name,
+        mimetype=document.mime_type
+    )

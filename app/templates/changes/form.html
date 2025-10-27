@@ -25,7 +25,7 @@
     </div>
 
     <!-- Form -->
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="row">
             <!-- Left Column: Main Information -->
@@ -276,6 +276,53 @@
             </div>
         </div>
 
+        <!-- Documentos Adjuntos -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-paperclip me-2"></i>Documentos Adjuntos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="documents" class="form-label">Subir Documentos</label>
+                            <input type="file" class="form-control" id="documents" name="documents" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png">
+                            <small class="form-text text-muted">
+                                Puede seleccionar múltiples archivos. Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, TXT, JPG, PNG (máx. 10MB por archivo)
+                            </small>
+                        </div>
+
+                        <div id="file-list" class="mt-3"></div>
+
+                        {% if change and change.documents %}
+                        <hr>
+                        <h6 class="mb-3">Documentos Existentes</h6>
+                        <div class="list-group">
+                            {% for doc in change.documents %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    <strong>{{ doc.file_name }}</strong>
+                                    {% if doc.description %}
+                                    <br><small class="text-muted">{{ doc.description }}</small>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <span class="badge bg-info">{{ doc.document_type.value }}</span>
+                                    <span class="badge bg-secondary">{{ (doc.file_size / 1024)|round(1) }} KB</span>
+                                    <a href="{{ url_for('changes.download_document', change_id=change.id, document_id=doc.id) }}" class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="row mt-4 mb-4">
             <div class="col-md-12">
@@ -313,6 +360,52 @@
         const downtimeCheckbox = document.getElementById('downtime_required');
         if (!downtimeCheckbox.checked) {
             document.getElementById('estimated_downtime_minutes').setAttribute('disabled', 'disabled');
+        }
+    });
+
+    // File upload preview
+    document.getElementById('documents').addEventListener('change', function(e) {
+        const fileList = document.getElementById('file-list');
+        fileList.innerHTML = '';
+
+        if (this.files.length > 0) {
+            const listGroup = document.createElement('div');
+            listGroup.className = 'list-group';
+
+            Array.from(this.files).forEach((file, index) => {
+                const fileSize = (file.size / 1024).toFixed(1);
+                const fileItem = document.createElement('div');
+                fileItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                // Determinar icono según extensión
+                let icon = 'fa-file';
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (['pdf'].includes(ext)) icon = 'fa-file-pdf';
+                else if (['doc', 'docx'].includes(ext)) icon = 'fa-file-word';
+                else if (['xls', 'xlsx'].includes(ext)) icon = 'fa-file-excel';
+                else if (['jpg', 'jpeg', 'png'].includes(ext)) icon = 'fa-file-image';
+                else if (['txt'].includes(ext)) icon = 'fa-file-alt';
+
+                fileItem.innerHTML = `
+                    <div>
+                        <i class="fas ${icon} me-2"></i>
+                        <strong>${file.name}</strong>
+                    </div>
+                    <span class="badge bg-secondary">${fileSize} KB</span>
+                `;
+                listGroup.appendChild(fileItem);
+            });
+
+            fileList.appendChild(listGroup);
+
+            // Mostrar alert si hay archivos muy grandes
+            const largeFiles = Array.from(this.files).filter(f => f.size > 10 * 1024 * 1024);
+            if (largeFiles.length > 0) {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-warning mt-2';
+                alert.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Algunos archivos superan el límite de 10MB: ${largeFiles.map(f => f.name).join(', ')}`;
+                fileList.appendChild(alert);
+            }
         }
     });
 </script>
