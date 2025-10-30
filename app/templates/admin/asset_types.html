@@ -64,7 +64,11 @@
                         </td>
                         <td>
                             <small class="text-muted">
-                                {{ asset_type.description[:100] }}{% if asset_type.description|length > 100 %}...{% endif %}
+                                {% if asset_type.description %}
+                                    {{ asset_type.description[:100] }}{% if asset_type.description|length > 100 %}...{% endif %}
+                                {% else %}
+                                    <em>Sin descripción</em>
+                                {% endif %}
                             </small>
                         </td>
                         <td class="text-center">
