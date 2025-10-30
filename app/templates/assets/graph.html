@@ -140,25 +140,25 @@
         font-size: 12px;
     }
 
-    /* Panel de estadísticas */
-    .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 8px;
+    /* Panel de estadísticas - estilo consistente con dashboard */
+    .stats-card .card-body {
+        padding: 12px;
     }
 
-    .stats-card h5 {
-        font-size: 24px;
-        margin: 0;
-        font-weight: bold;
-    }
-
-    .stats-card p {
-        margin: 0;
+    .stats-card h6 {
         font-size: 11px;
-        opacity: 0.9;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .stats-card h3 {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 0;
+    }
+
+    .stats-card i {
+        opacity: 0.75;
     }
 
     /* Leyenda */
@@ -227,13 +227,36 @@
         <!-- Panel lateral de controles -->
         <div class="col-lg-2 col-md-3 sidebar-col">
             <!-- Estadísticas -->
-            <div class="stats-card mb-3">
-                <h5 id="total-nodes">{{ total_assets }}</h5>
-                <p>Activos en el grafo</p>
+            <div class="stats-card mb-2">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title small mb-1">Activos en el grafo</h6>
+                                <h3 id="total-nodes">{{ total_assets }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-boxes fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="stats-card mb-3" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                <h5 id="total-links">{{ total_relationships }}</h5>
-                <p>Relaciones totales</p>
+
+            <div class="stats-card mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title small mb-1">Relaciones totales</h6>
+                                <h3 id="total-links">{{ total_relationships }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-project-diagram fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Panel de controles -->
