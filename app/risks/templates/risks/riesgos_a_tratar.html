@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Riesgos a Tratar - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0"><i class="fas fa-tasks me-2"></i>Riesgos a Tratar</h1>
+                <p class="text-muted">Riesgos que superan el umbral objetivo (>{{ "%.2f"|format(umbral) }}) en {{ evaluacion.nombre }}</p>
+            </div>
+            <div>
+                <a href="{{ url_for('risks.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">Total Riesgos Altos/Muy Altos</h6>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">Sin Tratamiento</h6>
+                        <h3 class="mb-0">{{ stats.sin_tratamiento }}</h3>
+                        <small class="d-block">Requieren acción urgente</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">En Planificación/Progreso</h6>
+                        <h3 class="mb-0">{{ stats.planificado + stats.en_progreso }}</h3>
+                        <small class="d-block">{{ stats.planificado }} plan. / {{ stats.en_progreso }} en progreso</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-spinner fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small">Tratamiento Implementado</h6>
+                        <h3 class="mb-0">{{ stats.implementado }}</h3>
+                        <small class="d-block">Completados</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs para organizar riesgos por estado -->
+<ul class="nav nav-tabs mb-3" id="riesgosTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="sin-tratamiento-tab" data-bs-toggle="tab" data-bs-target="#sin-tratamiento" type="button" role="tab">
+            <i class="fas fa-exclamation-circle text-warning"></i> Sin Tratamiento ({{ stats.sin_tratamiento }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="planificado-tab" data-bs-toggle="tab" data-bs-target="#planificado" type="button" role="tab">
+            <i class="fas fa-calendar-alt text-info"></i> Planificado ({{ stats.planificado }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="en-progreso-tab" data-bs-toggle="tab" data-bs-target="#en-progreso" type="button" role="tab">
+            <i class="fas fa-spinner text-primary"></i> En Progreso ({{ stats.en_progreso }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="implementado-tab" data-bs-toggle="tab" data-bs-target="#implementado" type="button" role="tab">
+            <i class="fas fa-check-circle text-success"></i> Implementado ({{ stats.implementado }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="riesgosTabsContent">
+    <!-- Sin Tratamiento -->
+    <div class="tab-pane fade show active" id="sin-tratamiento" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Riesgos sin Tratamiento Asignado</h5>
+            </div>
+            <div class="card-body">
+                {% if sin_tratamiento %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Activo</th>
+                                <th>Amenaza</th>
+                                <th>Dimensión</th>
+                                <th>Nivel Riesgo</th>
+                                <th>Clasificación</th>
+                                <th>Propietario</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in sin_tratamiento %}
+                            {% set r = item.riesgo %}
+                            <tr>
+                                <td><code>{{ r.codigo }}</code></td>
+                                <td>
+                                    {% if r.activo %}
+                                    <strong>{{ r.activo.nombre }}</strong><br>
+                                    <small class="text-muted">{{ r.activo.codigo }}</small>
+                                    {% elif r.recurso %}
+                                    <strong>{{ r.recurso.nombre }}</strong><br>
+                                    <small class="text-muted">{{ r.recurso.codigo }}</small>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.amenaza %}
+                                    <small>{{ r.amenaza.nombre[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ r.dimension }}</span>
+                                </td>
+                                <td><strong>{{ "%.2f"|format(r.nivel_riesgo_efectivo) }}</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if r.clasificacion_efectiva == 'MUY_ALTO' else 'warning' }}">
+                                        {{ r.clasificacion_efectiva }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if r.propietario_riesgo %}
+                                    {{ r.propietario_riesgo.username }}
+                                    {% else %}
+                                    <span class="text-muted">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('risks.riesgos_view', id=r.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <p class="text-muted">No hay riesgos sin tratamiento asignado</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Planificado -->
+    <div class="tab-pane fade" id="planificado" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Tratamientos Planificados</h5>
+            </div>
+            <div class="card-body">
+                {% if tratamiento_planificado %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Activo</th>
+                                <th>Amenaza</th>
+                                <th>Nivel Riesgo</th>
+                                <th>Tratamiento</th>
+                                <th>Responsable</th>
+                                <th>Fecha Planificada</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in tratamiento_planificado %}
+                            {% set r = item.riesgo %}
+                            {% set t = item.tratamiento %}
+                            <tr>
+                                <td><code>{{ r.codigo }}</code></td>
+                                <td>
+                                    {% if r.activo %}
+                                    <strong>{{ r.activo.nombre }}</strong>
+                                    {% elif r.recurso %}
+                                    <strong>{{ r.recurso.nombre }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.amenaza %}
+                                    <small>{{ r.amenaza.nombre[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ "%.2f"|format(r.nivel_riesgo_efectivo) }}</strong></td>
+                                <td>
+                                    <span class="badge bg-primary">{{ t.opcion_tratamiento }}</span>
+                                </td>
+                                <td>
+                                    {% if t.responsable_implementacion %}
+                                    {{ t.responsable_implementacion.username }}
+                                    {% else %}
+                                    <span class="text-muted">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.fecha_fin_planificada %}
+                                    {{ t.fecha_fin_planificada.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                    <span class="text-muted">No definida</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('risks.riesgos_view', id=r.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay tratamientos planificados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- En Progreso -->
+    <div class="tab-pane fade" id="en-progreso" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-spinner"></i> Tratamientos en Progreso</h5>
+            </div>
+            <div class="card-body">
+                {% if tratamiento_en_progreso %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Activo</th>
+                                <th>Amenaza</th>
+                                <th>Nivel Riesgo</th>
+                                <th>Tratamiento</th>
+                                <th>Progreso</th>
+                                <th>Responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in tratamiento_en_progreso %}
+                            {% set r = item.riesgo %}
+                            {% set t = item.tratamiento %}
+                            <tr>
+                                <td><code>{{ r.codigo }}</code></td>
+                                <td>
+                                    {% if r.activo %}
+                                    <strong>{{ r.activo.nombre }}</strong>
+                                    {% elif r.recurso %}
+                                    <strong>{{ r.recurso.nombre }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.amenaza %}
+                                    <small>{{ r.amenaza.nombre[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ "%.2f"|format(r.nivel_riesgo_efectivo) }}</strong></td>
+                                <td>
+                                    <span class="badge bg-primary">{{ t.opcion_tratamiento }}</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ t.progreso }}%;"
+                                             aria-valuenow="{{ t.progreso }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ t.progreso }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if t.responsable_implementacion %}
+                                    {{ t.responsable_implementacion.username }}
+                                    {% else %}
+                                    <span class="text-muted">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('risks.riesgos_view', id=r.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay tratamientos en progreso</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Implementado -->
+    <div class="tab-pane fade" id="implementado" role="tabpanel">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Tratamientos Implementados</h5>
+            </div>
+            <div class="card-body">
+                {% if tratamiento_implementado %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Activo</th>
+                                <th>Amenaza</th>
+                                <th>Nivel Riesgo</th>
+                                <th>Tratamiento</th>
+                                <th>Estado</th>
+                                <th>Fecha Implementación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in tratamiento_implementado %}
+                            {% set r = item.riesgo %}
+                            {% set t = item.tratamiento %}
+                            <tr>
+                                <td><code>{{ r.codigo }}</code></td>
+                                <td>
+                                    {% if r.activo %}
+                                    <strong>{{ r.activo.nombre }}</strong>
+                                    {% elif r.recurso %}
+                                    <strong>{{ r.recurso.nombre }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.amenaza %}
+                                    <small>{{ r.amenaza.nombre[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ "%.2f"|format(r.nivel_riesgo_efectivo) }}</strong></td>
+                                <td>
+                                    <span class="badge bg-success">{{ t.opcion_tratamiento }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if t.estado == 'verificado' else 'primary' }}">
+                                        {{ t.estado.upper() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if t.updated_at %}
+                                    {{ t.updated_at.strftime('%d/%m/%Y') }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('risks.riesgos_view', id=r.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay tratamientos implementados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

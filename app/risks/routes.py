@@ -825,3 +825,86 @@ def catalogo_amenazas():
     )
 
 
+# ==================== RIESGOS A TRATAR ====================
+
+@bp.route('/riesgos-a-tratar')
+@login_required
+def riesgos_a_tratar():
+    """Vista de riesgos que requieren tratamiento según el umbral objetivo"""
+
+    # Obtener la evaluación activa
+    evaluacion_activa = EvaluacionRiesgo.query.filter(
+        EvaluacionRiesgo.estado.in_(['en_curso', 'completada', 'aprobada'])
+    ).order_by(EvaluacionRiesgo.created_at.desc()).first()
+
+    if not evaluacion_activa:
+        flash('No hay evaluaciones de riesgo activas', 'warning')
+        return redirect(url_for('risks.dashboard'))
+
+    # Obtener umbral de riesgo objetivo
+    umbral = float(evaluacion_activa.umbral_riesgo_objetivo or 50.0)
+
+    # Obtener todos los riesgos de la evaluación activa que superen el umbral
+    riesgos_query = Riesgo.query.filter(
+        Riesgo.evaluacion_id == evaluacion_activa.id,
+        Riesgo.nivel_riesgo_efectivo > umbral
+    ).order_by(Riesgo.nivel_riesgo_efectivo.desc())
+
+    riesgos_all = riesgos_query.all()
+
+    # Clasificar riesgos según su estado de tratamiento
+    sin_tratamiento = []
+    tratamiento_planificado = []
+    tratamiento_en_progreso = []
+    tratamiento_implementado = []
+
+    for riesgo in riesgos_all:
+        # Obtener el tratamiento más reciente del riesgo
+        tratamiento = TratamientoRiesgo.query.filter_by(
+            riesgo_id=riesgo.id
+        ).order_by(TratamientoRiesgo.created_at.desc()).first()
+
+        if not tratamiento:
+            sin_tratamiento.append({
+                'riesgo': riesgo,
+                'tratamiento': None
+            })
+        elif tratamiento.estado == 'planificado':
+            tratamiento_planificado.append({
+                'riesgo': riesgo,
+                'tratamiento': tratamiento
+            })
+        elif tratamiento.estado == 'en_progreso':
+            tratamiento_en_progreso.append({
+                'riesgo': riesgo,
+                'tratamiento': tratamiento
+            })
+        else:  # implementado, verificado
+            tratamiento_implementado.append({
+                'riesgo': riesgo,
+                'tratamiento': tratamiento
+            })
+
+    # Estadísticas
+    stats = {
+        'total': len(riesgos_all),
+        'sin_tratamiento': len(sin_tratamiento),
+        'planificado': len(tratamiento_planificado),
+        'en_progreso': len(tratamiento_en_progreso),
+        'implementado': len(tratamiento_implementado),
+        'riesgo_total_efectivo': sum(float(r.nivel_riesgo_efectivo or 0) for r in riesgos_all),
+        'umbral': umbral
+    }
+
+    return render_template(
+        'risks/riesgos_a_tratar.html',
+        sin_tratamiento=sin_tratamiento,
+        tratamiento_planificado=tratamiento_planificado,
+        tratamiento_en_progreso=tratamiento_en_progreso,
+        tratamiento_implementado=tratamiento_implementado,
+        stats=stats,
+        evaluacion=evaluacion_activa,
+        umbral=umbral
+    )
+
+
