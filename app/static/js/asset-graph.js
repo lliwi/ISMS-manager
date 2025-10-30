@@ -149,14 +149,70 @@ function renderGraph(data) {
             .on('click', showNodeInfo)
             .on('dblclick', goToAsset);
 
-        // Círculos de nodos
-        console.log('✓ Añadiendo círculos a nodos...');
+        // Fondo circular para los iconos
+        console.log('✓ Añadiendo círculos de fondo...');
         nodeGroup.append('circle')
             .attr('r', d => getNodeRadius(d))
-            .attr('fill', d => categoryColors[d.category] || '#95a5a6')
+            .attr('fill', d => {
+                // Mapeo de colores de Bootstrap a códigos hex
+                const bootstrapColors = {
+                    'primary': '#0d6efd',
+                    'secondary': '#6c757d',
+                    'success': '#198754',
+                    'danger': '#dc3545',
+                    'warning': '#ffc107',
+                    'info': '#0dcaf0',
+                    'light': '#f8f9fa',
+                    'dark': '#212529'
+                };
+                return bootstrapColors[d.color] || categoryColors[d.category] || '#95a5a6';
+            })
             .attr('opacity', d => d.status === 'Activo' ? 0.9 : 0.5)
             .append('title')
             .text(d => d.name);
+
+        // Iconos FontAwesome usando texto SVG con fuente FontAwesome
+        console.log('✓ Añadiendo iconos a nodos...');
+        nodeGroup.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'central')
+            .attr('class', d => `fas ${d.icon}`)
+            .attr('font-size', d => getNodeRadius(d) * 1.2 + 'px')
+            .attr('fill', 'white')
+            .attr('pointer-events', 'none')
+            .style('font-family', '"Font Awesome 6 Free"')
+            .style('font-weight', '900')
+            .text(d => {
+                // Mapeo de iconos FontAwesome a sus códigos Unicode
+                const iconMap = {
+                    'fa-server': '\uf233',
+                    'fa-desktop': '\uf108',
+                    'fa-laptop': '\uf109',
+                    'fa-mobile-alt': '\uf3cd',
+                    'fa-print': '\uf02f',
+                    'fa-scanner': '\uf8f3',
+                    'fa-network-wired': '\uf6ff',
+                    'fa-hdd': '\uf0a0',
+                    'fa-window-maximize': '\uf2d0',
+                    'fa-briefcase': '\uf0b1',
+                    'fa-database': '\uf1c0',
+                    'fa-file-word': '\uf1c2',
+                    'fa-shield-alt': '\uf3ed',
+                    'fa-save': '\uf0c7',
+                    'fa-cloud': '\uf0c2',
+                    'fa-envelope': '\uf0e0',
+                    'fa-globe': '\uf0ac',
+                    'fa-wifi': '\uf1eb',
+                    'fa-users': '\uf0c0',
+                    'fa-user-tie': '\uf508',
+                    'fa-user-shield': '\uf505',
+                    'fa-building': '\uf1ad',
+                    'fa-warehouse': '\uf494',
+                    'fa-broadcast-tower': '\uf519',
+                    'fa-cube': '\uf1b2'
+                };
+                return iconMap[d.icon] || iconMap['fa-cube'];
+            });
 
         // Etiquetas de nodos
         console.log('✓ Añadiendo etiquetas a nodos...');

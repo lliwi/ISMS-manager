@@ -745,6 +745,13 @@ def graph_data():
     # Construir nodos
     nodes = []
     for asset in assets:
+        # Obtener icono y color del tipo de activo
+        icon = 'fa-cube'  # Icono por defecto
+        color = 'secondary'  # Color por defecto
+        if asset.asset_type:
+            icon = asset.asset_type.icon if asset.asset_type.icon else 'fa-cube'
+            color = asset.asset_type.color if asset.asset_type.color else 'secondary'
+
         nodes.append({
             'id': asset.id,
             'code': asset.asset_code,
@@ -760,7 +767,10 @@ def graph_data():
             # Información CIA
             'confidentiality': asset.confidentiality_level.value if asset.confidentiality_level else 'Medio',
             'integrity': asset.integrity_level.value if asset.integrity_level else 'Medio',
-            'availability': asset.availability_level.value if asset.availability_level else 'Medio'
+            'availability': asset.availability_level.value if asset.availability_level else 'Medio',
+            # Icono y color del tipo de activo
+            'icon': icon,
+            'color': color
         })
 
     # Query para relaciones
