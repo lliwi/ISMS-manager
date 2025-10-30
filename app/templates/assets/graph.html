@@ -7,15 +7,13 @@
     /* Página de grafo ocupa toda la pantalla */
     .graph-page {
         position: fixed;
-        top: 0;
+        top: 56px; /* Altura del navbar */
         left: 0;
         right: 0;
         bottom: 0;
-        padding-top: 60px; /* Espacio para el navbar */
-        padding-left: 10px;
-        padding-right: 10px;
-        padding-bottom: 10px;
+        padding: 10px;
         overflow: hidden;
+        z-index: 1; /* Debajo del navbar */
     }
 
     /* Row que ocupa toda la altura disponible */
@@ -381,8 +379,9 @@
 
             <!-- Panel de información del nodo seleccionado -->
             <div class="card mt-3 d-none" id="node-info-panel">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="fas fa-info-circle"></i> Información del Activo</h6>
+                    <button type="button" class="btn-close btn-close-white" id="close-node-info" title="Cerrar"></button>
                 </div>
                 <div class="card-body" id="node-info-content">
                     <!-- Se llenará dinámicamente con JavaScript -->
@@ -434,6 +433,11 @@
         // Actualizar valor del slider de criticidad
         document.getElementById('criticality-filter').addEventListener('input', function() {
             document.getElementById('criticality-value').textContent = this.value;
+        });
+
+        // Event listener para cerrar el panel de información del nodo
+        document.getElementById('close-node-info').addEventListener('click', function() {
+            document.getElementById('node-info-panel').classList.add('d-none');
         });
     });
 
