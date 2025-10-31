@@ -283,6 +283,22 @@
                 </div>
             </div>
 
+            <!-- Risks -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Riesgos</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Ver análisis de riesgos asociados a este servicio</strong>
+                    </p>
+                    <a href="{{ url_for('risks.service_risks_detail', service_id=service.id) }}"
+                       class="btn btn-outline-danger w-100">
+                        <i class="fas fa-eye me-2"></i>Ver Riesgos del Servicio
+                    </a>
+                </div>
+            </div>
+
             <!-- Metadata -->
             <div class="card">
                 <div class="card-header">

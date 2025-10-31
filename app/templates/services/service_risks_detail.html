@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Riesgos de {{ service.name }} - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Riesgos del Servicio
+                </h1>
+                <p class="text-muted mb-1">
+                    <strong>{{ service.name }}</strong>
+                    <code class="ms-2">{{ service.service_code }}</code>
+                </p>
+                <span class="badge bg-info">{{ service.service_type.value if service.service_type else 'N/A' }}</span>
+            </div>
+            <div>
+                <a href="{{ url_for('services.risks_by_service') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Lista
+                </a>
+                <a href="{{ url_for('services.detail', service_id=service.id) }}" class="btn btn-outline-primary">
+                    <i class="fas fa-info-circle me-2"></i>Detalle del Servicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas del servicio -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Total Riesgos</h6>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Alto/Muy Alto</h6>
+                        <h3 class="mb-0">{{ stats.altos_muy_altos|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Medio</h6>
+                        <h3 class="mb-0">{{ stats.medios|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-minus-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Bajo/Muy Bajo</h6>
+                        <h3 class="mb-0">{{ stats.bajos|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs para organizar riesgos por nivel -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Riesgos por Nivel</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="a-tratar-tab" data-bs-toggle="tab"
+                                data-bs-target="#a-tratar" type="button" role="tab">
+                            <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                            A Tratar ({{ stats.a_tratar|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="sin-tratamiento-tab" data-bs-toggle="tab"
+                                data-bs-target="#sin-tratamiento" type="button" role="tab">
+                            <i class="fas fa-exclamation-circle text-warning me-1"></i>
+                            Sin Tratamiento ({{ stats.sin_tratamiento|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="altos-tab" data-bs-toggle="tab"
+                                data-bs-target="#altos" type="button" role="tab">
+                            <i class="fas fa-arrow-up text-danger me-1"></i>
+                            Alto/Muy Alto ({{ stats.altos_muy_altos|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="medios-tab" data-bs-toggle="tab"
+                                data-bs-target="#medios" type="button" role="tab">
+                            <i class="fas fa-minus text-warning me-1"></i>
+                            Medio ({{ stats.medios|length }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="bajos-tab" data-bs-toggle="tab"
+                                data-bs-target="#bajos" type="button" role="tab">
+                            <i class="fas fa-arrow-down text-success me-1"></i>
+                            Bajo/Muy Bajo ({{ stats.bajos|length }})
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Tab: A Tratar -->
+                    <div class="tab-pane fade show active" id="a-tratar" role="tabpanel">
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Umbral de Riesgo Objetivo:</strong> {{ stats.umbral }}
+                            <br>
+                            <small>Riesgos con nivel efectivo superior a {{ stats.umbral }} requieren tratamiento</small>
+                        </div>
+                        {% if stats.a_tratar %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Activo</th>
+                                        <th>Amenaza</th>
+                                        <th>Nivel Efectivo</th>
+                                        <th>Diferencia</th>
+                                        <th>Clasificación</th>
+                                        <th>Tratamiento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for riesgo in stats.a_tratar %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ riesgo.activo.nombre if riesgo.activo else 'N/A' }}</strong><br>
+                                            <small class="text-muted">{{ riesgo.activo.codigo if riesgo.activo else '' }}</small>
+                                        </td>
+                                        <td>{{ riesgo.amenaza.nombre if riesgo.amenaza else 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge bg-danger">{{ riesgo.nivel_riesgo_efectivo }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">+{{ "%.2f"|format(riesgo.nivel_riesgo_efectivo|float - stats.umbral) }}</span>
+                                        </td>
+                                        <td>
+                                            {% if riesgo.clasificacion_magerit %}
+                                                {% if riesgo.clasificacion_magerit in ['MUY_ALTO', 'ALTO'] %}
+                                                    <span class="badge bg-danger">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% elif riesgo.clasificacion_magerit == 'MEDIO' %}
+                                                    <span class="badge bg-warning">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if riesgo.tratamientos %}
+                                                {% set tratamiento = riesgo.tratamientos|first %}
+                                                <span class="badge bg-info">{{ tratamiento.estado }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">sin_tratamiento</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Ver detalle del riesgo">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                            <p>No hay riesgos que superen el umbral objetivo de {{ stats.umbral }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tab: Sin Tratamiento -->
+                    <div class="tab-pane fade" id="sin-tratamiento" role="tabpanel">
+                        {% if stats.sin_tratamiento %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Activo</th>
+                                        <th>Amenaza</th>
+                                        <th>Nivel Efectivo</th>
+                                        <th>Clasificación</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for riesgo in stats.sin_tratamiento %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ riesgo.activo.nombre if riesgo.activo else 'N/A' }}</strong><br>
+                                            <small class="text-muted">{{ riesgo.activo.codigo if riesgo.activo else '' }}</small>
+                                        </td>
+                                        <td>{{ riesgo.amenaza.nombre if riesgo.amenaza else 'N/A' }}</td>
+                                        <td>
+                                            {% set nivel = riesgo.nivel_riesgo_efectivo %}
+                                            {% if nivel >= 75 %}
+                                                <span class="badge bg-danger">{{ nivel }}</span>
+                                            {% elif nivel >= 50 %}
+                                                <span class="badge bg-warning">{{ nivel }}</span>
+                                            {% else %}
+                                                <span class="badge bg-info">{{ nivel }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if riesgo.clasificacion_magerit %}
+                                                {% if riesgo.clasificacion_magerit in ['MUY_ALTO', 'ALTO'] %}
+                                                    <span class="badge bg-danger">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% elif riesgo.clasificacion_magerit == 'MEDIO' %}
+                                                    <span class="badge bg-warning">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">{{ riesgo.clasificacion_magerit }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ riesgo.estado_tratamiento.value if riesgo.estado_tratamiento else 'sin_tratamiento' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Ver detalle del riesgo">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                            <p>Todos los riesgos tienen tratamiento asignado</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tab: Alto/Muy Alto -->
+                    <div class="tab-pane fade" id="altos" role="tabpanel">
+                        {% if stats.altos_muy_altos %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Activo</th>
+                                        <th>Amenaza</th>
+                                        <th>Nivel Efectivo</th>
+                                        <th>Clasificación</th>
+                                        <th>Tratamiento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for riesgo in stats.altos_muy_altos %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ riesgo.activo.nombre if riesgo.activo else 'N/A' }}</strong><br>
+                                            <small class="text-muted">{{ riesgo.activo.codigo if riesgo.activo else '' }}</small>
+                                        </td>
+                                        <td>{{ riesgo.amenaza.nombre if riesgo.amenaza else 'N/A' }}</td>
+                                        <td><span class="badge bg-danger">{{ riesgo.nivel_riesgo_efectivo }}</span></td>
+                                        <td><span class="badge bg-danger">{{ riesgo.clasificacion_magerit or 'N/A' }}</span></td>
+                                        <td>
+                                            {% if riesgo.estado_tratamiento %}
+                                                <span class="badge bg-info">{{ riesgo.estado_tratamiento.value }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">sin_tratamiento</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                            <p>No hay riesgos de nivel alto o muy alto</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tab: Medio -->
+                    <div class="tab-pane fade" id="medios" role="tabpanel">
+                        {% if stats.medios %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Activo</th>
+                                        <th>Amenaza</th>
+                                        <th>Nivel Efectivo</th>
+                                        <th>Clasificación</th>
+                                        <th>Tratamiento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for riesgo in stats.medios %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ riesgo.activo.nombre if riesgo.activo else 'N/A' }}</strong><br>
+                                            <small class="text-muted">{{ riesgo.activo.codigo if riesgo.activo else '' }}</small>
+                                        </td>
+                                        <td>{{ riesgo.amenaza.nombre if riesgo.amenaza else 'N/A' }}</td>
+                                        <td><span class="badge bg-warning">{{ riesgo.nivel_riesgo_efectivo }}</span></td>
+                                        <td><span class="badge bg-warning">{{ riesgo.clasificacion_magerit or 'N/A' }}</span></td>
+                                        <td>
+                                            {% if riesgo.estado_tratamiento %}
+                                                <span class="badge bg-info">{{ riesgo.estado_tratamiento.value }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">sin_tratamiento</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            <p>No hay riesgos de nivel medio</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tab: Bajo/Muy Bajo -->
+                    <div class="tab-pane fade" id="bajos" role="tabpanel">
+                        {% if stats.bajos %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Activo</th>
+                                        <th>Amenaza</th>
+                                        <th>Nivel Efectivo</th>
+                                        <th>Clasificación</th>
+                                        <th>Tratamiento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for riesgo in stats.bajos %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ riesgo.activo.nombre if riesgo.activo else 'N/A' }}</strong><br>
+                                            <small class="text-muted">{{ riesgo.activo.codigo if riesgo.activo else '' }}</small>
+                                        </td>
+                                        <td>{{ riesgo.amenaza.nombre if riesgo.amenaza else 'N/A' }}</td>
+                                        <td><span class="badge bg-success">{{ riesgo.nivel_riesgo_efectivo }}</span></td>
+                                        <td><span class="badge bg-success">{{ riesgo.clasificacion_magerit or 'N/A' }}</span></td>
+                                        <td>
+                                            {% if riesgo.estado_tratamiento %}
+                                                <span class="badge bg-info">{{ riesgo.estado_tratamiento.value }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">sin_tratamiento</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('risks.riesgos_view', id=riesgo.id) }}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            <p>No hay riesgos de nivel bajo o muy bajo</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información del servicio -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Servicio</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Código:</strong> <code>{{ service.service_code }}</code></p>
+                        <p><strong>Nombre:</strong> {{ service.name }}</p>
+                        <p><strong>Tipo:</strong> {{ service.service_type.value if service.service_type else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Estado:</strong>
+                            <span class="badge bg-success">{{ service.status.value if service.status else 'N/A' }}</span>
+                        </p>
+                        <p><strong>Activos Vinculados:</strong> {{ service.assets|length }}</p>
+                        {% if service.description %}
+                        <p><strong>Descripción:</strong> {{ service.description }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

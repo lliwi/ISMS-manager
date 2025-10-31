@@ -12,6 +12,7 @@ from sqlalchemy import or_, and_
 from datetime import datetime
 from models import db, Service, ServiceType, ServiceStatus, Asset, User, ServiceDependency
 from utils.decorators import role_required
+from app.risks.models import Riesgo, ActivoInformacion
 
 services_bp = Blueprint('services', __name__, url_prefix='/servicios')
 
@@ -525,3 +526,194 @@ def api_generate_code():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+def get_risks_for_service(service):
+    """
+    Obtiene todos los riesgos asociados a un servicio a través de sus activos.
+    Vincula Asset (código) con ActivoInformacion (código) y luego con Riesgo.
+
+    Args:
+        service: Instancia de Service
+
+    Returns:
+        list: Lista de objetos Riesgo asociados al servicio
+    """
+    # Obtener códigos de los activos del servicio
+    asset_codes = [asset.asset_code for asset in service.assets if asset.asset_code]
+
+    if not asset_codes:
+        return []
+
+    # Buscar ActivoInformacion por código
+    activos_info = ActivoInformacion.query.filter(
+        ActivoInformacion.codigo.in_(asset_codes)
+    ).all()
+
+    activos_ids = [activo.id for activo in activos_info]
+
+    if not activos_ids:
+        return []
+
+    # Obtener riesgos asociados a esos activos
+    riesgos = Riesgo.query.filter(
+        Riesgo.activo_id.in_(activos_ids)
+    ).order_by(Riesgo.nivel_riesgo_efectivo.desc()).all()
+
+    return riesgos
+
+
+def calculate_service_risk_stats(service):
+    """
+    Calcula estadísticas de riesgos para un servicio.
+
+    Args:
+        service: Instancia de Service
+
+    Returns:
+        dict: Diccionario con estadísticas de riesgos
+    """
+    riesgos = get_risks_for_service(service)
+
+    if not riesgos:
+        return {
+            'total': 0,
+            'high_count': 0,
+            'medium_count': 0,
+            'low_count': 0,
+            'avg_level': 0,
+            'max_level': 0
+        }
+
+    high_count = len([r for r in riesgos if r.clasificacion_efectiva in ['ALTO', 'MUY_ALTO']])
+    medium_count = len([r for r in riesgos if r.clasificacion_efectiva == 'MEDIO'])
+    low_count = len([r for r in riesgos if r.clasificacion_efectiva in ['BAJO', 'MUY_BAJO']])
+
+    niveles = [float(r.nivel_riesgo_efectivo or 0) for r in riesgos]
+    avg_level = sum(niveles) / len(niveles) if niveles else 0
+    max_level = max(niveles) if niveles else 0
+
+    return {
+        'total': len(riesgos),
+        'high_count': high_count,
+        'medium_count': medium_count,
+        'low_count': low_count,
+        'avg_level': round(avg_level, 2),
+        'max_level': round(max_level, 2)
+    }
+
+
+# ==================== VISTAS DE RIESGOS POR SERVICIO ====================
+
+@services_bp.route('/riesgos-por-servicio')
+@login_required
+def risks_by_service():
+    """Vista general de riesgos agrupados por servicio"""
+
+    # Obtener todos los servicios activos
+    services = Service.query.filter_by(status=ServiceStatus.ACTIVE).all()
+
+    # Calcular estadísticas de riesgos para cada servicio
+    services_with_risks = []
+    total_risks = 0
+    services_with_high_risks = 0
+    total_avg_risk = []
+
+    for service in services:
+        stats = calculate_service_risk_stats(service)
+
+        if stats['total'] > 0:
+            services_with_risks.append({
+                'service': service,
+                'stats': stats
+            })
+            total_risks += stats['total']
+
+            if stats['high_count'] > 0:
+                services_with_high_risks += 1
+
+            total_avg_risk.append(stats['avg_level'])
+
+    # Ordenar por número de riesgos altos/muy altos
+    services_with_risks.sort(key=lambda x: x['stats']['high_count'], reverse=True)
+
+    # Estadísticas generales
+    general_stats = {
+        'total_services': len(services_with_risks),
+        'total_risks': total_risks,
+        'services_with_high_risks': services_with_high_risks,
+        'avg_risk_level': round(sum(total_avg_risk) / len(total_avg_risk), 2) if total_avg_risk else 0,
+        'services_without_risks': len(services) - len(services_with_risks)
+    }
+
+    return render_template(
+        'services/risks_by_service.html',
+        services_with_risks=services_with_risks,
+        stats=general_stats
+    )
+
+
+@services_bp.route('/<int:service_id>/riesgos')
+@login_required
+def service_risks_detail(service_id):
+    """Vista detallada de riesgos de un servicio específico"""
+
+    service = Service.query.get_or_404(service_id)
+    riesgos = get_risks_for_service(service)
+
+    # Obtener umbral de riesgo de la evaluación activa
+    from app.risks.models import TratamientoRiesgo, EvaluacionRiesgo
+    evaluacion_activa = EvaluacionRiesgo.query.filter(
+        EvaluacionRiesgo.estado.in_(['en_curso', 'completada', 'aprobada'])
+    ).order_by(EvaluacionRiesgo.created_at.desc()).first()
+
+    umbral = float(evaluacion_activa.umbral_riesgo_objetivo or 50.0) if evaluacion_activa else 50.0
+
+    # Clasificar riesgos por nivel
+    sin_tratamiento = []
+    a_tratar = []
+    altos_muy_altos = []
+    medios = []
+    bajos = []
+
+    for riesgo in riesgos:
+        # Verificar si tiene tratamiento
+        tratamiento = TratamientoRiesgo.query.filter_by(
+            riesgo_id=riesgo.id
+        ).order_by(TratamientoRiesgo.created_at.desc()).first()
+
+        # Clasificar sin tratamiento
+        if not tratamiento or tratamiento.estado == 'planificado':
+            sin_tratamiento.append(riesgo)
+
+        # Clasificar riesgos a tratar (superan umbral)
+        nivel = float(riesgo.nivel_riesgo_efectivo or 0)
+        if nivel > umbral:
+            a_tratar.append(riesgo)
+
+        # Clasificar por nivel de riesgo efectivo
+        if nivel >= 50:  # Alto/Muy Alto
+            altos_muy_altos.append(riesgo)
+        elif nivel >= 25:  # Medio
+            medios.append(riesgo)
+        else:  # Bajo/Muy Bajo
+            bajos.append(riesgo)
+
+    # Construir estadísticas
+    stats = {
+        'total': len(riesgos),
+        'sin_tratamiento': sin_tratamiento,
+        'a_tratar': a_tratar,
+        'altos_muy_altos': altos_muy_altos,
+        'medios': medios,
+        'bajos': bajos,
+        'umbral': umbral
+    }
+
+    return render_template(
+        'services/service_risks_detail.html',
+        service=service,
+        stats=stats
+    )

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Riesgos por Servicio - ISMS Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2 mb-0"><i class="fas fa-server me-2"></i>Riesgos por Servicio</h1>
+                <p class="text-muted">Análisis de riesgos asociados a cada servicio</p>
+            </div>
+            <div>
+                <a href="{{ url_for('services.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Servicios
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Servicios con Riesgos</h6>
+                        <h3 class="mb-0">{{ stats.total_services_with_risks }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-server fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Servicios Críticos</h6>
+                        <h3 class="mb-0">{{ stats.critical_services }}</h3>
+                        <small>Riesgos Alto/Muy Alto</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Nivel Promedio de Riesgo</h6>
+                        <h3 class="mb-0">{{ stats.avg_risk_level }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title small mb-1">Servicios sin Riesgos</h6>
+                        <h3 class="mb-0">{{ stats.services_without_risks }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de servicios con riesgos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Servicios y sus Riesgos</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Total Riesgos</th>
+                                <th>Alto/Muy Alto</th>
+                                <th>Nivel Promedio</th>
+                                <th>Nivel Máximo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if services_with_risks %}
+                                {% for item in services_with_risks %}
+                                <tr>
+                                    <td>
+                                        <code>{{ item.service.service_code }}</code>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.service.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ item.service.service_type.value if item.service.service_type else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ item.stats.total }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.stats.high_count > 0 %}
+                                            <span class="badge bg-danger">{{ item.stats.high_count }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.stats.avg_level >= 75 %}
+                                            <span class="badge bg-danger">{{ item.stats.avg_level }}</span>
+                                        {% elif item.stats.avg_level >= 50 %}
+                                            <span class="badge bg-warning">{{ item.stats.avg_level }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ item.stats.avg_level }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.stats.max_level >= 75 %}
+                                            <span class="badge bg-danger">{{ item.stats.max_level }}</span>
+                                        {% elif item.stats.max_level >= 50 %}
+                                            <span class="badge bg-warning">{{ item.stats.max_level }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ item.stats.max_level }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('services.service_risks_detail', service_id=item.service.id) }}"
+                                               class="btn btn-outline-primary"
+                                               title="Ver riesgos del servicio">
+                                                <i class="fas fa-eye me-1"></i>Ver Riesgos
+                                            </a>
+                                            <a href="{{ url_for('services.detail', service_id=item.service.id) }}"
+                                               class="btn btn-outline-secondary"
+                                               title="Ver detalle del servicio">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        <p>No hay servicios con riesgos registrados</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Servicios sin riesgos (opcional) -->
+{% if services_without_risks %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Servicios sin Riesgos Identificados</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in services_without_risks %}
+                            <tr>
+                                <td><code>{{ service.service_code }}</code></td>
+                                <td>{{ service.name }}</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ service.service_type.value if service.service_type else 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        {{ service.status.value if service.status else 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('services.detail', service_id=service.id) }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
