@@ -25,6 +25,8 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <!-- Código -->
                     <div class="mb-3">
                         <label for="code" class="form-label">Código <span class="text-danger">*</span></label>
