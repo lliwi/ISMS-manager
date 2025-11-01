@@ -8,7 +8,7 @@ from app.models.change import Change, ChangeStatus
 from app.models.audit import (AuditProgram, AuditFinding as Finding,
                               AuditCorrectiveAction as CorrectiveAction,
                               FindingStatus, AuditActionStatus)
-from app.risks.models import Riesgo
+from app.risks.models import Riesgo, TratamientoRiesgo
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_, case, extract
 from collections import defaultdict
@@ -358,18 +358,43 @@ def soa_controls_radar_data():
 @login_required
 def critical_alerts():
     """
-    API endpoint para obtener todas las alertas críticas consolidadas
+    API endpoint para obtener todas las alertas críticas consolidadas con paginación
+    Parámetros:
+    - page: número de página (default: 1)
+    - per_page: elementos por página (default: 10)
     """
     try:
+        from flask import request
+
+        # Obtener parámetros de paginación
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        # Validar parámetros
+        if page < 1:
+            page = 1
+        if per_page < 1 or per_page > 100:
+            per_page = 10
+
         alerts = []
         today = date.today()
 
-        # 1. Riesgos críticos (nivel 9-10)
+        # 1. Riesgos críticos (nivel 9-10) pendientes de tratar
+        # Solo mostrar riesgos que no tienen tratamiento o están en planificado/en_progreso
         critical_risks = Riesgo.query.filter(
             Riesgo.nivel_riesgo_efectivo >= 9
         ).all()
 
         for risk in critical_risks:
+            # Verificar estado de tratamiento
+            # Si tiene tratamiento implementado o verificado, no mostrar alerta
+            tratamientos_activos = [t for t in risk.tratamientos
+                                   if t.estado in ['implementado', 'verificado']]
+
+            # Solo incluir riesgos sin tratamiento efectivo
+            if tratamientos_activos:
+                continue
+
             # Construir nombre descriptivo del riesgo
             risk_name = risk.codigo
             if risk.activo and hasattr(risk.activo, 'nombre'):
@@ -377,11 +402,19 @@ def critical_alerts():
             elif risk.amenaza and hasattr(risk.amenaza, 'nombre'):
                 risk_name = f"{risk.codigo} - {risk.amenaza.nombre}"
 
+            # Determinar estado del tratamiento para mostrar en descripción
+            estado_tratamiento = "Sin tratamiento"
+            if risk.tratamientos:
+                ultimo_tratamiento = sorted(risk.tratamientos,
+                                          key=lambda t: t.created_at,
+                                          reverse=True)[0]
+                estado_tratamiento = f"Tratamiento: {ultimo_tratamiento.estado}"
+
             alerts.append({
                 'type': 'risk',
                 'severity': 'critical',
                 'title': f'Riesgo Crítico: {risk_name}',
-                'description': f'Nivel de riesgo: {float(risk.nivel_riesgo_efectivo) if risk.nivel_riesgo_efectivo else 0}',
+                'description': f'Nivel: {float(risk.nivel_riesgo_efectivo) if risk.nivel_riesgo_efectivo else 0:.2f} | {estado_tratamiento}',
                 'url': f'/riesgos/{risk.id}',
                 'date': risk.created_at.date().isoformat() if risk.created_at else None
             })
@@ -476,9 +509,23 @@ def critical_alerts():
         severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
         alerts.sort(key=lambda x: (severity_order.get(x['severity'], 99), x['date'] or ''))
 
+        # Calcular paginación
+        total_alerts = len(alerts)
+        total_pages = (total_alerts + per_page - 1) // per_page  # Ceiling division
+
+        # Obtener solo los elementos de la página actual
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_alerts = alerts[start_idx:end_idx]
+
         return jsonify({
-            'alerts': alerts,
-            'total': len(alerts),
+            'alerts': paginated_alerts,
+            'total': total_alerts,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': total_pages,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
             'by_severity': {
                 'critical': len([a for a in alerts if a['severity'] == 'critical']),
                 'high': len([a for a in alerts if a['severity'] == 'high']),
@@ -597,20 +644,27 @@ def risk_heatmap():
                 'tratamiento': risk.tratamientos[0].opcion_tratamiento if risk.tratamientos else None
             })
 
-        # Contar riesgos por celda de la matriz
+        # Contar riesgos por celda de la matriz (escala 1-5)
         matrix = {}
         for i in range(1, 6):
             for j in range(1, 6):
                 matrix[f"{i},{j}"] = {'count': 0, 'risks': []}
 
         for risk in heatmap_data:
-            key = f"{risk['impacto']},{risk['probabilidad']}"
+            # Escalar valores de 0-10 a 1-5
+            # 0-2 -> 1, 2-4 -> 2, 4-6 -> 3, 6-8 -> 4, 8-10 -> 5
+            impacto_scaled = max(1, min(5, int((risk['impacto'] / 2) + 0.5)))
+            prob_scaled = max(1, min(5, int((risk['probabilidad'] / 2) + 0.5)))
+
+            key = f"{impacto_scaled},{prob_scaled}"
             if key in matrix:
                 matrix[key]['count'] += 1
                 matrix[key]['risks'].append({
                     'id': risk['id'],
                     'nombre': risk['nombre'],
-                    'nivel': risk['nivel']
+                    'nivel': risk['nivel'],
+                    'impacto_original': risk['impacto'],
+                    'probabilidad_original': risk['probabilidad']
                 })
 
         return jsonify({
