@@ -144,6 +144,169 @@
     </div>
 </div>
 
+<!-- ========== NUEVAS SECCIONES - MÉTRICAS ADICIONALES ========== -->
+
+<!-- Sección: Alertas Críticas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Alertas Críticas</h5>
+                <span class="badge bg-white text-danger" id="alertsCount">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div id="criticalAlerts" class="list-group list-group-flush">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Métricas Operativas -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h6 class="text-muted">Tasa Completitud Tareas</h6>
+                <h3 id="taskCompletionRate">--</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-clipboard-check fa-2x text-info mb-2"></i>
+                <h6 class="text-muted">Efectividad NC</h6>
+                <h3 id="ncEffectivenessRate">--</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h6 class="text-muted">Tiempo Resp. Incidentes</h6>
+                <h3 id="avgIncidentResponse">--</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-exchange-alt fa-2x text-primary mb-2"></i>
+                <h6 class="text-muted">Éxito de Cambios</h6>
+                <h3 id="changeSuccessRate">--</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Gráficos de Tendencias -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tendencia de Incidentes (6 meses)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="incidentsTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Distribución de Riesgos</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="riskDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Mapa de Calor de Riesgos -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-th me-2"></i>Mapa de Calor de Riesgos (Impacto vs Probabilidad)</h6>
+            </div>
+            <div class="card-body">
+                <div id="riskHeatmap"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Métricas de Auditoría y Distribuciones -->
+<div class="row mb-4">
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Métricas de Auditoría</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Tasa Completitud</span>
+                        <strong id="auditCompletionRate">--</strong>
+                    </div>
+                    <div class="progress mt-1" style="height: 10px;">
+                        <div id="auditCompletionBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Cobertura ISO 27001</span>
+                        <strong id="isoCoverage">--</strong>
+                    </div>
+                    <div class="progress mt-1" style="height: 10px;">
+                        <div id="isoCoverageBar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Hallazgos Abiertos</span>
+                    <span class="badge bg-warning" id="openFindings">0</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Acciones Vencidas</span>
+                    <span class="badge bg-danger" id="overdueActions">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-server me-2"></i>Distribución de Activos</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="assetsDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Distribución de Servicios</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="servicesDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Content Row -->
 <div class="row">
     <!-- Recent Incidents -->
@@ -761,6 +924,298 @@ function loadSOAApplicabilityMap() {
         });
 }
 
+// =================================================================
+// CARGAR NUEVAS MÉTRICAS Y GRÁFICOS
+// =================================================================
+
+// 1. Cargar alertas críticas
+function loadCriticalAlerts() {
+    fetch('/api/critical-alerts')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('criticalAlerts').innerHTML = `
+                    <div class="alert alert-danger m-3">${data.error}</div>`;
+                return;
+            }
+
+            document.getElementById('alertsCount').textContent = data.total;
+
+            if (data.alerts.length === 0) {
+                document.getElementById('criticalAlerts').innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-check-circle fa-3x mb-2"></i>
+                        <p>No hay alertas críticas en este momento</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            data.alerts.slice(0, 10).forEach(alert => {
+                const severityClass = {
+                    'critical': 'danger',
+                    'high': 'warning',
+                    'medium': 'info',
+                    'low': 'secondary'
+                }[alert.severity] || 'secondary';
+
+                html += `
+                    <a href="${alert.url}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${alert.title}</h6>
+                            <span class="badge bg-${severityClass}">${alert.severity.toUpperCase()}</span>
+                        </div>
+                        <p class="mb-1 text-muted small">${alert.description}</p>
+                    </a>`;
+            });
+
+            document.getElementById('criticalAlerts').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error al cargar alertas:', error);
+        });
+}
+
+// 2. Cargar métricas operativas
+function loadOperationalMetrics() {
+    fetch('/api/operational-metrics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            document.getElementById('taskCompletionRate').textContent = data.task_completion_rate + '%';
+            document.getElementById('ncEffectivenessRate').textContent = data.nc_effectiveness_rate + '%';
+            document.getElementById('avgIncidentResponse').textContent = data.avg_incident_response_days + ' días';
+            document.getElementById('changeSuccessRate').textContent = data.change_success_rate + '%';
+        })
+        .catch(error => console.error('Error al cargar métricas operativas:', error));
+}
+
+// 3. Cargar tendencia de incidentes
+function loadIncidentsTrend() {
+    fetch('/api/trends/incidents')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            const ctx = document.getElementById('incidentsTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Total Incidentes',
+                        data: data.data,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4
+                    }, {
+                        label: 'Críticos/Altos',
+                        data: data.critical,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error al cargar tendencia de incidentes:', error));
+}
+
+// 4. Cargar distribución de riesgos
+function loadRiskDistribution() {
+    fetch('/api/trends/risks')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            const ctx = document.getElementById('riskDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Riesgos por Nivel',
+                        data: data.data,
+                        backgroundColor: [
+                            'rgba(220, 53, 69, 0.7)',
+                            'rgba(255, 193, 7, 0.7)',
+                            'rgba(13, 202, 240, 0.7)',
+                            'rgba(25, 135, 84, 0.7)',
+                            'rgba(108, 117, 125, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error al cargar distribución de riesgos:', error));
+}
+
+// 5. Cargar mapa de calor de riesgos
+function loadRiskHeatmap() {
+    fetch('/api/risk-heatmap')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            let html = '<table class="table table-bordered text-center">';
+            html += '<thead><tr><th>Imp/Prob</th>';
+            for (let i = 1; i <= 5; i++) {
+                html += `<th>Prob ${i}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            for (let impact = 5; impact >= 1; impact--) {
+                html += `<tr><th>Imp ${impact}</th>`;
+                for (let prob = 1; prob <= 5; prob++) {
+                    const key = `${impact},${prob}`;
+                    const cell = data.matrix[key] || {count: 0};
+                    const nivel = impact * prob;
+
+                    let bgColor = '';
+                    if (nivel >= 20) bgColor = 'bg-danger';
+                    else if (nivel >= 12) bgColor = 'bg-warning';
+                    else if (nivel >= 6) bgColor = 'bg-info';
+                    else bgColor = 'bg-success';
+
+                    html += `<td class="${bgColor} text-white">${cell.count}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+
+            document.getElementById('riskHeatmap').innerHTML = html;
+        })
+        .catch(error => console.error('Error al cargar mapa de calor:', error));
+}
+
+// 6. Cargar métricas de auditoría
+function loadAuditMetrics() {
+    fetch('/api/audit-metrics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            document.getElementById('auditCompletionRate').textContent = data.audit_completion_rate + '%';
+            document.getElementById('auditCompletionBar').style.width = data.audit_completion_rate + '%';
+
+            document.getElementById('isoCoverage').textContent = data.iso_coverage_percentage + '%';
+            document.getElementById('isoCoverageBar').style.width = data.iso_coverage_percentage + '%';
+
+            document.getElementById('openFindings').textContent = data.open_findings;
+            document.getElementById('overdueActions').textContent = data.overdue_corrective_actions;
+        })
+        .catch(error => console.error('Error al cargar métricas de auditoría:', error));
+}
+
+// 7. Cargar distribución de activos
+function loadAssetsDistribution() {
+    fetch('/api/assets/distribution')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            const categories = Object.keys(data.by_category || {});
+            const values = Object.values(data.by_category || {});
+
+            if (categories.length === 0) {
+                document.getElementById('assetsDistributionChart').parentElement.innerHTML =
+                    '<p class="text-muted text-center">Sin datos</p>';
+                return;
+            }
+
+            const ctx = document.getElementById('assetsDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error al cargar distribución de activos:', error));
+}
+
+// 8. Cargar distribución de servicios
+function loadServicesDistribution() {
+    fetch('/api/services/metrics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            const types = Object.keys(data.by_type || {});
+            const values = Object.values(data.by_type || {});
+
+            if (types.length === 0) {
+                document.getElementById('servicesDistributionChart').parentElement.innerHTML =
+                    '<p class="text-muted text-center">Sin datos</p>';
+                return;
+            }
+
+            const ctx = document.getElementById('servicesDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: types,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            'rgba(13, 110, 253, 0.7)',
+                            'rgba(25, 135, 84, 0.7)',
+                            'rgba(220, 53, 69, 0.7)',
+                            'rgba(255, 193, 7, 0.7)',
+                            'rgba(108, 117, 125, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error al cargar distribución de servicios:', error));
+}
+
 // Cargar ambos gráficos al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     // El gráfico de categorías ya se carga arriba
@@ -768,6 +1223,16 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(loadControlsRadarChart, 500);
     // Cargar mapa de aplicabilidad
     setTimeout(loadSOAApplicabilityMap, 1000);
+
+    // Cargar nuevas métricas
+    setTimeout(loadCriticalAlerts, 1500);
+    setTimeout(loadOperationalMetrics, 2000);
+    setTimeout(loadIncidentsTrend, 2500);
+    setTimeout(loadRiskDistribution, 3000);
+    setTimeout(loadRiskHeatmap, 3500);
+    setTimeout(loadAuditMetrics, 4000);
+    setTimeout(loadAssetsDistribution, 4500);
+    setTimeout(loadServicesDistribution, 5000);
 });
 </script>
 {% endblock %}
