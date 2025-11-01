@@ -154,12 +154,10 @@
             <!-- Auditorías del Programa -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Auditorías</h5>
-                    {% if program.status.name != 'DRAFT' %}
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Auditorías Planificadas</h5>
                     <a href="{{ url_for('audits.audit_create') }}?program_id={{ program.id }}" class="btn btn-sm btn-primary">
                         <i class="fas fa-plus me-1"></i>Nueva Auditoría
                     </a>
-                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if audits %}
@@ -206,7 +204,13 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-muted text-center py-4">No hay auditorías en este programa</p>
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-3">No hay auditorías planificadas en este programa</p>
+                        <a href="{{ url_for('audits.audit_create') }}?program_id={{ program.id }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Planificar Primera Auditoría
+                        </a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -240,14 +244,24 @@
                                 {% else %}bg-danger
                                 {% endif %}"
                                 role="progressbar"
-                                style="width: {{ iso_coverage }}%;">
+                                style="width: {% if iso_coverage > 0 %}{{ iso_coverage }}{% else %}5{% endif %}%;">
                                 {{ iso_coverage|round(1) }}%
                             </div>
                         </div>
-                        {% if iso_coverage < 80 %}
+                        {% if program.status.name == 'DRAFT' and iso_coverage == 0 %}
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Planifique auditorías para alcanzar el mínimo requerido (80%)
+                        </small>
+                        {% elif iso_coverage < 80 %}
                         <small class="text-danger">
                             <i class="fas fa-exclamation-triangle me-1"></i>
-                            Mínimo requerido: 80%
+                            Mínimo requerido: 80% - Actual: {{ iso_coverage|round(1) }}%
+                        </small>
+                        {% else %}
+                        <small class="text-success">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Cobertura adecuada
                         </small>
                         {% endif %}
                     </div>

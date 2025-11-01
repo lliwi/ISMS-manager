@@ -68,7 +68,7 @@
                                     <option value="">Ninguno (auditoría extraordinaria)</option>
                                     {% for program in programs %}
                                     <option value="{{ program.id }}"
-                                            {% if audit and audit.audit_program_id == program.id %}selected{% endif %}>
+                                            {% if (audit and audit.audit_program_id == program.id) or (not audit and default_program_id == program.id) %}selected{% endif %}>
                                         Programa {{ program.year }} - {{ program.title }}
                                         {% if program.status.name == 'APPROVED' %}
                                             (Aprobado)

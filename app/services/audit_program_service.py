@@ -38,6 +38,7 @@ class AuditProgramService:
                 description=data.get('description'),
                 scope=data.get('scope'),
                 objectives=data.get('objectives'),
+                checklist_data=data.get('checklist_data'),
                 start_date=data['start_date'],
                 end_date=data['end_date'],
                 status=ProgramStatus.DRAFT,
@@ -125,6 +126,8 @@ class AuditProgramService:
                 program.scope = data['scope']
             if 'objectives' in data:
                 program.objectives = data['objectives']
+            if 'checklist_data' in data:
+                program.checklist_data = data['checklist_data']
             if 'start_date' in data:
                 program.start_date = data['start_date']
             if 'end_date' in data:

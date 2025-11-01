@@ -184,6 +184,11 @@ def program_create():
             if objectives:
                 data['objectives'] = objectives
 
+            # Procesar checklist
+            checklist = request.form.getlist('checklist[]')
+            if checklist:
+                data['checklist_data'] = checklist
+
             program, errors = program_service.create_program(
                 data=data,
                 created_by_id=current_user.id
@@ -275,6 +280,11 @@ def program_edit(id):
             objectives = request.form.getlist('objectives[]')
             if objectives:
                 data['objectives'] = objectives
+
+            # Procesar checklist
+            checklist = request.form.getlist('checklist[]')
+            if checklist:
+                data['checklist_data'] = checklist
 
             program, errors = program_service.update_program(
                 program_id=id,
@@ -473,7 +483,7 @@ def audit_create():
             audit, errors = audit_service.create_audit(
                 data=data,
                 created_by_id=current_user.id,
-                program_id=data.get('program_id')
+                program_id=data.get('audit_program_id') or data.get('program_id')
             )
 
             if errors:
@@ -519,6 +529,9 @@ def audit_create():
     # Obtener controles SOA aplicables
     controls = SOAControl.query.filter_by(applicability_status='aplicable').order_by(SOAControl.control_id).all()
 
+    # Obtener program_id de la URL si viene
+    default_program_id = request.args.get('program_id', type=int)
+
     return render_template('audits/audits/form.html',
         audit=None,
         active_programs=active_programs,
@@ -527,6 +540,7 @@ def audit_create():
         organizational_areas=[],  # TODO: obtener áreas
         controls=controls,
         selected_controls=[],
+        default_program_id=default_program_id,
         datetime=datetime
     )
 

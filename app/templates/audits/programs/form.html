@@ -181,37 +181,43 @@
                     </div>
                     <div class="card-body">
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="check1">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="year_defined" id="check1"
+                                   {% if program and program.checklist_data and 'year_defined' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check1">
                                 Año y período definidos
                             </label>
                         </div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="check2">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="scope_complete" id="check2"
+                                   {% if program and program.checklist_data and 'scope_complete' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check2">
                                 Alcance cubre SGSI completo
                             </label>
                         </div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="check3">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="objectives_aligned" id="check3"
+                                   {% if program and program.checklist_data and 'objectives_aligned' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check3">
                                 Objetivos alineados con política
                             </label>
                         </div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="check4">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="coverage_adequate" id="check4"
+                                   {% if program and program.checklist_data and 'coverage_adequate' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check4">
                                 Cobertura ≥ 80% controles ISO
                             </label>
                         </div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="check5">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="auditors_available" id="check5"
+                                   {% if program and program.checklist_data and 'auditors_available' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check5">
                                 Auditores calificados disponibles
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="check6">
+                            <input class="form-check-input" type="checkbox" name="checklist[]" value="resources_assigned" id="check6"
+                                   {% if program and program.checklist_data and 'resources_assigned' in program.checklist_data %}checked{% endif %}>
                             <label class="form-check-label small" for="check6">
                                 Recursos asignados
                             </label>

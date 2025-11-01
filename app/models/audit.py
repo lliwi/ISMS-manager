@@ -156,6 +156,9 @@ class AuditProgram(db.Model):
     scope = db.Column(db.Text)
     objectives = db.Column(db.Text)
 
+    # Checklist de preparación (JSON)
+    checklist_data = db.Column(db.JSON)
+
     # Fechas
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)

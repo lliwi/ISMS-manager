@@ -121,10 +121,11 @@ class User(UserMixin, db.Model):
         """Verifica si el usuario tiene un rol específico
 
         Args:
-            role_name: Nombre completo o alias del rol
+            role_name: Nombre completo, alias del rol, o lista de roles
                       Aliases: 'admin' -> 'Administrador del Sistema'
                                'ciso' -> 'Responsable de Seguridad (CISO)'
                                'auditor' -> 'Auditor Interno'
+                      Si se pasa una lista, verifica si tiene alguno de los roles
         """
         if not self.role:
             return False
@@ -137,6 +138,10 @@ class User(UserMixin, db.Model):
             'process_owner': 'Responsable de Proceso',
             'user': 'Usuario General'
         }
+
+        # Si se pasa una lista, verificar si tiene alguno de los roles
+        if isinstance(role_name, list):
+            return any(self.has_role(r) for r in role_name)
 
         # Obtener el nombre completo si se pasó un alias
         full_role_name = role_aliases.get(role_name.lower(), role_name)
