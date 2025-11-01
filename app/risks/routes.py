@@ -581,7 +581,7 @@ def evaluaciones_recalcular(id):
 
 # ==================== RIESGOS ====================
 
-@bp.route('/riesgos/<int:id>')
+@bp.route('/<int:id>')
 @login_required
 def riesgos_view(id):
     """Ver detalle de un riesgo"""
@@ -609,7 +609,7 @@ def riesgos_view(id):
     )
 
 
-@bp.route('/riesgos/<int:id>/recalcular', methods=['POST'])
+@bp.route('/<int:id>/recalcular', methods=['POST'])
 @login_required
 def riesgos_recalcular(id):
     """Recalcular un riesgo específico"""

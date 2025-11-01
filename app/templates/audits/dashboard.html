@@ -79,9 +79,15 @@
                         <div class="col-md-8">
                             <h6>Objetivos del Programa:</h6>
                             <ul class="mb-0">
-                                {% for objective in active_program.objectives %}
-                                <li>{{ objective }}</li>
-                                {% endfor %}
+                                {% if active_program.objectives %}
+                                    {% for objective in active_program.objectives.split('\n') %}
+                                        {% if objective.strip() %}
+                                        <li>{{ objective.strip() }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">No hay objetivos definidos</li>
+                                {% endif %}
                             </ul>
                         </div>
                         <div class="col-md-4">
