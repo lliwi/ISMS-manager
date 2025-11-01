@@ -265,7 +265,12 @@
                         <dt class="col-sm-4">RTO:</dt>
                         <dd class="col-sm-8">
                             {% if service.rto %}
-                                <strong>{{ service.rto }} minutos</strong>
+                                <strong>{{ "%.2f"|format(service.rto) }} días</strong>
+                                <small class="text-muted d-block">
+                                    {% if service.rto < 1 %}
+                                        ({{ "%.1f"|format(service.rto * 24) }} horas)
+                                    {% endif %}
+                                </small>
                             {% else %}
                                 <span class="text-muted">No definido</span>
                             {% endif %}
@@ -274,7 +279,12 @@
                         <dt class="col-sm-4">RPO:</dt>
                         <dd class="col-sm-8">
                             {% if service.rpo %}
-                                <strong>{{ service.rpo }} minutos</strong>
+                                <strong>{{ "%.2f"|format(service.rpo) }} días</strong>
+                                <small class="text-muted d-block">
+                                    {% if service.rpo < 1 %}
+                                        ({{ "%.1f"|format(service.rpo * 24) }} horas)
+                                    {% endif %}
+                                </small>
                             {% else %}
                                 <span class="text-muted">No definido</span>
                             {% endif %}

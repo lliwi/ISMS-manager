@@ -37,8 +37,8 @@ CREATE TABLE services (
     -- Criticidad y disponibilidad
     criticality INTEGER DEFAULT 5 CHECK (criticality >= 1 AND criticality <= 10),
     required_availability FLOAT CHECK (required_availability >= 0 AND required_availability <= 100),
-    rto INTEGER,  -- Recovery Time Objective en minutos
-    rpo INTEGER,  -- Recovery Point Objective en minutos
+    rto FLOAT,  -- Recovery Time Objective en días (ej: 0.5 = 12 horas)
+    rpo FLOAT,  -- Recovery Point Objective en días (ej: 0.25 = 6 horas)
 
     -- Información operativa
     operating_hours VARCHAR(100),
@@ -103,7 +103,7 @@ COMMENT ON TABLE service_asset_association IS 'Relación muchos a muchos entre s
 COMMENT ON TABLE service_dependencies IS 'Dependencias entre servicios para análisis de impacto';
 
 -- Comentarios en columnas importantes
-COMMENT ON COLUMN services.rto IS 'Recovery Time Objective - Tiempo máximo aceptable de interrupción (minutos)';
-COMMENT ON COLUMN services.rpo IS 'Recovery Point Objective - Máxima pérdida de datos aceptable (minutos)';
+COMMENT ON COLUMN services.rto IS 'Recovery Time Objective - Tiempo máximo de recuperación (días, ej: 0.5 = 12 horas)';
+COMMENT ON COLUMN services.rpo IS 'Recovery Point Objective - Máxima pérdida de datos aceptable (días, ej: 0.25 = 6 horas)';
 COMMENT ON COLUMN services.required_availability IS 'Disponibilidad requerida en porcentaje (ej: 99.9)';
 COMMENT ON COLUMN service_asset_association.role IS 'Rol del activo en el servicio: critical, support, backup';

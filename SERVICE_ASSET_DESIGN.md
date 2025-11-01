@@ -54,8 +54,8 @@ class Service(db.Model):
     # Criticidad y disponibilidad
     criticality = db.Column(db.Integer, default=5)  # 1-10
     required_availability = db.Column(db.Float)  # % (ej: 99.9)
-    rto = db.Column(db.Integer)  # Recovery Time Objective (minutos)
-    rpo = db.Column(db.Integer)  # Recovery Point Objective (minutos)
+    rto = db.Column(db.Float)  # Recovery Time Objective (días, ej: 0.5 = 12 horas)
+    rpo = db.Column(db.Float)  # Recovery Point Objective (días, ej: 0.25 = 6 horas)
 
     # Información operativa
     operating_hours = db.Column(db.String(100))  # "24/7", "8-18 L-V", etc.

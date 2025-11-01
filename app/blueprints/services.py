@@ -163,8 +163,8 @@ def create():
             technical_manager_id = request.form.get('technical_manager_id', type=int)
             criticality = request.form.get('criticality', type=int)
             required_availability = request.form.get('required_availability', type=float)
-            rto = request.form.get('rto', type=int)
-            rpo = request.form.get('rpo', type=int)
+            rto = request.form.get('rto', type=float)
+            rpo = request.form.get('rpo', type=float)
             operating_hours = request.form.get('operating_hours', '').strip()
             department = request.form.get('department', '').strip()
             annual_cost = request.form.get('annual_cost', type=float)
@@ -315,8 +315,8 @@ def edit(service_id):
             service.technical_manager_id = request.form.get('technical_manager_id', type=int)
             service.criticality = request.form.get('criticality', type=int) or 5
             service.required_availability = request.form.get('required_availability', type=float)
-            service.rto = request.form.get('rto', type=int)
-            service.rpo = request.form.get('rpo', type=int)
+            service.rto = request.form.get('rto', type=float)
+            service.rpo = request.form.get('rpo', type=float)
             service.operating_hours = request.form.get('operating_hours', '').strip() or None
             service.department = request.form.get('department', '').strip() or None
             service.annual_cost = request.form.get('annual_cost', type=float)

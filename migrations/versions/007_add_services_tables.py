@@ -43,8 +43,8 @@ def upgrade():
         sa.Column('technical_manager_id', sa.Integer(), nullable=True),
         sa.Column('criticality', sa.Integer(), server_default='5', nullable=True),
         sa.Column('required_availability', sa.Float(), nullable=True),
-        sa.Column('rto', sa.Integer(), nullable=True),
-        sa.Column('rpo', sa.Integer(), nullable=True),
+        sa.Column('rto', sa.Float(), nullable=True),  # Recovery Time Objective (días)
+        sa.Column('rpo', sa.Float(), nullable=True),  # Recovery Point Objective (días)
         sa.Column('operating_hours', sa.String(length=100), nullable=True),
         sa.Column('max_users', sa.Integer(), nullable=True),
         sa.Column('department', sa.String(length=100), nullable=True),

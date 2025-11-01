@@ -15,8 +15,8 @@ INSERT INTO services (
     1,  -- Usuario admin
     8,  -- Alta criticidad
     99.5,
-    30,  -- RTO: 30 minutos
-    15,  -- RPO: 15 minutos
+    0.02,  -- RTO: 0.02 días (~30 minutos)
+    0.01,  -- RPO: 0.01 días (~15 minutos)
     '24/7',
     'IT',
     50000.00
@@ -37,8 +37,8 @@ INSERT INTO services (
     2,  -- Technical manager
     9,  -- Crítico
     99.9,
-    15,  -- RTO: 15 minutos
-    5,   -- RPO: 5 minutos
+    0.01,  -- RTO: 0.01 días (~15 minutos)
+    0.003,  -- RPO: 0.003 días (~5 minutos)
     '24/7',
     'IT',
     75000.00
@@ -58,8 +58,8 @@ INSERT INTO services (
     1,
     10,  -- Crítico
     99.99,
-    10,  -- RTO: 10 minutos
-    0,   -- RPO: 0 minutos (no aplica pérdida de datos)
+    0.007,  -- RTO: 0.007 días (~10 minutos)
+    0,   -- RPO: 0 días (no aplica pérdida de datos)
     '24/7',
     'IT'
 );
@@ -78,8 +78,8 @@ INSERT INTO services (
     1,
     9,
     99.5,
-    60,  -- RTO: 1 hora
-    30,  -- RPO: 30 minutos
+    0.04,  -- RTO: 0.04 días (~1 hora)
+    0.02,  -- RPO: 0.02 días (~30 minutos)
     '8-20 L-V',
     'Operaciones',
     120000.00
@@ -99,7 +99,7 @@ INSERT INTO services (
     1,
     8,
     99.0,
-    120,  -- RTO: 2 horas
+    0.08,  -- RTO: 0.08 días (~2 horas)
     '24/7',
     'IT',
     30000.00

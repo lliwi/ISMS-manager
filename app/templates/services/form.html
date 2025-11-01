@@ -424,19 +424,19 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="rto" class="form-label">RTO - Recovery Time Objective (minutos)</label>
+                            <label for="rto" class="form-label">RTO - Recovery Time Objective (días)</label>
                             <input type="number" class="form-control" id="rto" name="rto"
                                    value="{{ service.rto if service else '' }}"
-                                   min="0" placeholder="30">
-                            <small class="text-muted">Tiempo máximo de recuperación</small>
+                                   step="0.01" min="0" placeholder="0.5">
+                            <small class="text-muted">Tiempo máximo de recuperación (ej: 0.5 = 12 horas, 1 = 1 día)</small>
                         </div>
 
                         <div class="mb-3">
-                            <label for="rpo" class="form-label">RPO - Recovery Point Objective (minutos)</label>
+                            <label for="rpo" class="form-label">RPO - Recovery Point Objective (días)</label>
                             <input type="number" class="form-control" id="rpo" name="rpo"
                                    value="{{ service.rpo if service else '' }}"
-                                   min="0" placeholder="15">
-                            <small class="text-muted">Pérdida máxima de datos aceptable</small>
+                                   step="0.01" min="0" placeholder="0.25">
+                            <small class="text-muted">Pérdida máxima de datos aceptable (ej: 0.25 = 6 horas, 0.5 = 12 horas)</small>
                         </div>
                     </div>
                 </div>
