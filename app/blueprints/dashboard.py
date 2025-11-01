@@ -370,13 +370,20 @@ def critical_alerts():
         ).all()
 
         for risk in critical_risks:
+            # Construir nombre descriptivo del riesgo
+            risk_name = risk.codigo
+            if risk.activo and hasattr(risk.activo, 'nombre'):
+                risk_name = f"{risk.codigo} - {risk.activo.nombre}"
+            elif risk.amenaza and hasattr(risk.amenaza, 'nombre'):
+                risk_name = f"{risk.codigo} - {risk.amenaza.nombre}"
+
             alerts.append({
                 'type': 'risk',
                 'severity': 'critical',
-                'title': f'Riesgo Crítico: {risk.nombre}',
+                'title': f'Riesgo Crítico: {risk_name}',
                 'description': f'Nivel de riesgo: {float(risk.nivel_riesgo_efectivo) if risk.nivel_riesgo_efectivo else 0}',
                 'url': f'/riesgos/{risk.id}',
-                'date': risk.fecha_identificacion.isoformat() if risk.fecha_identificacion else None
+                'date': risk.created_at.date().isoformat() if risk.created_at else None
             })
 
         # 2. Incidentes críticos abiertos
@@ -573,14 +580,21 @@ def risk_heatmap():
         heatmap_data = []
 
         for risk in risks:
+            # Construir nombre descriptivo del riesgo
+            risk_name = risk.codigo
+            if risk.activo and hasattr(risk.activo, 'nombre'):
+                risk_name = f"{risk.codigo} - {risk.activo.nombre}"
+            elif risk.amenaza and hasattr(risk.amenaza, 'nombre'):
+                risk_name = f"{risk.codigo} - {risk.amenaza.nombre}"
+
             heatmap_data.append({
                 'id': risk.id,
-                'nombre': risk.nombre,
-                'probabilidad': risk.probabilidad or 0,
-                'impacto': risk.impacto or 0,
+                'nombre': risk_name,
+                'probabilidad': float(risk.probabilidad_efectiva) if risk.probabilidad_efectiva else 0,
+                'impacto': float(risk.impacto_efectivo) if risk.impacto_efectivo else 0,
                 'nivel': float(risk.nivel_riesgo_efectivo) if risk.nivel_riesgo_efectivo else 0,
                 'clasificacion': risk.clasificacion_efectiva,
-                'tratamiento': risk.tratamiento
+                'tratamiento': risk.tratamientos[0].opcion_tratamiento if risk.tratamientos else None
             })
 
         # Contar riesgos por celda de la matriz
